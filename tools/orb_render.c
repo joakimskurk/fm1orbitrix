@@ -7,6 +7,8 @@
  *   orb_render hold N NOTE SECONDS OUT.wav       system N's KEYS sound, one key held, the orrery stopped
  *   orb_render sweep WHAT OUT.wav                one held note, WHAT (ecc sling ang moon dust pixel prec) 0 -> 99
  *   orb_render macro N M OUT.wav                 system N playing, macro M (0..4) 0 -> 99 -> 0 over 24 s
+ *   orb_render lib DIR                           every library sound (SOUND's list) -> DIR/NN_name.wav: a beat for a
+ *                                                drum, a phrase for the rest, played as the keys play a part (A's voice)
  *   orb_render bench                             the worst case: 8 voices, everything on; ns and x86 instructions a frame
  * Each prints the render's peak, RMS and DC. (MUTATE is the engine's own, at each ring's lap.) */
 #include <math.h>
@@ -127,6 +129,31 @@ static uint8_t *sweep_field(const char *w, orb_snd_t *s)
     exit(2);
 }
 
+/* a library sound alone, dry of the system's own: as part A on the keys' voices (how the keys play a track) */
+static void lib_phrase(uint32_t li)
+{
+    static const int8_t MEL[8] = {0, 4, 7, 12, 9, 7, 4, 0}, BASS[8] = {0, 0, 12, 0, 7, 0, 10, 12};
+    const orb_lib_t *L = &ORB_LIB[li];
+    uint32_t k, kind = L->kind, step = 60000u / 112u / 2u;   /* 8ths at 112 */
+    orb_system(0, &S);
+    { uint32_t r; for (r = 0; r < ORB_NRING; r++) S.ring[r].mute = 1; }
+    S.snd[1].pan = 50;
+    orb_lib_load(&S.snd[1], li, ORB_A);
+    S.dmix = 30; S.rmix = 40;
+    orb_init(&O, &S, &MEM);
+    run_ms(50);
+    for (k = 0; k < 8u; k++) {
+        int32_t semi = kind <= LK_PERC ? 0 : kind == LK_BASS ? BASS[k] : MEL[k];
+        uint32_t len = kind == LK_PAD ? step * 4u : kind <= LK_PERC ? step / 3u : step * 3u / 4u;
+        if (kind == LK_PAD && (k & 3u)) continue;   /* (a pad: two long notes) */
+        orb_note_on_part(&O, 1, (36 + (int32_t)S.sun + semi) * 256, kind == LK_KICK && (k & 1u) ? 70 : 100, ORB_A);
+        run_ms(len);
+        orb_note_off(&O, 1);
+        run_ms((kind == LK_PAD ? step * 4u : step) - len);
+    }
+    run_ms(1500);
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 5 && !strcmp(argv[1], "system")) {
@@ -188,6 +215,17 @@ int main(int argc, char **argv)
         orb_play(&O, 0);
         run_ms(1500);
         write_wav(argv[4]);
+    } else if (argc >= 3 && !strcmp(argv[1], "lib")) {
+        uint32_t li;
+        for (li = 1; li < ORB_NLIB; li++) {
+            char name[512], low[16];
+            uint32_t k;
+            for (k = 0; ORB_LIB[li].name[k] && k < 15u; k++) low[k] = (char)(ORB_LIB[li].name[k] + 32);
+            low[k] = 0;
+            snprintf(name, sizeof name, "%s/%02u_%s.wav", argv[2], li, low);
+            lib_phrase(li);
+            write_wav(name);
+        }
     } else if (argc >= 2 && !strcmp(argv[1], "bench")) {
         /* the worst case: every voice sounding with moon, sling, dust, pixel, TIDE and BEAM; the filter, delay, NEBULA
          * and HORIZON on */

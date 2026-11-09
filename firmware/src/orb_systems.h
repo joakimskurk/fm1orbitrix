@@ -6,34 +6,75 @@
 #define ORB_SYSTEMS_H
 #include "orb_engine.h"
 
+/* ---- the sound library: what SOUND picks by name (EDIT's first page). Each sound knows its number (.lib), so the app
+ * can say what a part plays and what kind it is (its icon; what IDEA writes for it). The systems are made of them */
+enum { LIB_NONE, LIB_BOOM, LIB_THUMP, LIB_TOM, LIB_PAT, LIB_CLAP, LIB_TICK, LIB_TSSS, LIB_ZAP, LIB_PURR, LIB_GROWL, LIB_SUB,
+       LIB_SWOOP, LIB_PLUCK, LIB_PAW, LIB_GLASS, LIB_BELL, LIB_STAR, LIB_TIDAL, LIB_PIXEL, LIB_LEAD, LIB_FLUTE, LIB_MEOW,
+       LIB_CLOUD, LIB_DRONE, LIB_COMET, ORB_NLIB };
+enum { LK_KICK, LK_SNARE, LK_HAT, LK_PERC, LK_BASS, LK_KEYS, LK_PAD, LK_LEAD, LK_VOICE, ORB_NLK };   /* the kinds */
+static const char *const ORB_LK_NAME[ORB_NLK] = {"KICK", "SNARE", "HAT", "PERC", "BASS", "MELODY", "PAD", "LEAD", "VOICE"};
+
 /* ---- the sound archetypes (times 0..99: 0 = 1 ms, 30 = 20 ms, 50 = 150 ms, 60 = 0.4 s, 70 = 1.1 s, 80 = 3 s) */
 static const orb_snd_t SND_KICK = {.ecc = 22, .sling = 30, .ang = 0, .spr = 0, .fall = 52, .fallt = 36, .a = 0, .d = 50,
     .s = 0, .r = 40, .eamt = 55, .ea = 0, .ed = 30, .vsens = 50, .level = 96, .pan = 50, .send = 0, .gate = 50, .oct = -1,
-    .flags = SF_PHASE};
+    .flags = SF_PHASE, .lib = LIB_BOOM};
 static const orb_snd_t SND_SNARE = {.ecc = 30, .sling = 20, .ang = 20, .spr = 30, .dust = 62, .color = 74, .fall = 22,
     .fallt = 28, .a = 0, .d = 42, .s = 0, .r = 42, .eamt = 30, .ea = 0, .ed = 25, .vsens = 60, .level = 82, .pan = 50,
-    .send = 28, .gate = 40, .oct = 1, .flags = SF_PHASE};
+    .send = 28, .gate = 40, .oct = 1, .flags = SF_PHASE, .lib = LIB_PAT};
 static const orb_snd_t SND_HAT = {.ecc = 10, .dust = 99, .color = 90, .a = 0, .d = 24, .s = 0, .r = 26, .vsens = 70,
-    .level = 58, .pan = 58, .spr = 60, .send = 10, .gate = 20, .oct = 2};
+    .level = 78, .pan = 58, .spr = 60, .send = 10, .gate = 20, .oct = 2, .lib = LIB_TICK};
 static const orb_snd_t SND_BASS = {.ecc = 52, .sling = 38, .ang = 10, .spr = 10, .prec = 0, .a = 2, .d = 52, .s = 55,
     .r = 30, .eamt = 30, .ea = 0, .ed = 46, .vsens = 40, .level = 84, .pan = 50, .send = 6, .gate = 55, .oct = 0,
-    .flags = SF_LEGATO, .tide = 30};
+    .flags = SF_LEGATO, .tide = 30, .lib = LIB_PURR};
 static const orb_snd_t SND_GLASS = {.ecc = 16, .moon = 38, .mratio = 2, .ang = 60, .spr = 70, .prec = 18, .a = 1, .d = 60,
-    .s = 15, .r = 60, .eamt = 25, .ea = 0, .ed = 50, .vsens = 50, .level = 64, .pan = 50, .send = 55, .gate = 50, .oct = 2, .tide = 50};
+    .s = 15, .r = 60, .eamt = 25, .ea = 0, .ed = 50, .vsens = 50, .level = 64, .pan = 50, .send = 55, .gate = 50, .oct = 2, .tide = 50, .lib = LIB_GLASS};
 static const orb_snd_t SND_PLUCK = {.ecc = 40, .sling = 22, .ang = 30, .spr = 45, .prec = 10, .a = 0, .d = 56, .s = 10,
-    .r = 52, .eamt = 40, .ea = 0, .ed = 44, .vsens = 50, .level = 72, .pan = 50, .send = 40, .gate = 50, .oct = 1, .tide = 50};
+    .r = 52, .eamt = 40, .ea = 0, .ed = 44, .vsens = 50, .level = 72, .pan = 50, .send = 40, .gate = 50, .oct = 1, .tide = 50, .lib = LIB_PLUCK};
 static const orb_snd_t SND_BELL = {.ecc = 18, .moon = 58, .mratio = 13, .ang = 45, .spr = 75, .prec = 14, .a = 0, .d = 66,
-    .s = 0, .r = 66, .eamt = 40, .ea = 0, .ed = 56, .vsens = 50, .level = 60, .pan = 50, .send = 62, .gate = 50, .oct = 2, .tide = 55};
+    .s = 0, .r = 66, .eamt = 40, .ea = 0, .ed = 56, .vsens = 50, .level = 60, .pan = 50, .send = 62, .gate = 50, .oct = 2, .tide = 55, .lib = LIB_BELL};
 static const orb_snd_t SND_PAD = {.ecc = 30, .sling = 10, .moon = 22, .mratio = 1, .ang = 50, .spr = 82, .prec = 30,
     .a = 60, .d = 70, .s = 70, .r = 74, .eamt = 22, .ea = 62, .ed = 72, .vsens = 30, .level = 66, .pan = 50, .send = 70,
-    .gate = 95, .oct = 1, .tide = 50};
+    .gate = 95, .oct = 1, .tide = 50, .lib = LIB_CLOUD};
 static const orb_snd_t SND_PIXEL = {.ecc = 58, .sling = 30, .pixel = 66, .ang = 20, .spr = 40, .a = 0, .d = 38, .s = 0,
-    .r = 32, .eamt = 20, .ea = 0, .ed = 30, .vsens = 50, .level = 60, .pan = 50, .send = 25, .gate = 40, .oct = 2, .tide = 40};
+    .r = 32, .eamt = 20, .ea = 0, .ed = 30, .vsens = 50, .level = 60, .pan = 50, .send = 25, .gate = 40, .oct = 2, .tide = 40, .lib = LIB_PIXEL};
 static const orb_snd_t SND_LEAD = {.ecc = 44, .sling = 26, .ang = 40, .spr = 50, .prec = 8, .a = 4, .d = 56, .s = 62,
-    .r = 50, .eamt = 24, .ea = 0, .ed = 50, .vsens = 50, .level = 74, .pan = 50, .send = 42, .gate = 80, .oct = 0, .tide = 45};
+    .r = 50, .eamt = 24, .ea = 0, .ed = 50, .vsens = 50, .level = 74, .pan = 50, .send = 42, .gate = 80, .oct = 0, .tide = 45, .lib = LIB_LEAD};
 static const orb_snd_t SND_FLUTE = {.ecc = 8, .sling = 0, .ang = 70, .spr = 40, .prec = 6, .dust = 14, .color = 30,
     .a = 22, .d = 60, .s = 80, .r = 52, .eamt = 12, .ea = 30, .ed = 60, .vsens = 40, .level = 70, .pan = 50, .send = 50,
-    .gate = 90, .oct = 0, .tide = 40};
+    .gate = 90, .oct = 0, .tide = 40, .lib = LIB_FLUTE};
+
+
+/* the library's own (the rest are the archetypes above, and the legend's below) */
+static const orb_snd_t SND_THUMP = {.ecc = 14, .sling = 20, .fall = 64, .fallt = 42, .a = 0, .d = 56, .s = 0, .r = 46,
+    .eamt = 40, .ed = 34, .vsens = 50, .level = 98, .pan = 50, .gate = 60, .oct = -1, .flags = SF_PHASE, .lib = LIB_THUMP};
+static const orb_snd_t SND_TOM = {.ecc = 26, .sling = 24, .ang = 10, .spr = 20, .fall = 34, .fallt = 38, .a = 0, .d = 48,
+    .s = 0, .r = 44, .eamt = 35, .ed = 30, .vsens = 55, .level = 84, .pan = 50, .send = 18, .gate = 50, .oct = 0,
+    .flags = SF_PHASE, .lib = LIB_TOM};
+static const orb_snd_t SND_CLAP = {.ecc = 20, .sling = 10, .ang = 30, .spr = 60, .dust = 84, .color = 62, .fall = 10,
+    .fallt = 20, .a = 0, .d = 38, .s = 0, .r = 40, .eamt = 10, .ed = 20, .vsens = 60, .level = 80, .pan = 50, .send = 36,
+    .gate = 30, .oct = 1, .flags = SF_PHASE, .lib = LIB_CLAP};
+static const orb_snd_t SND_TSSS = {.ecc = 8, .dust = 99, .color = 92, .a = 0, .d = 44, .s = 0, .r = 46, .vsens = 70,
+    .level = 88, .pan = 44, .spr = 70, .send = 16, .gate = 30, .oct = 2, .lib = LIB_TSSS};
+static const orb_snd_t SND_ZAP = {.ecc = 60, .sling = 40, .pixel = 80, .fall = 70, .fallt = 30, .a = 0, .d = 34, .s = 0,
+    .r = 30, .eamt = 30, .ed = 26, .vsens = 50, .level = 60, .pan = 56, .send = 22, .gate = 30, .oct = 2, .flags = SF_PHASE,
+    .lib = LIB_ZAP};
+static const orb_snd_t SND_GROWL = {.ecc = 56, .sling = 55, .ang = 12, .spr = 10, .a = 1, .d = 50, .s = 40, .r = 30,
+    .eamt = 40, .ed = 40, .vsens = 45, .level = 82, .pan = 50, .send = 6, .gate = 50, .oct = 0, .flags = SF_LEGATO,
+    .tide = 30, .lib = LIB_GROWL};
+static const orb_snd_t SND_SUB = {.ecc = 6, .a = 2, .d = 60, .s = 70, .r = 30, .eamt = 12, .ed = 40, .vsens = 30,
+    .level = 92, .pan = 50, .gate = 70, .oct = 0, .flags = SF_LEGATO, .lib = LIB_SUB};
+static const orb_snd_t SND_SWOOP = {.ecc = 52, .sling = 38, .ang = 10, .spr = 10, .a = 2, .d = 64, .s = 0, .r = 56,
+    .eamt = 50, .ed = 50, .vsens = 40, .level = 86, .pan = 50, .send = 10, .gate = 90, .oct = 0, .insp = 50, .inspt = 52,
+    .lib = LIB_SWOOP};
+static const orb_snd_t SND_PAW = {.ecc = 22, .sling = 6, .ang = 25, .spr = 40, .a = 0, .d = 52, .s = 0, .r = 50,
+    .eamt = 36, .ed = 36, .vsens = 55, .level = 78, .pan = 50, .send = 34, .gate = 50, .oct = 1, .tide = 20,
+    .lib = LIB_PAW};   /* (no SF_PHASE: a chord retriggering a ringing voice would click) */
+static const orb_snd_t SND_STAR = {.ecc = 12, .moon = 46, .mratio = 2, .ang = 50, .spr = 70, .prec = 10, .a = 0, .d = 62,
+    .s = 0, .r = 62, .eamt = 30, .ed = 50, .vsens = 50, .level = 62, .pan = 50, .send = 60, .gate = 50, .oct = 3, .tide = 30,
+    .lib = LIB_STAR};
+static const orb_snd_t SND_TIDAL = {.ecc = 20, .moon = 20, .mratio = 2, .ang = 55, .spr = 70, .prec = 12, .a = 1, .d = 62,
+    .s = 20, .r = 60, .eamt = 30, .ed = 50, .vsens = 50, .level = 66, .pan = 50, .send = 50, .gate = 60, .oct = 1,
+    .tide = 95, .lib = LIB_TIDAL};
 
 static uint8_t orb_ratio_idx(uint32_t p, uint32_t q)
 {
@@ -98,14 +139,37 @@ static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8
     s->mod[k].src = src; s->mod[k].dst = dst; s->mod[k].amt = amt;
 }
 
-#define ORB_NSYSTEM 13u
-static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"HARMONICES", "GALILEAN", "TRAPPIST", "KIRKWOOD",
+#define ORB_NSYSTEM 14u
+static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"KITTEN", "HARMONICES", "GALILEAN", "TRAPPIST", "KIRKWOOD",
     "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION", "GW150914", "ALPHA CEN", "SGR A*"};
+
+/* KITTEN: a beat to start from, on the grid (all 1:1, so every step is where you look for it): a kick on the beat, a
+ * clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates:
+ * it is yours to change (STEPS: the keys; IDEA; SOUND) */
+static void orb_system_kitten(orb_sys_t *s)
+{
+    static const int8_t md[] = {0, 0, 7, 0, 10, 12};
+    orb_rdef_t A = {1, 1, 16, 4, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x1};
+    orb_rdef_t B = {1, 1, 16, 2, 4, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x3};
+    orb_rdef_t C = {1, 1, 16, 8, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0xAA};
+    orb_rdef_t D = {1, 1, 16, 6, 0, 0, DIR_FWD, 0, 0, 0, md, 6, 0x1};
+    s->tuning = 0; s->sun = 5; s->bpm = 104; s->swing = 16;
+    s->snd[0] = SND_PAW; s->snd[0].oct = 0; s->snd[0].level = 74;
+    s->snd[1] = SND_KICK;
+    s->snd[2] = SND_CLAP;
+    s->snd[3] = SND_HAT;
+    s->snd[4] = SND_BASS; s->snd[4].oct = 0; s->snd[4].gate = 60; s->snd[4].level = 68;   /* (under the kick) */
+    orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
+    orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+    s->var = 20;
+    s->dtime = 6; s->dfb = 30; s->dmix = 22; s->rmix = 30; s->rsize = 55;
+}
 
 static void orb_system(uint32_t i, orb_sys_t *s)
 {
     orb_sys_clear(s, ORB_SYSTEM_NAME[i % ORB_NSYSTEM]);
-    switch (i % ORB_NSYSTEM) {
+    if (i % ORB_NSYSTEM == 0u) { orb_system_kitten(s); return; }
+    switch (i % ORB_NSYSTEM - 1u) {           /* (the sky's: HARMONICES 0 ..) */
     case 0: {   /* HARMONICES: 4, 5, 6, 7 hits a bar on the 4:5:6:7 chord, in the overtone scale (OTONAL) */
         static const int8_t mb[] = {0, 1, 0, -1, 2}, mc[] = {0, 0, 2, 0, -2, 1}, md[] = {0, 2, 0, 4, 0, -1, 1};
         orb_rdef_t A = {1, 1, 16, 4, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x1};
@@ -406,13 +470,47 @@ static void orb_system(uint32_t i, orb_sys_t *s)
  * chirp of a planet eaten on A, the orrery's three rings on B C D (HARMONICES's), and then the keys become her meow */
 static const orb_snd_t SND_DRONE = {.ecc = 22, .moon = 30, .mratio = 1, .ang = 40, .spr = 85, .prec = 45, .dust = 12,
     .color = 20, .a = 72, .d = 80, .s = 85, .r = 74, .eamt = 15, .ea = 70, .ed = 80, .vsens = 20, .level = 74, .pan = 50,
-    .send = 72, .gate = 99, .oct = 0, .tide = 30};
+    .send = 72, .gate = 99, .oct = 0, .tide = 30, .lib = LIB_DRONE};
 static const orb_snd_t SND_CHIRP = {.ecc = 50, .sling = 40, .ang = 10, .spr = 30, .insp = 80, .inspt = 64, .a = 2,
     .d = 72, .s = 0, .r = 64, .eamt = 70, .ea = 0, .ed = 56, .vsens = 30, .level = 96, .pan = 50, .send = 45, .gate = 99,
-    .oct = 0};
+    .oct = 0, .lib = LIB_COMET};
 static const orb_snd_t SND_MEOW = {.ecc = 14, .sling = 25, .ang = 35, .spr = 45, .moon = 30, .mratio = 1, .dust = 10,
     .color = 40, .a = 26, .d = 62, .s = 55, .r = 56, .eamt = 75, .ea = 44, .ed = 58, .vsens = 0, .level = 92, .pan = 50,
-    .send = 78, .gate = 90, .oct = 0};
+    .send = 78, .gate = 90, .oct = 0, .lib = LIB_MEOW};
+
+
+/* the library, in SOUND's order (by kind: drums, bass, keys, leads, pads). oct: its register, as a ring plays it (the
+ * ring's root at C2, 12 x oct above); on the keys' part two octaves less, so the keyboard plays it where a ring does */
+typedef struct { const char *name; uint8_t kind; const orb_snd_t *snd; int8_t oct; } orb_lib_t;
+static const orb_lib_t ORB_LIB[ORB_NLIB] = {
+    [LIB_NONE] = {"-", LK_KEYS, 0, 0},
+    [LIB_BOOM] = {"BOOM", LK_KICK, &SND_KICK, -1}, [LIB_THUMP] = {"THUMP", LK_KICK, &SND_THUMP, -1},
+    [LIB_TOM] = {"TOM", LK_PERC, &SND_TOM, 0}, [LIB_PAT] = {"PAT", LK_SNARE, &SND_SNARE, 1},
+    [LIB_CLAP] = {"CLAP", LK_SNARE, &SND_CLAP, 1}, [LIB_TICK] = {"TICK", LK_HAT, &SND_HAT, 2},
+    [LIB_TSSS] = {"TSSS", LK_HAT, &SND_TSSS, 2}, [LIB_ZAP] = {"ZAP", LK_PERC, &SND_ZAP, 2},
+    [LIB_PURR] = {"PURR", LK_BASS, &SND_BASS, 0}, [LIB_GROWL] = {"GROWL", LK_BASS, &SND_GROWL, 0},
+    [LIB_SUB] = {"SUB", LK_BASS, &SND_SUB, 0}, [LIB_SWOOP] = {"SWOOP", LK_BASS, &SND_SWOOP, 0},
+    [LIB_PLUCK] = {"PLUCK", LK_KEYS, &SND_PLUCK, 1}, [LIB_PAW] = {"PAW", LK_KEYS, &SND_PAW, 1},
+    [LIB_GLASS] = {"GLASS", LK_KEYS, &SND_GLASS, 2}, [LIB_BELL] = {"BELL", LK_KEYS, &SND_BELL, 2},
+    [LIB_STAR] = {"STAR", LK_KEYS, &SND_STAR, 3}, [LIB_TIDAL] = {"TIDAL", LK_KEYS, &SND_TIDAL, 1},
+    [LIB_PIXEL] = {"PIXEL", LK_LEAD, &SND_PIXEL, 2}, [LIB_LEAD] = {"LEAD", LK_LEAD, &SND_LEAD, 2},
+    [LIB_FLUTE] = {"FLUTE", LK_LEAD, &SND_FLUTE, 2}, [LIB_MEOW] = {"MEOW", LK_VOICE, &SND_MEOW, 2},
+    [LIB_CLOUD] = {"CLOUD", LK_PAD, &SND_PAD, 1}, [LIB_DRONE] = {"DRONE", LK_PAD, &SND_DRONE, 1},
+    [LIB_COMET] = {"COMET", LK_PAD, &SND_CHIRP, 1}};
+/* library sound li into s, for part (ORB_KEYS or a ring): at its own level (the library is balanced), the part's PAN kept */
+static void orb_lib_load(orb_snd_t *s, uint32_t li, uint32_t part)
+{
+    uint8_t pan = s->pan;
+    int32_t oct;
+    if (!li || li >= ORB_NLIB) return;
+    *s = *ORB_LIB[li].snd;
+    oct = ORB_LIB[li].oct - (part == ORB_KEYS ? 2 : 0);
+    s->oct = (int8_t)(oct < -3 ? -3 : oct > 3 ? 3 : oct);
+    s->pan = pan;
+    s->lib = (uint8_t)li;
+}
+static uint32_t orb_lib_kind(const orb_snd_t *s) { return ORB_LIB[s->lib < ORB_NLIB ? s->lib : 0].kind; }
+static const char *orb_lib_name(const orb_snd_t *s) { return s->lib && s->lib < ORB_NLIB ? ORB_LIB[s->lib].name : "OWN"; }
 
 static void orb_intro_system(orb_sys_t *s)
 {

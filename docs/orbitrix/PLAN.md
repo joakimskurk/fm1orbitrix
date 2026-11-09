@@ -109,18 +109,21 @@ pixel stars. Top bar: the page, the system, the tempo and the sun. The bottom: K
 
 | Button | Page(s) | K1–K4 (SEL held: the second row) |
 | --- | --- | --- |
-| HOME | ORRERY → MACROS | hits A–D (rotation A–D) · CHAOS SPECTRAL GRAVITY ORBIT (FRACT on ALGORITHM) |
-| SEQ | RING → TIME | RATIO LEN HITS ROT (DEG DIR PROB LOGIC) · BPM SWING MUTATE HUM (VAR, GATE …) |
-| EDIT | ORBIT → BODY → COSMOS | ECC SLING ANG SPR (PREC MOON RATIO DUST) · FALL FALL-T COLOR PIXEL (LEVEL PAN SEND OCT) · TIDE INSPIRAL INSP-T BEAM |
+| HOME | ORRERY → MACROS | hits A–D (levels A–D) · CHAOS SPECTRAL GRAVITY ORBIT (FRACT TIDE HORIZON MUTATE) |
+| SEQ | STEPS → TIME | SPEED LEN HITS ROT (NOTE DIR PROB LOGIC) · BPM SWING MUTATE HUM (VAR, GATE …) |
+| EDIT | SOUND → ORBIT → BODY → COSMOS | SOUND TONE DECAY LEVEL (OCT PAN SPACE WOBBLE) · ECC SLING ANG SPR (PREC MOON RATIO DUST) · FALL FALL-T COLOR PIXEL (LEVEL PAN SEND OCT) · TIDE INSPIRAL INSP-T BEAM |
 | ENV | ENV | A D S R (ECC AMT, ECC A, ECC D, VEL) |
 | LFO | MOD → LFO | SRC DST AMT (SELECT: the slot) · RATE SHAPE for LFO 1 and 2 |
 | FX | FILTER MAP → SPACE → HORIZON | CUT RES MODE DRIVE · TIME FDBK SIZE MIX (TONE DECAY DAMP ECHO) · DEPTH SHIFT RETRO GRAIN |
 | GLO | ORBIT PAD | X Y RAD RATE |
 | ARP | KEYS | MODE TUNING SUN OCT |
 
-SELECT turns the focus (KEYS, A, B, C, D) on every page; PRESETS the system; ALGORITHM is the page's extra; PLAY starts
-the orrery; REC writes the keys into the focused ring; SAVE stores the system (8 places of your own). On RING, the
-white keys are the steps (OCT± the page of 16); a held step key and K1 set its degree.
+SELECT turns the focus (K for the keys, A, B, C, D) on every page: what the pages edit, and what the keys play (a
+track's sound where its ring plays it). PRESETS the system; ALGORITHM is the page's extra; PLAY starts the orrery; REC
+writes the keys into the focused track; SAVE stores the system (8 places of your own). On STEPS, the white keys are the
+steps (OCT± the page of 16; a held step key and K1 set its note) and the black ones: tracks A–D, IDEA, mutes A–D,
+CLEAR, UNDO (D15). HOME is Astralica as the sun, her orbits round her. Each button's pages show on the hint line as it
+is pressed.
 
 ## 8. Budget and rules
 

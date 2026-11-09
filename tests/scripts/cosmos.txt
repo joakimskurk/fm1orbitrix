@@ -1,5 +1,5 @@
 # ORBITRIX: GW150914 playing, the MACROS, COSMOS and HORIZON pages (tests/run_host.sh tests/scripts/cosmos.txt)
-1700 enc 6 10
+1700 enc 6 11
 2400 btn 12
 2600 keys 0x4890
 3000 btn 8
@@ -8,6 +8,7 @@
 3800 btn 6
 3900 btn 6
 4000 btn 6
+4050 btn 6
 4100 enc 0 -1
 4800 shot
 5000 btn 2

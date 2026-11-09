@@ -178,3 +178,52 @@ since D12's skip: it is 0.3 s later now, and edits the RING page again.)
 
 What still comes back at a lap by design: a modulation from STEP (a ramp over ring A's lap, TRAPPIST's ANG) and a
 synced SAW LFO (GW150914's HORIZON) fall back to their start there.
+
+## D15 — Music in a minute: STEPS, SOUND, IDEA, and Astralica at home (2026-11-09)
+
+The user: "we're onto something, but I wish I could make music with this. It is hard to navigate, and I wish for
+something cute, since the cat is very cute. A deep round for musicality; change the interface if we must; take from
+the drawings. The firmwares that score best are the ones you can quickly make something nice with, as the best
+grooveboxes." What stood in the way: fifteen pages under physics names; the focus on a turned knob; no way to pick a
+sound but to build it from ECC and SLING; steps sixteen at a time with nothing for the black keys; nothing to undo; a
+first system of quintuplets against septuplets.
+
+Decided, the engine and its strangeness kept whole, a friendly way in on top:
+
+- **KITTEN**, system 0 (first at power-on, and after the legend): a beat to start from, on the grid: a kick, a clap's
+  backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4, the keys a soft paw; nothing mutates. The
+  other thirteen follow (system numbers +1; the settings got a version byte, so an older layout is not misread).
+- **The library**: 25 sounds by name (BOOM THUMP TOM PAT CLAP TICK TSSS ZAP · PURR GROWL SUB SWOOP · PLUCK PAW GLASS
+  BELL STAR TIDAL · PIXEL LEAD FLUTE MEOW · CLOUD DRONE COMET), in nine kinds, each with an icon. Rendered one by one
+  (`orb_render lib`, `build/audio/lib/`) and balanced: peaks −5 to −19 dBFS, drums by nature lower in RMS; the hats were
+  buried (−25 and −34) and went up, also in the systems that use them. Each has a register (the octave as a ring plays
+  it); a sound keeps its own level when picked, the track keeps its pan. A sound knows its number (`orb_snd_t.lib`, a
+  spare byte), so the screens can name it and IDEA knows what it is.
+- **SOUND**, EDIT's first page (then ORBIT, BODY, COSMOS: from the friendly to the deep): K1 the sound by name (heard at
+  once when stopped), TONE (ECC), DECAY, LEVEL; SEL: OCT, PAN, SPACE, WOBBLE (the moon).
+- **The keys play the focus** (the chip, now on every page): K is the keys' own sound, A–D that track's, played on the
+  keys' four voices (a note-on with a part: the sequence goes on, untouched, on the rings' own) and two octaves down,
+  where its ring plays it. REC writes the note heard (from the pitch played, not the key, so HARMONIC keys and MIDI
+  record right too); REC with the keys in focus records into A.
+- **STEPS** (was RING): the white keys the steps, as before; the black ones each with a job, drawn over its key on the
+  screen: the lower F# G# A# C# pick track A–D, D# an **IDEA**, the upper four mute A–D (lit while it plays, out a
+  moment at each hit), D# **CLEAR**, the top F# **UNDO**. The hits are paws.
+- **IDEA**: a pattern as the track's kind of sound wants it, its LEN and SPEED kept: a kick on the beat (4, 3 or 5 a
+  bar), a snare's backbeat (and now and then a ghost before it), hats in 8ths, offbeats or 16ths, accents between, a
+  bass mostly on the root (its octave, now and then another tone), a melody walking the chord's tones (the tuning's
+  consonant degrees: the major pentatonic in JUST and ET, harmonics 8 10 12 14 in OTONAL ...), a pad's few long notes.
+- **UNDO**, a level per ring, a gesture at a time (changes under 1.5 s apart: a run of knob detents is one), for IDEA,
+  CLEAR, LEN HITS ROT on any page, taps, a step's note, REC. UNDO again is REDO.
+- **HOME**: Astralica is the sun. She bobs on each beat, blinks, her eyes light where the orbits meet, and stopped she
+  naps (zz). The lanes name each track's sound, its speed and level; a muted track naps too. K1–K4 the hits of A–D, SEL
+  their levels (a mixer; the rotations are on STEPS). Her head sits by the sun's note in the top bar.
+- **Where am I**: a button's pages show on the hint line as it is pressed, this one lit; a message shows at once.
+
+Engine changes, small: the note-on with a part; the library tag; a chirp grows from a third only when it starts from
+silence (a ringing voice kept its level). PAW lost SF_PHASE (a chord retriggering a ringing voice clicked). Measured:
+the systems unchanged but for the hats' level (HARMONICES bit for bit); the bench unchanged. The click detector's
+findings are as before (a ring's re-attacks, chord changes on the keys); KITTEN's two are a −64 dBFS kink as a key
+voice's decay reaches its floor; SWOOP retriggered every 8th note swoops each time (its nature; it is for slow lines).
+Tests: `test_library` (every sound loads with its register; the keys play a track on their own voices, the ring's left
+alone); `tests/scripts/groove.txt` (KITTEN made into a groove); `tests/scripts/readme.txt` and `tools/readme_screens.sh`
+(the README's screens).

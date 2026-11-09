@@ -4,17 +4,18 @@
  * four rings circle a sun at small ratios, and the same ratios, heard as pitch, are pure intervals above it. The voice
  * is a planet on an ellipse; you hear where it is (docs/orbitrix/PLAN.md). Built on Dinghy 0.5 (docs/DINGHY.md).
  *
- *   HOME      ORRERY -> MACROS        SEQ   RING -> TIME          EDIT  ORBIT -> BODY       ENV  ENV
- *   LFO       MOD -> LFO              FX    FILTER MAP -> SPACE   GLO   ORBIT PAD           ARP  KEYS
+ *   HOME      ORRERY (Astralica, the sun) -> MACROS     SEQ   STEPS -> TIME      EDIT  SOUND -> ORBIT -> BODY -> COSMOS
+ *   ENV       ENV      LFO  MOD -> LFO     FX  FILTER MAP -> SPACE -> HORIZON     GLO  ORBIT PAD     ARP  KEYS
  *   K1..K4    the four values in the row; SEL held: the second row. ALGORITHM: the page's extra (the hint line)
- *   SELECT    the focus: KEYS, A, B, C, D (the sound and the ring the pages edit)
- *   PRESETS   the system (10 built in, U1..U8 your own); SAVE: SAVE again to store it in the place PRESETS picks
- *   PLAY      the orrery; REC: the keys write into the focused ring (playing: at its step)
- *   keys      play (SOLAR: each key retuned to the sun; HARMONIC: white keys harmonics 1..16, black 17..27);
- *             SEL + a key: the sun moves there. On RING the white keys are the ring's steps (OCT +-: the page of 16):
- *             a tap toggles rest -> hit -> accent, a held step and K1 set its degree
- *   SEL + SEQ the focused ring muted / not.  OCT- OCT+: the keys' octave
- *   MIDI      notes play the keys, CC 1 is MODW, channel pressure AFT; clock and START / STOP drive the orrery */
+ *   SELECT    the focus: KEYS, A, B, C, D: what the pages edit, and what the keys play (A..D: that track's sound)
+ *   PRESETS   the system (KITTEN and the sky's 13, U1..U8 your own); SAVE: SAVE again to store it where PRESETS picks
+ *   PLAY      the orrery; REC: the keys write into the focused track (playing: at its step)
+ *   keys      play the focus (SOLAR: each key retuned to the sun; HARMONIC: white keys harmonics 1..16, black 17..27);
+ *             SEL + a key: the sun moves there. On STEPS the white keys are the track's steps (OCT +-: the page of 16):
+ *             a tap toggles rest -> hit -> accent, a held step and K1 set its note; the black keys: tracks A..D, IDEA,
+ *             mute A..D, CLEAR, UNDO
+ *   SEL + SEQ the focused track muted / not.  OCT- OCT+: the keys' octave
+ *   MIDI      notes play the focus (and REC writes them), CC 1 is MODW, channel pressure AFT; clock and START / STOP drive the orrery */
 static void app_idle(void);
 #define LCD_IDLE app_idle
 #ifndef APP_NAME
@@ -190,19 +191,37 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-static struct { uint8_t oct, ch, sysi, intro_off; } set = {0, 0, 0, 0};   /* intro_off: 1 = no story at power-on */
+#define SET_VER 2u                              /* (2: KITTEN first, the library) */
+static struct { uint8_t oct, ch, sysi, intro_off, ver; } set = {0, 0, 0, 0, SET_VER};   /* intro_off: 1 = no story at power-on */
 static uint32_t set_dirty, set_t;
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
 
+/* ---- UNDO: each ring's pattern as it was before the last gesture on it (an IDEA, a CLEAR, LEN HITS ROT, steps): one
+ * level, and UNDO again is REDO. A gesture: changes to that ring with under 1.5 s between them */
+static struct { uint8_t on[ORB_NSTEP]; int8_t dg[ORB_NSTEP]; uint8_t len, hits, rot, ok; } undo[ORB_NRING];
+static uint32_t undo_t[ORB_NRING], undo_redo[ORB_NRING];
+static void undo_take(uint32_t r, int fresh)
+{
+    const orb_ring_t *g = &sys.ring[r];
+    uint32_t i;
+    if (fresh || !undo[r].ok || fm1_ms - undo_t[r] > 1500u) {
+        for (i = 0; i < ORB_NSTEP; i++) { undo[r].on[i] = g->on[i]; undo[r].dg[i] = g->dg[i]; }
+        undo[r].len = g->len; undo[r].hits = g->hits; undo[r].rot = g->rot; undo[r].ok = 1;
+        undo_redo[r] = 0;
+    }
+    undo_t[r] = fm1_ms;
+}
+static void undo_forget(void) { uint32_t r; for (r = 0; r < ORB_NRING; r++) undo[r].ok = 0; }
+
 /* ---- the pages and their values */
-enum { PG_ORRERY, PG_MACRO, PG_RING, PG_TIME, PG_ORBIT, PG_BODY, PG_COSMOS, PG_ENV, PG_MOD, PG_LFO, PG_FILTER, PG_SPACE,
-       PG_HORIZON, PG_PAD, PG_KEYS, NPAGE };
-static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "RING", "TIME", "ORBIT", "BODY", "COSMOS", "ENV", "MOD",
+enum { PG_ORRERY, PG_MACRO, PG_RING, PG_TIME, PG_SOUND, PG_ORBIT, PG_BODY, PG_COSMOS, PG_ENV, PG_MOD, PG_LFO, PG_FILTER,
+       PG_SPACE, PG_HORIZON, PG_PAD, PG_KEYS, NPAGE };
+static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME", "SOUND", "ORBIT", "BODY", "COSMOS", "ENV", "MOD",
                                              "LFO", "FILTER MAP", "SPACE", "HORIZON", "ORBIT PAD", "KEYS"};
-enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_NONE };
+enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_INTRO };
+       F_INSP, F_GRAIN, F_SEMI, F_INTRO, F_LIB };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -218,20 +237,24 @@ typedef struct {
 static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
     [PG_ORRERY] = {{"HITS A", W_RA, F_NUM, RO(hits), 0, 64}, {"HITS B", W_RB, F_NUM, RO(hits), 0, 64},
                    {"HITS C", W_RC, F_NUM, RO(hits), 0, 64}, {"HITS D", W_RD, F_NUM, RO(hits), 0, 64},
-                   {"ROT A", W_RA, F_NUM, RO(rot), 0, 63}, {"ROT B", W_RB, F_NUM, RO(rot), 0, 63},
-                   {"ROT C", W_RC, F_NUM, RO(rot), 0, 63}, {"ROT D", W_RD, F_NUM, RO(rot), 0, 63}, P_BPM},
+                   {"LEVEL A", W_SA, F_NUM, NO(level), 0, 99}, {"LEVEL B", W_SB, F_NUM, NO(level), 0, 99},
+                   {"LEVEL C", W_SC, F_NUM, NO(level), 0, 99}, {"LEVEL D", W_SD, F_NUM, NO(level), 0, 99}, P_BPM},
     [PG_MACRO] = {{"CHAOS", W_SYS, F_PCT, SO(macro[MAC_CHAOS]), 0, 99}, {"SPECTR", W_SYS, F_PCT, SO(macro[MAC_SPECTRAL]), 0, 99},
                   {"GRAVITY", W_SYS, F_PCT, SO(macro[MAC_GRAVITY]), 0, 99}, {"ORBIT", W_SYS, F_PCT, SO(macro[MAC_ORBIT]), 0, 99},
                   {"FRACT", W_SYS, F_PCT, SO(macro[MAC_FRACT]), 0, 99}, {"TIDE", W_SYS, F_PCT, SO(macro[MAC_TIDE]), 0, 99},
                   {"HORIZON", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"MUTATE", W_SYS, F_PCT, SO(mutate), 0, 99}, P_BPM},
-    [PG_RING] = {{"RATIO", W_RING, F_RATIO, RO(ratio), 0, ORB_NRATIO - 1}, {"LEN", W_RING, F_NUM, RO(len), 1, 64},
+    [PG_RING] = {{"SPEED", W_RING, F_RATIO, RO(ratio), 0, ORB_NRATIO - 1}, {"LEN", W_RING, F_NUM, RO(len), 1, 64},
                  {"HITS", W_RING, F_NUM, RO(hits), 0, 64}, {"ROT", W_RING, F_NUM, RO(rot), 0, 63},
-                 {"DEG", W_RING, F_DEG, RO(deg), -14, 21}, {"DIR", W_RING, F_DIR, RO(dir), 0, ORB_NDIR - 1},
+                 {"NOTE", W_RING, F_DEG, RO(deg), -14, 21}, {"DIR", W_RING, F_DIR, RO(dir), 0, ORB_NDIR - 1},
                  {"PROB", W_RING, F_PCT, RO(prob), 0, 99}, {"LOGIC", W_RING, F_LOGIC, RO(logic), 0, 13}, P_BPM},
     [PG_TIME] = {P_BPM, {"SWING", W_SYS, F_PCT, SO(swing), 0, 99}, {"MUTATE", W_SYS, F_PCT, SO(mutate), 0, 99},
                  {"HUM", W_SYS, F_PCT, SO(hum), 0, 99}, {"VAR", W_SYS, F_PCT, SO(var), 0, 99},
                  {"GATE", W_SND, F_PCT, NO(gate), 1, 99}, {"MUTE", W_RING, F_ONOFF, RO(mute), 0, 1},
                  {"TRIG", W_SND, F_TRIG, NO(flags), 0, 3}, P_BPM},
+    [PG_SOUND] = {{"SOUND", W_SND, F_LIB, NO(lib), 1, ORB_NLIB - 1}, {"TONE", W_SND, F_NUM, NO(ecc), 0, 99},
+                  {"DECAY", W_SND, F_TIME, NO(d), 0, 99}, {"LEVEL", W_SND, F_NUM, NO(level), 0, 99},
+                  {"OCT", W_SND, F_OCT, NO(oct), -3, 3}, {"PAN", W_SND, F_PAN, NO(pan), 0, 99},
+                  {"SPACE", W_SND, F_NUM, NO(send), 0, 99}, {"WOBBLE", W_SND, F_NUM, NO(moon), 0, 99}, P_BPM},
     [PG_ORBIT] = {{"ECC", W_SND, F_NUM, NO(ecc), 0, 99}, {"SLING", W_SND, F_NUM, NO(sling), 0, 99},
                   {"ANG", W_SND, F_NUM, NO(ang), 0, 99}, {"SPR", W_SND, F_NUM, NO(spr), 0, 99},
                   {"PREC", W_SND, F_NUM, NO(prec), 0, 99}, {"MOON", W_SND, F_NUM, NO(moon), 0, 99},
@@ -277,7 +300,7 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                  {"GRAVITY", W_SYS, F_PCT, SO(macro[MAC_GRAVITY]), 0, 99}, {"MIDI CH", W_SET, F_CH, 1, 0, 16},
                  {"INTRO", W_SET, F_INTRO, 3, 0, 1}, P_NONE, P_BPM},
 };
-static uint32_t page = PG_ORRERY, focus = ORB_A, slot;   /* focus: 0 KEYS, 1..4 A..D */
+static uint32_t page = PG_ORRERY, focus = ORB_KEYS, slot;   /* focus: 0 KEYS, 1..4 A..D: what the pages edit and the keys play */
 static uint32_t ring_focus(void) { return focus ? focus - 1u : 0u; }
 static uint8_t *pd_ptr(const pd_t *d)
 {
@@ -288,6 +311,7 @@ static uint8_t *pd_ptr(const pd_t *d)
     case W_RA: case W_RB: case W_RC: case W_RD: return (uint8_t *)&sys.ring[d->where - W_RA] + d->off;
     case W_MOD: return (uint8_t *)&sys.mod[slot % ORB_NMOD] + d->off;
     case W_SET: return (uint8_t *)&set + d->off;
+    case W_SA: case W_SB: case W_SC: case W_SD: return (uint8_t *)&sys.snd[ORB_A + d->where - W_SA] + d->off;
     default: return 0;
     }
 }
@@ -304,6 +328,18 @@ static int32_t pd_get(const pd_t *d)
     if (d->fmt == F_TRIG) return *p & 3u;
     return pd_signed(d) ? (int32_t)(int8_t)*p : (int32_t)*p;
 }
+/* SOUND: a sound from the library into the focus; stopped, you hear it at once (playing: at its next hit) */
+static uint32_t preview_t;
+static void lib_pick(uint32_t li)
+{
+    orb_lib_load(&sys.snd[focus], li, focus);
+    if (eng.playing) return;
+    if (focus) orb_part_on(&eng, (uint8_t)focus, (36 + (int32_t)(sys.sun % 12u)) * 256, 100, 30);
+    else {
+        orb_note_on(&eng, 99, orb_key_pitch(&sys, sys.keymode == KM_HARMONIC ? 7u : 60u + sys.sun % 12u, 0, 0), 100);
+        preview_t = fm1_ms + 350u;
+    }
+}
 static void pd_set(const pd_t *d, int32_t v)
 {
     uint8_t *p = pd_ptr(d);
@@ -318,6 +354,9 @@ static void pd_set(const pd_t *d, int32_t v)
         return;
     }
     if (d->fmt == F_TRIG) { *p = (uint8_t)((*p & ~3u) | (uint32_t)v); return; }
+    if (d->fmt == F_LIB) { lib_pick((uint32_t)v); return; }
+    if (d->where >= W_RING && d->where <= W_RD && (d->off == RO(len) || d->off == RO(hits) || d->off == RO(rot)))
+        undo_take((uint32_t)((orb_ring_t *)(p - d->off) - sys.ring), 0);
     *p = (uint8_t)v;
     if (d->where == W_SET) set_touch();
     if (d->where >= W_RING && d->where <= W_RD && (d->off == RO(len) || d->off == RO(hits) || d->off == RO(rot))) {
@@ -374,6 +413,7 @@ static void pd_text(const pd_t *d, char *s)
     case F_SEMI: put_s(put_i(s, v, 1), "st"); break;
     case F_GRAIN: put_s(put_u(s, (256u + (uint32_t)v * 39u) * 10u / 441u), "ms"); break;
     case F_INTRO: put_s(s, v ? "OFF" : "ON"); break;
+    case F_LIB: put_s(s, v > 0 && v < (int32_t)ORB_NLIB ? ORB_LIB[v].name : "OWN"); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
 }
@@ -381,14 +421,15 @@ static uint32_t pd_fill(const pd_t *d)          /* 0..1024: how full its gauge i
 {
     int32_t v = pd_get(d), span = d->hi - d->lo;
     if (d->fmt == F_LRATE0 || d->fmt == F_LRATE1) span = 99;
-    return span > 0 ? (uint32_t)((v - d->lo) * 1024 / span) : 0u;
+    return span > 0 && v > d->lo ? (uint32_t)((v - d->lo) * 1024 / span) : 0u;
 }
 
 /* ---- the systems: 10 built in, U1..U8 in the blobs */
 #define NSYS (ORB_NSYSTEM + NBLOB)
 static uint32_t sysi, sys_pending = 0xFFu, sys_pend_t, msg_t;
 static char msg[32];
-static void say(const char *s) { put_s(msg, s); msg_t = fm1_ms + 1400u; }
+static uint32_t msg_seq;                        /* (a new message: the hint line at once) */
+static void say(const char *s) { put_s(msg, s); msg_t = fm1_ms + 1400u; msg_seq++; }
 static int user_load(uint32_t u, orb_sys_t *dst) { return blob_load(u, dst, sizeof *dst); }
 static void system_load(uint32_t i)
 {
@@ -400,6 +441,7 @@ static void system_load(uint32_t i)
     orb_all_off(&eng);
     sys = tmp;
     orb_pattern_edited(&eng, ORB_NRING);
+    undo_forget();
     sysi = i;
     set.sysi = (uint8_t)i;
     set_touch();
@@ -409,6 +451,46 @@ static void sys_label(uint32_t i, char *s)
     if (i < ORB_NSYSTEM) { put_s(s, ORB_SYSTEM_NAME[i]); return; }
     s[0] = 'U'; s[1] = (char)('1' + i - ORB_NSYSTEM); s[2] = 0;
 }
+
+
+/* ---- little pictures: each kind of sound (9 x 9, the bit 8 at the left), the keys' functions on STEPS (7 x 7), a paw */
+static const uint16_t KIND_ICON[ORB_NLK][9] = {
+    {0x038, 0x0C6, 0x082, 0x111, 0x139, 0x111, 0x082, 0x0C6, 0x038},   /* KICK: a drum's skin */
+    {0x101, 0x082, 0x044, 0x0FE, 0x101, 0x1FF, 0x155, 0x155, 0x1FF},   /* SNARE: a drum and its sticks */
+    {0x010, 0x07C, 0x1FF, 0x010, 0x07C, 0x1FF, 0x010, 0x028, 0x044},   /* HAT: two cymbals on a stand */
+    {0x00E, 0x01C, 0x038, 0x07E, 0x01C, 0x038, 0x060, 0x0C0, 0x180},   /* PERC: a spark */
+    {0x000, 0x0C0, 0x120, 0x110, 0x011, 0x009, 0x006, 0x000, 0x000},   /* BASS: a wave */
+    {0x010, 0x038, 0x07C, 0x07C, 0x07C, 0x0FE, 0x1FF, 0x000, 0x010},   /* KEYS: a bell */
+    {0x000, 0x036, 0x07F, 0x0FE, 0x1FF, 0x1FF, 0x0FE, 0x000, 0x000},   /* PAD: a cloud */
+    {0x010, 0x010, 0x038, 0x1FF, 0x0FE, 0x07C, 0x0EE, 0x0C6, 0x101},   /* LEAD: a star */
+    {0x101, 0x183, 0x1FF, 0x1BB, 0x1FF, 0x1EF, 0x0FE, 0x07C, 0x000}};  /* VOICE: her head */
+static const uint8_t ICON_DICE[7] = {0x7F, 0x41, 0x51, 0x49, 0x45, 0x41, 0x7F};
+static const uint8_t ICON_SPEAKER[7] = {0x08, 0x1A, 0x79, 0x79, 0x79, 0x1A, 0x08};
+static const uint8_t ICON_CROSS[7] = {0x41, 0x22, 0x14, 0x08, 0x14, 0x22, 0x41};
+static const uint8_t ICON_UNDO[7] = {0x10, 0x30, 0x7E, 0x31, 0x11, 0x01, 0x1E};
+static const uint8_t ICON_PAW[5] = {0x15, 0x00, 0x0E, 0x1F, 0x0E};
+static void icon9(const uint16_t *b, int32_t x, int32_t y, int32_t sc, uint16_t c)
+{
+    int32_t i, j;
+    for (j = 0; j < 9; j++)
+        for (i = 0; i < 9; i++)
+            if (b[j] >> (8 - i) & 1u) cv_rect(x + i * sc, y + j * sc, sc, sc, c);
+}
+static void icon_w(const uint8_t *b, int32_t n, int32_t x, int32_t y, uint16_t c)   /* n x n, bit n-1 at the left */
+{
+    int32_t i, j;
+    for (j = 0; j < n; j++)
+        for (i = 0; i < n; i++)
+            if (b[j] >> (n - 1 - i) & 1u) cv_pset(x + i, y + j, c);
+}
+static uint32_t part_kind(uint32_t part) { return orb_lib_kind(&sys.snd[part % ORB_NPART]); }
+static void cat_draw_q8(int32_t ax, int32_t ay, uint32_t s, uint32_t acx, uint32_t acy, int blink, uint32_t look);
+static int32_t part_level(uint32_t p);
+static uint8_t tour[4], tour_n;                 /* the pages of the button pressed last (the hint line, a moment) */
+static uint32_t tour_t;
+/* STEPS: the black keys (F# G# A# C# below: the track; D#: an IDEA; F# G# A# C# above: mute; D#: CLEAR; F#: UNDO) */
+static const uint8_t BLACK_KEY[11] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
+enum { BK_A, BK_B, BK_C, BK_D, BK_IDEA, BK_MA, BK_MB, BK_MC, BK_MD, BK_CLEAR, BK_UNDO };
 
 /* ---- drawing */
 static uint32_t drawn_bar = 0xFFFFFFFFu, knobs_dirty = 1, main_dirty = 1, hint_dirty = 1, t_main;
@@ -423,7 +505,7 @@ static void draw_bar(void)                      /* the top line: the page, the f
     x = text_w(&FONT_S, PAGE_NAME[page]) + 12;
     pill(2, 2, x, 18, C_LIME);
     tx(8, 3, &FONT_S, PAGE_NAME[page], C_INK, C_LIME);
-    if (page != PG_ORRERY && page != PG_MACRO && page < PG_FILTER) {   /* the focus chip */
+    {   /* the focus: what the pages edit and the keys play */
         pill(x + 6, 2, 18, 18, RINGC[focus]);
         txc(x + 15, 3, &FONT_S, focus ? ORB_PART_NAME[focus] : "K", C_INK, RINGC[focus]);
         x += 24;
@@ -433,8 +515,13 @@ static void draw_bar(void)                      /* the top line: the page, the f
         sys_label(ORB_NSYSTEM + save_to, p);
         tx(x + 8, 3, &FONT_S, s, C_MAG, C_BG);
     } else {
+        int32_t rw;                             /* (the right side: the sun's note, the tempo, her head, PLAY) */
+        char t[12], *q = put_s(t, NOTE_NAME[sys.sun % 12u]);
+        *q++ = ' ';
+        put_u(q, sys.bpm);
+        rw = text_w(&FONT_S, t) + (eng.playing ? 14 : 4) + 17;
         sys_label(sysi, s);
-        if (text_w(&FONT_S, s) < 240 - x - 74) tx(x + 8, 3, &FONT_S, s, C_GREY, C_BG);
+        if (x + 8 + text_w(&FONT_S, s) < 240 - rw - 4) tx(x + 8, 3, &FONT_S, s, C_GREY, C_BG);
     }
     {   /* right: the sun and the tempo */
         char *p = put_s(s, NOTE_NAME[sys.sun % 12u]);
@@ -443,7 +530,7 @@ static void draw_bar(void)                      /* the top line: the page, the f
         p = put_u(p, sys.bpm);
         w = text_w(&FONT_S, s);
         tx(240 - w - (eng.playing ? 14 : 4), 3, &FONT_S, s, C_TXT, C_BG);
-        disc(240 - w - (eng.playing ? 14 : 4) - 8, 11, 3, C_YEL);
+        icon9(KIND_ICON[LK_VOICE], 240 - w - (eng.playing ? 14 : 4) - 13, 6, 1, C_YEL);   /* (the sun is her) */
         if (eng.playing) {                      /* a play triangle */
             int32_t k;
             for (k = 0; k < 7; k++) cv_rect(229 + k, 5 + k / 2 + (k & 1), 1, 12 - 2 * (k / 2) - 2 * (k & 1), C_LIME);
@@ -482,7 +569,16 @@ static void draw_hint(void)                     /* the line above the knobs: ALG
     const pd_t *d = &PD[page][8];
     cv_begin(240, 16, C_BG);
     if (msg_t && fm1_ms < msg_t) txc(120, 0, &FONT_S, msg, C_YEL, C_BG);
-    else {
+    else if (tour_t && fm1_ms < tour_t && tour_n > 1u) {   /* this button's pages, this one lit */
+        uint32_t i;
+        int32_t w = 0, x;
+        for (i = 0; i < tour_n; i++) w += text_w(&FONT_S, PAGE_NAME[tour[i]]) + (i ? 10 : 0);
+        x = 120 - w / 2;
+        for (i = 0; i < tour_n; i++) {
+            if (i) { cv_rect(x + 3, 7, 3, 2, C_FDIM); x += 10; }
+            x = tx(x, 0, &FONT_S, PAGE_NAME[tour[i]], tour[i] == page ? C_LIME : C_DIMT, C_BG);
+        }
+    } else {
         if (d->where != W_NONE || d->fmt == F_SLOT) {
             p = put_s(p, "ALG ");
             p = put_s(p, d->name);
@@ -512,17 +608,16 @@ static uint32_t ring_progress(uint32_t r)       /* 0..65535 of the current step'
 }
 static void draw_orrery(void)
 {
-    static const int16_t RAD[4] = {26, 40, 54, 68};
+    static const int16_t RAD[4] = {28, 41, 54, 67};
     int32_t cx = 80, cy = 72;
     uint32_t r, i;
     cv_begin(240, 144, C_BG);
     stars(240, 144, 77, 46);
     for (r = 0; r < ORB_NRING; r++) {
         const orb_ring_t *g = &sys.ring[r];
-        uint32_t len = g->len ? g->len : 1u, fl = eng.rs[r].flash;
+        uint32_t len = g->len ? g->len : 1u;
         uint16_t c = RINGC[r + 1u];
         int32_t rad = RAD[r];
-        if (fl != flash_seen[r]) { flash_seen[r] = fl; flash_t[r] = fm1_ms; }
         circle(cx, cy, rad, dim565(c, g->mute ? 2u : 4u), 3);
         for (i = 0; i < len; i++) {
             uint32_t ph = 0xC0000000u + (uint32_t)(((uint64_t)i << 32) / len);
@@ -546,28 +641,40 @@ static void draw_orrery(void)
         }
     }
     if (eng.conj_count != conj_seen) { conj_seen = eng.conj_count; conj_t = fm1_ms; }
-    {   /* the sun: it flares at a conjunction */
-        int32_t fl = conj_t && fm1_ms - conj_t < 200u ? (int32_t)(200u - (fm1_ms - conj_t)) / 50 : 0;
-        disc(cx, cy, 14 + fl, dim565(C_YEL, 4));
-        disc(cx, cy, 11 + fl / 2, C_YEL);
-        txc(cx, cy - 8, &FONT_S, NOTE_NAME[sys.sun % 12u], C_INK, C_YEL);
+    {   /* Astralica, the sun: she bobs on the beat, blinks, her eyes light where the orbits meet; stopped, she naps */
+        uint32_t beat = eng.T % (4u * ORB_TPS), awake = eng.playing, flare = conj_t && fm1_ms - conj_t < 220u;
+        int32_t bob = awake && beat < ORB_TPS ? 1 : 0;
+        int blink = !awake || (fm1_ms % 3700u) < 130u;
+        cat_draw_q8(cx, cy + bob, 256u, CAT_W, CAT_H, blink, awake && flare);
+        if (!awake) {                           /* zz */
+            uint32_t t = fm1_ms % 2400u, k;
+            for (k = 0; k < 2u; k++) {
+                uint32_t u = (t + k * 1200u) % 2400u;
+                int32_t zx = cx + 20 + (int32_t)u / 150, zy = cy - 16 - (int32_t)u / 90;
+                tx(zx, zy, &FONT_S, "z", dim565(C_TXT, (uint32_t)orb_clamp(15 - (int32_t)u / 160, 2, 15)), C_BG);
+            }
+        }
     }
-    /* the lanes: each ring's ratio and length */
+    /* the lanes: each track, its sound, its speed and level (napping: muted) */
     for (r = 0; r < ORB_NRING; r++) {
         const orb_ring_t *g = &sys.ring[r];
-        char s[16], *p = s;
-        int32_t y = 8 + (int32_t)r * 34;
-        uint16_t c = RINGC[r + 1u], bg = C_BG;
-        frame(158, y, 80, 30, g->mute ? C_FDIM : dim565(c, 9));
-        circle(168, y + 9, 4, c, 0);
-        if (fm1_ms - flash_t[r] < 100u) disc(168, y + 9, 3, c);
-        p = put_s(p, ORB_RATIO_NAME[g->ratio % ORB_NRATIO]);
-        tx(178, y + 2, &FONT_S, s, g->mute ? C_DIMT : C_TXT, bg);
-        p = put_u(s, g->len);
-        p = put_s(p, " ");
-        p = put_deg(p, g->deg);
-        tx(164, y + 15, &FONT_S, s, g->mute ? C_DIMT : dim565(c, 12), bg);
-        if (g->mute) tx(222, y + 2, &FONT_S, "M", C_MAG, bg);
+        const orb_snd_t *sn = &sys.snd[ORB_A + r];
+        char s[16], *p;
+        int32_t y = 4 + (int32_t)r * 35, lw;
+        uint16_t c = RINGC[r + 1u], cc = g->mute ? C_FDIM : c, fl = fm1_ms - flash_t[r] < 90u ? C_TXT : cc;
+        frame(156, y, 82, 33, g->mute ? C_FDIM : dim565(c, focus == ORB_A + r ? 15u : 8u));
+        pill(159, y + 3, 15, 15, fl);
+        txc(167, y + 2, &FONT_S, ORB_PART_NAME[r + 1u], C_INK, fl);
+        tx(178, y + 2, &FONT_S, orb_lib_name(sn), g->mute ? C_DIMT : C_TXT, C_BG);
+        p = put_s(s, ORB_RATIO_NAME[g->ratio % ORB_NRATIO]);
+        (void)p;
+        tx(160, y + 17, &FONT_S, s, g->mute ? C_DIMT : dim565(c, 11), C_BG);
+        if (g->mute) tx(206, y + 17, &FONT_S, "zz", C_DIMT, C_BG);
+        else {
+            lw = sn->level * 30 / 99;
+            cv_rect(202, y + 24, 31, 3, C_FDIM);
+            cv_rect(202, y + 24, lw, 3, c);
+        }
     }
     cv_blit(0, 24);
 }
@@ -652,53 +759,116 @@ static void draw_macros(void)                   /* two rows of four, as the knob
     cv_blit(0, 24);
 }
 
-/* RING: the focused ring, big; each hit's distance from the centre is its degree; the 16 keys' page marked */
+/* STEPS: the track's ring, its hits as paws (further out the higher the note), the page of 16 on the keys marked;
+ * its sound; below, the keys as they are now: the white ones its steps, the black ones what they do */
 static uint32_t step_page;
+static const uint8_t BLACK_AFTER[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};   /* the white key left of each black one */
 static void draw_ring(void)
 {
     uint32_t r = ring_focus(), len, i;
     const orb_ring_t *g = &sys.ring[r];
+    const orb_snd_t *sn = &sys.snd[ORB_A + r];
     uint16_t c = RINGC[r + 1u];
-    int32_t cx = 82, cy = 72;
+    int32_t cx = 62, cy = 51, R = 41;
     len = g->len ? g->len : 1u;
     cv_begin(240, 144, C_BG);
-    stars(240, 144, 5, 30);
-    circle(cx, cy, 52, dim565(c, 5), 2);
-    circle(cx, cy, 30, dim565(c, 3), 4);
+    stars(240, 104, 5, 22);
+    circle(cx, cy, R, dim565(c, 4), 2);
     for (i = 0; i < len; i++) {
         uint32_t ph = 0xC0000000u + (uint32_t)(((uint64_t)i << 32) / len);
-        int32_t rad = 52 + (g->on[i] ? orb_clamp(g->dg[i], -7, 7) * 2 : 0);
+        int32_t rad = R + (g->on[i] ? orb_clamp(g->dg[i], -6, 6) : 0);
         int32_t x = cx + icos(ph, rad), y = cy + isin(ph, rad);
-        int pg = i / 16u == step_page;
-        if (pg) cv_pset(cx + icos(ph, 62), cy + isin(ph, 62), C_LIME);
+        if (i / 16u == step_page) cv_pset(cx + icos(ph, R + 9), cy + isin(ph, R + 9), C_LIME);
         if (g->on[i]) {
-            cv_line(cx + icos(ph, 30), cy + isin(ph, 30), x, y, dim565(c, 4));
-            cv_rect(x - 2, y - 2, 5, 5, g->on[i] == 2u ? C_TXT : c);
+            uint16_t pc = g->on[i] == 2u ? C_TXT : c;
+            if (len <= 32u) icon_w(ICON_PAW, 5, x - 2, y - 2, pc);
+            else cv_rect(x - 1, y - 1, 3, 3, pc);
         } else
-            cv_rect(x - 1, y - 1, 2, 2, dim565(c, 7));
+            cv_rect(x, y, 1, 1, dim565(c, 8));
     }
     if (eng.playing) {
         uint32_t ph = 0xC0000000u + (uint32_t)(((uint64_t)eng.rs[r].cur << 32) / len);
-        disc(cx + icos(ph, 40), cy + isin(ph, 40), 3, C_TXT);
+        disc(cx + icos(ph, R - 10), cy + isin(ph, R - 10), 3, fm1_ms - flash_t[r] < 100u ? C_TXT : dim565(C_TXT, 10));
     }
-    disc(cx, cy, 9, C_YEL);
-    txc(cx, cy - 8, &FONT_S, ORB_PART_NAME[r + 1u], C_INK, C_YEL);
-    {   /* the side: ratio, logic, steps page */
+    icon9(KIND_ICON[part_kind(ORB_A + r)], cx - 9, cy - 9, 2, fm1_ms - flash_t[r] < 100u ? C_TXT : c);
+    {   /* the side: the track, its sound, its speed, the page */
         char s[20], *p;
-        frame(160, 6, 78, 132, dim565(c, 9));
-        tx(166, 10, &FONT_S, "SPEED", C_GREY, C_BG);
-        tx(166, 26, &FONT_S, ORB_RATIO_NAME[g->ratio % ORB_NRATIO], c, C_BG);
-        tx(166, 46, &FONT_S, "LOGIC", C_GREY, C_BG);
-        if (g->logic == LOG_FREE || g->logic == LOG_CONJ) put_s(s, ORB_LOGIC_NAME[g->logic % ORB_NLOGIC]);
-        else { p = put_s(s, ORB_LOGIC_NAME[g->logic % ORB_NLOGIC]); *p++ = ' '; *p++ = (char)('A' + (g->ltgt & 3u)); *p = 0; }
-        tx(166, 62, &FONT_S, s, C_TXT, C_BG);
-        tx(166, 82, &FONT_S, "KEYS", C_GREY, C_BG);
-        p = put_u(s, step_page * 16u + 1u);
-        *p++ = '-';
-        put_u(p, step_page * 16u + 16u);
-        tx(166, 98, &FONT_S, s, C_LIME, C_BG);
-        if (g->mute) tx(166, 118, &FONT_S, "MUTED", C_MAG, C_BG);
-        else if (rec) tx(166, 118, &FONT_S, "REC", C_MAG, C_BG);
+        frame(124, 2, 114, 98, dim565(c, 9));
+        pill(129, 6, 18, 18, c);
+        txc(138, 7, &FONT_S, ORB_PART_NAME[r + 1u], C_INK, c);
+        tx(152, 7, &FONT_S, ORB_LK_NAME[part_kind(ORB_A + r)], C_GREY, C_BG);
+        tx(130, 26, &FONT_L, orb_lib_name(sn), c, C_BG);
+        p = put_s(s, "SPEED ");
+        put_s(p, ORB_RATIO_NAME[g->ratio % ORB_NRATIO]);
+        tx(130, 62, &FONT_S, s, C_TXT, C_BG);
+        if (g->mute) put_s(s, "NAPPING zz");
+        else if (rec) put_s(s, "REC");
+        else { p = put_s(s, "KEYS "); p = put_u(p, step_page * 16u + 1u); *p++ = '-'; put_u(p, step_page * 16u + 16u); }
+        tx(130, 80, &FONT_S, s, g->mute || rec ? C_MAG : C_LIME, C_BG);
+    }
+    /* the keys: the white ones the steps of this page, the black ones: A B C D, IDEA, mute A B C D, CLEAR, UNDO */
+    for (i = 0; i < 16u; i++) {
+        uint32_t st = step_page * 16u + i, on = st < g->len ? g->on[st] : 0u;
+        int32_t x = 2 + (int32_t)i * 15, play = eng.playing && st == eng.rs[r].cur;
+        if (st >= g->len) { cv_rect(x, 124, 14, 19, dim565(C_FDIM, 6)); continue; }
+        cv_rect(x, 124, 14, 19, on == 2u ? C_TXT : on ? c : dim565(C_GREY, 4));
+        if (play) frame(x - 1, 123, 16, 21, C_LIME);
+    }
+    for (i = 0; i < 11u; i++) {
+        int32_t x = 2 + (int32_t)(BLACK_AFTER[i] + 1u) * 15 - 7, y = 104;
+        uint16_t bg = C_PANEL;
+        if (i <= BK_D) {
+            uint16_t tc = RINGC[i + 1u];
+            int sel = focus == ORB_A + i;
+            pill(x, y, 13, 17, sel ? tc : C_PANEL);
+            txc(x + 7, y + 1, &FONT_S, ORB_PART_NAME[i + 1u], sel ? C_INK : tc, sel ? tc : C_PANEL);
+            continue;
+        }
+        pill(x, y, 13, 17, bg);
+        if (i == BK_IDEA) icon_w(ICON_DICE, 7, x + 3, y + 5, C_LIME);
+        else if (i <= BK_MD) {
+            uint32_t q = i - BK_MA;
+            icon_w(ICON_SPEAKER, 7, x + 3, y + 5, sys.ring[q].mute ? C_FDIM : RINGC[q + 1u]);
+        } else if (i == BK_CLEAR) icon_w(ICON_CROSS, 7, x + 3, y + 5, C_MAG);
+        else icon_w(ICON_UNDO, 7, x + 3, y + 5, C_CYAN);
+    }
+    cv_blit(0, 24);
+}
+
+/* SOUND: what the focus plays, big: its kind, its name, the library's place; below, its wave as it sounds */
+static void draw_sound(void)
+{
+    const orb_snd_t *sn = &sys.snd[focus];
+    uint16_t c = RINGC[focus];
+    uint32_t kind = part_kind(focus), lv = (uint32_t)part_level(focus);
+    char s[20], *p;
+    cv_begin(240, 144, C_BG);
+    stars(240, 100, 3, 20);
+    frame(2, 2, 116, 98, dim565(c, 7));
+    {   /* the kind's picture, a little bigger while it sounds */
+        int32_t sc = 4 + (lv > 9000u ? 1 : 0), w = 9 * sc;
+        icon9(KIND_ICON[kind], 60 - w / 2, 44 - w / 2, sc, lv > 3000u ? mix565(c, C_TXT, 6) : c);
+    }
+    txc(60, 80, &FONT_S, ORB_LK_NAME[kind], C_GREY, C_BG);
+    {   /* whose: a track, or the keys */
+        int32_t x = tx(126, 5, &FONT_S, focus ? "TRACK " : "THE KEYS", C_GREY, C_BG);
+        if (focus) tx(x, 5, &FONT_S, ORB_PART_NAME[focus], c, C_BG);
+    }
+    tx(126, 28, &FONT_L, orb_lib_name(sn), c, C_BG);
+    p = put_s(s, "SOUND ");
+    if (sn->lib && sn->lib < ORB_NLIB) { p = put_u(p, sn->lib); p = put_s(p, "/"); put_u(p, ORB_NLIB - 1u); }
+    else put_s(p, "-");
+    tx(126, 64, &FONT_S, s, C_DIMT, C_BG);
+    tx(126, 82, &FONT_S, "K1 PICKS", C_GREY, C_BG);
+    frame(2, 104, 236, 39, C_FDIM);
+    {
+        uint32_t w = eng.scope_w, i;
+        int32_t lx = 0, ly = 0;
+        for (i = 0; i < 116u; i++) {
+            int32_t v = eng.scope[(w + 12u + i) & 127u], y = 123 - (v * 16 >> 15), x = 4 + (int32_t)i * 2;
+            if (i) cv_line(lx, ly, x, y, C_LIME);
+            lx = x; ly = y;
+        }
     }
     cv_blit(0, 24);
 }
@@ -1132,6 +1302,7 @@ static void draw_main(void)
     case PG_MACRO: draw_macros(); break;
     case PG_RING: draw_ring(); break;
     case PG_TIME: draw_time(); break;
+    case PG_SOUND: draw_sound(); break;
     case PG_ORBIT: case PG_BODY: draw_orbit(); break;
     case PG_COSMOS: draw_cosmos(); break;
     case PG_HORIZON: draw_horizon(); break;
@@ -1146,7 +1317,7 @@ static void draw_main(void)
 }
 static int page_animated(void)
 {
-    return page == PG_ORRERY || page == PG_MACRO || page == PG_RING || page == PG_TIME || page == PG_ORBIT ||
+    return page == PG_ORRERY || page == PG_MACRO || page == PG_RING || page == PG_TIME || page == PG_SOUND || page == PG_ORBIT ||
            page == PG_BODY || page == PG_MOD || page == PG_LFO || page == PG_PAD || page == PG_COSMOS ||
            page == PG_HORIZON;
 }
@@ -1487,6 +1658,7 @@ static int intro_pass(void)                     /* a pass; 0: over (itr.skipped:
 
 /* ---- MIDI in (the main loop, and app_idle while the screen draws) */
 static uint32_t idle_ok, clk_n, clk_t0, clk_bpm, clk_run, clk_last;
+static void rec_key(int32_t p);
 static void midi_in(void)
 {
     uint8_t st, d1, d2;
@@ -1515,7 +1687,9 @@ static void midi_in(void)
             int32_t k = (int32_t)d1 - 53 - 12 * (int8_t)set.oct;
             int32_t p = sys.keymode == KM_HARMONIC && k >= 0 && k < 27 ? orb_key_pitch(&sys, (uint32_t)k, (int8_t)set.oct, 0)
                                                                          : orb_key_pitch(&sys, d1, 0, 0);
-            orb_note_on(&eng, (uint8_t)(128u + d1), p, d2);
+            if (focus) p -= 24 * 256;
+            orb_note_on_part(&eng, (uint8_t)(128u + d1), p, d2, focus);
+            if (rec && focus) rec_key(p);
             (void)src;
         } else if (ty == 0x80u || ty == 0x90u) orb_note_off(&eng, (uint8_t)(128u + d1));
         else if (ty == 0xB0u && d1 == 1u) eng.modw = (int32_t)d2 * 258;
@@ -1538,28 +1712,42 @@ static int32_t white_index(uint32_t k)
 }
 static uint32_t held_step = 0xFFu, held_used;
 
-static void goto_page3(uint32_t a, uint32_t b, uint32_t c)   /* a button's pages: the first, then on round them */
+/* a button's pages: the first, then on round them; the hint line shows them all a moment, this one lit */
+static void goto_pages(const uint8_t *pg, uint32_t n)
 {
-    page = page == a ? b : page == b ? c : a;
+    uint32_t i, at = n;
+    for (i = 0; i < n; i++) if (page == pg[i]) at = i;
+    page = pg[at < n ? (at + 1u) % n : 0u];
+    for (i = 0; i < n; i++) tour[i] = pg[i];
+    tour_n = (uint8_t)n;
+    tour_t = fm1_ms + 1600u;
     main_dirty = knobs_dirty = hint_dirty = 1;
     drawn_bar = ~0u;
 }
+static void goto_page3(uint32_t a, uint32_t b, uint32_t c)
+{
+    uint8_t pg[3] = {(uint8_t)a, (uint8_t)b, (uint8_t)c};
+    goto_pages(pg, a == c ? (a == b ? 1u : 2u) : 3u);
+}
 static void goto_page(uint32_t a, uint32_t b) { goto_page3(a, b, a); }
 
-/* REC: a key played into the focused ring, at its step (playing) or the next (stopped) */
+/* REC: a key played into the focused ring, at its step (playing) or the next (stopped). p: the pitch played (1/256
+ * semitone), the keys playing the ring's sound where the ring plays it, so the step is the note heard */
 static uint32_t rec_pos;
-static void rec_key(uint32_t note)
+static void rec_key(int32_t p)
 {
     uint32_t r = ring_focus(), t = sys.tuning % ORB_NTUNING, n = ORB_SCALE_N[t], i, best = 0;
     orb_ring_t *g = &sys.ring[r];
-    int32_t semi = ((int32_t)note - 36 - (int32_t)sys.sun - 12 * sys.snd[r + 1u].oct), oct, pos, bd = 1 << 30;
-    oct = semi >= 0 ? semi / 12 : -((11 - semi) / 12);
-    pos = semi - oct * 12;
+    int32_t rel = p - (36 + (int32_t)(sys.sun % 12u)) * 256, oct, pos, bd = 1 << 30;
+    oct = rel >= 0 ? rel / 3072 : -((3071 - rel) / 3072);
+    pos = rel - oct * 3072;
     for (i = 0; i < n; i++) {                   /* the nearest degree */
-        int32_t d = ORB_SCALE[t][i] - pos * 256;
+        int32_t d = ORB_SCALE[t][i] - pos;
         if (d < 0) d = -d;
         if (d < bd) { bd = d; best = i; }
     }
+    if (3072 - pos < bd) { oct++; best = 0; }   /* (the next octave's root nearer) */
+    undo_take(r, 0);
     {
         uint32_t len = g->len ? g->len : 1u, at = eng.playing ? eng.rs[r].cur : rec_pos % len;
         int32_t deg = oct * (int32_t)n + (int32_t)best - g->deg;
@@ -1568,6 +1756,128 @@ static void rec_key(uint32_t note)
         if (!eng.playing) rec_pos = (at + 1u) % len;
     }
     orb_pattern_edited(&eng, r);
+    main_dirty = 1;
+}
+
+/* ---- IDEA: a fresh pattern for a ring, as its sound wants it: a kick on the beat, a snare's backbeat, hats between,
+ * a bass on the root, a melody on the chord's tones (the tuning's consonant degrees); its LEN and SPEED kept */
+static const uint8_t CHORD_T[ORB_NTUNING][6] = {{5, 0, 2, 4, 7, 9}, {5, 0, 1, 2, 4, 6}, {4, 0, 2, 4, 6, 0},
+                                                {5, 0, 1, 2, 3, 4}, {5, 0, 2, 4, 7, 9}};   /* [0]: how many */
+static int32_t chord_deg(uint32_t t, int32_t c)  /* the c-th chord tone up from the root (an octave each [0]) */
+{
+    int32_t n = CHORD_T[t][0], o = c >= 0 ? c / n : -((n - 1 - c) / n);
+    return o * (int32_t)ORB_SCALE_N[t] + CHORD_T[t][1 + (c - o * n)];
+}
+static uint32_t irng = 0x9E3779B9u;
+static uint8_t scaled(uint32_t h, uint32_t len) { uint32_t v = (h * len + 8u) / 16u; return (uint8_t)(v < 1u ? 1u : v > len ? len : v); }
+static void idea(uint32_t r)
+{
+    orb_ring_t *g = &sys.ring[r];
+    uint32_t len = g->len ? g->len : 1u, kind = orb_lib_kind(&sys.snd[ORB_A + r]), x = orb_xs(&irng), i, h = 0;
+    uint32_t t = sys.tuning % ORB_NTUNING, n = CHORD_T[t][0];
+    int32_t c = (int32_t)(x >> 24) % (int32_t)n;
+    undo_take(r, 1);
+    for (i = 0; i < ORB_NSTEP; i++) { g->on[i] = 0; g->dg[i] = 0; }
+    switch (kind) {
+    case LK_KICK: { static const uint8_t H[4] = {4, 4, 3, 5}; g->hits = scaled(H[x & 3u], len); g->rot = 0; break; }
+    case LK_SNARE: g->hits = scaled(2, len); g->rot = (uint8_t)(len / 4u); break;
+    case LK_HAT: {
+        static const uint8_t H[4] = {8, 4, 12, 16}, R[4] = {0, 2, 0, 0};
+        g->hits = scaled(H[x & 3u], len); g->rot = (uint8_t)(R[x & 3u] * len / 16u);
+        break;
+    }
+    case LK_PERC: g->hits = scaled(3u + x % 3u, len); g->rot = (uint8_t)((x >> 8) % len); break;
+    case LK_BASS: { static const uint8_t H[4] = {3, 5, 6, 7}, R[4] = {0, 0, 1, 2}; g->hits = scaled(H[x & 3u], len); g->rot = R[(x >> 2) & 3u]; break; }
+    case LK_PAD: g->hits = scaled(1u + x % 3u, len); g->rot = 0; break;
+    default: { static const uint8_t H[5] = {4, 5, 6, 7, 9}; g->hits = scaled(H[x % 5u], len); g->rot = (uint8_t)((x >> 8) % len); break; }
+    }
+    if (g->rot >= len) g->rot = 0;
+    orb_euclid(g);
+    for (i = 0; i < len; i++) {
+        uint32_t y;
+        if (!g->on[i]) continue;
+        y = orb_xs(&irng);
+        switch (kind) {
+        case LK_KICK: if (!h) g->on[i] = 2; break;
+        case LK_SNARE: g->on[i] = 2; break;
+        case LK_HAT: if ((x & 3u) != 1u && (h & 1u)) g->on[i] = 2; break;
+        case LK_PERC: if (!h) g->on[i] = 2; break;
+        case LK_BASS: {                         /* the root, mostly; its octave; now and then another tone */
+            uint32_t w = y % 10u;
+            int32_t cc = !h || w < 5u ? 0 : w < 7u ? (int32_t)n : 1 + (int32_t)((y >> 8) % (n - 1u));
+            g->dg[i] = (int8_t)chord_deg(t, cc);
+            if (!h) g->on[i] = 2;
+            break;
+        }
+        case LK_PAD: g->dg[i] = (int8_t)chord_deg(t, (int32_t)((y >> 8) % n)); break;
+        default:                                /* a walk on the chord's tones, within two octaves */
+            if (h) c = orb_clamp(c + (int32_t)((y >> 8) % 5u) - 2, 0, 2 * (int32_t)n);
+            g->dg[i] = (int8_t)chord_deg(t, c);
+            if (!h) g->on[i] = 2;
+            break;
+        }
+        h++;
+    }
+    if (kind == LK_SNARE && (x >> 9) & 1u) {    /* a ghost before the backbeat, now and then */
+        uint32_t j = (g->rot + len - 1u) % len;
+        if (!g->on[j]) g->on[j] = 1;
+    }
+    orb_pattern_edited(&eng, r);
+}
+static void ring_clear(uint32_t r)
+{
+    orb_ring_t *g = &sys.ring[r];
+    uint32_t i;
+    undo_take(r, 1);
+    for (i = 0; i < ORB_NSTEP; i++) { g->on[i] = 0; g->dg[i] = 0; }
+    g->hits = 0;
+    orb_pattern_edited(&eng, r);
+}
+static void ring_undo(uint32_t r)              /* the pattern and the snapshot swap: again is redo */
+{
+    orb_ring_t *g = &sys.ring[r];
+    uint32_t i;
+    if (!undo[r].ok) { say("NOTHING TO UNDO"); return; }
+    for (i = 0; i < ORB_NSTEP; i++) {
+        uint8_t o = g->on[i];
+        int8_t d = g->dg[i];
+        g->on[i] = undo[r].on[i]; g->dg[i] = undo[r].dg[i];
+        undo[r].on[i] = o; undo[r].dg[i] = d;
+    }
+    { uint8_t a = g->len, b = g->hits, c = g->rot; g->len = undo[r].len; g->hits = undo[r].hits; g->rot = undo[r].rot;
+      undo[r].len = a; undo[r].hits = b; undo[r].rot = c; }
+    undo_t[r] = 0;                              /* (the next edit is a new gesture) */
+    undo_redo[r] = !undo_redo[r];
+    orb_pattern_edited(&eng, r);
+}
+
+/* STEPS: the black keys. F# G# A# C# below: the track (A..D); D#: an IDEA; F# G# A# C# above: mute A..D; D#: CLEAR;
+ * the top F#: UNDO */
+static int32_t black_index(uint32_t k)
+{
+    uint32_t i;
+    for (i = 0; i < 11u; i++) if (BLACK_KEY[i] == k) return (int32_t)i;
+    return -1;
+}
+static void step_key(int32_t f)
+{
+    char s[32], *p;
+    uint32_t r = ring_focus();
+    if (f < 0) return;
+    p = put_s(s, ORB_PART_NAME[ORB_A + (f >= BK_MA && f <= BK_MD ? (uint32_t)(f - BK_MA) : f <= BK_D ? (uint32_t)f : r)]);
+    *p++ = ' ';
+    if (f <= BK_D) {
+        focus = ORB_A + (uint32_t)f;
+        put_s(p, orb_lib_name(&sys.snd[focus]));
+        drawn_bar = ~0u; knobs_dirty = 1;
+    } else if (f == BK_IDEA) { idea(r); put_s(p, "NEW IDEA"); }
+    else if (f <= BK_MD) {
+        orb_ring_t *g = &sys.ring[f - BK_MA];
+        g->mute = !g->mute;
+        put_s(p, g->mute ? "NAPS  zz" : "AWAKE");
+    } else if (f == BK_CLEAR) { ring_clear(r); put_s(p, "CLEARED"); }
+    else { ring_undo(r); put_s(p, undo[r].ok ? (undo_redo[r] ? "UNDONE" : "REDONE") : "NOTHING TO UNDO"); }
+    if (!(f == BK_UNDO && !undo[r].ok)) say(s);
     main_dirty = 1;
 }
 
@@ -1588,18 +1898,20 @@ static void handle_keys(void)
                 held_id[k] = 0;
                 continue;
             }
-            if (page == PG_RING) {              /* the steps */
+            if (page == PG_RING) {              /* the steps on the white keys; the black ones: tracks, IDEA, mutes .. */
                 int32_t wi = white_index(k);
                 held_id[k] = 0;
                 if (wi >= 0) { held_step = step_page * 16u + (uint32_t)wi; held_used = 0; }
+                else step_key(black_index(k));
                 continue;
             }
-            {
+            {   /* the keys play the focus: KEYS, or a track's sound where its ring plays it (the keys' C4 is its root) */
                 int32_t p = orb_key_pitch(&sys, sys.keymode == KM_HARMONIC ? k : note, oct, 0);
+                if (focus) p -= 24 * 256;
                 held_id[k] = (uint8_t)(k + 1u);
-                orb_note_on(&eng, held_id[k], p, 100);
+                orb_note_on_part(&eng, held_id[k], p, 100, focus);
                 midi_send(0x90u | (set.ch ? set.ch - 1u : 0u), note & 127u, 100);
-                if (rec) rec_key(note);
+                if (rec && focus) rec_key(p);
             }
         }
         if (up >> k & 1u) {
@@ -1607,6 +1919,7 @@ static void handle_keys(void)
                 held_step == step_page * 16u + (uint32_t)white_index(k)) {
                 orb_ring_t *g = &sys.ring[ring_focus()];
                 if (!held_used && held_step < g->len) {   /* a tap: rest -> hit -> accent -> rest */
+                    undo_take(ring_focus(), 0);
                     g->on[held_step] = (uint8_t)((g->on[held_step] + 1u) % 3u);
                     orb_pattern_edited(&eng, ring_focus());
                     main_dirty = 1;
@@ -1632,6 +1945,7 @@ static void handle_encoders(void)
         if (page == PG_RING && k == 0u && held_step != 0xFFu) {   /* a held step: its degree */
             orb_ring_t *g = &sys.ring[ring_focus()];
             if (held_step < ORB_NSTEP) {
+                if (!held_used) undo_take(ring_focus(), 0);
                 g->dg[held_step] = (int8_t)orb_clamp(g->dg[held_step] + e, -14, 21);
                 if (!g->on[held_step]) g->on[held_step] = 1;
                 orb_pattern_edited(&eng, ring_focus());
@@ -1708,14 +2022,21 @@ static void handle_buttons(void)
             if (!focus) focus = ORB_A;
         }
     }
-    if (b & (1u << BTN_EDIT)) goto_page3(PG_ORBIT, PG_BODY, PG_COSMOS);
+    if (b & (1u << BTN_EDIT)) { static const uint8_t E[4] = {PG_SOUND, PG_ORBIT, PG_BODY, PG_COSMOS}; goto_pages(E, 4); }
     if (b & (1u << BTN_ENV)) goto_page(PG_ENV, PG_ENV);
     if (b & (1u << BTN_LFO)) goto_page(PG_MOD, PG_LFO);
     if (b & (1u << BTN_FX)) goto_page3(PG_FILTER, PG_SPACE, PG_HORIZON);
     if (b & (1u << BTN_GLO)) goto_page(PG_PAD, PG_PAD);
     if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
     if (b & (1u << BTN_PLAY)) { orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
-    if (b & (1u << BTN_REC)) { rec = !rec; rec_pos = 0; say(rec ? "REC: KEYS INTO THE RING" : "REC OFF"); drawn_bar = ~0u; main_dirty = 1; }
+    if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the keys: into A) */
+        char s[28];
+        rec = !rec; rec_pos = 0;
+        if (rec && !focus) { focus = ORB_A; knobs_dirty = 1; }
+        put_s(put_s(s, rec ? "REC: KEYS INTO " : "REC OFF"), rec ? ORB_PART_NAME[focus] : "");
+        say(s);
+        drawn_bar = ~0u; main_dirty = 1;
+    }
     if (b & (1u << BTN_OCT_DOWN)) {
         if (page == PG_RING) { if (step_page) step_page--; main_dirty = 1; }
         else if ((int8_t)set.oct > -3) { set.oct = (uint8_t)((int8_t)set.oct - 1); set_touch(); knobs_dirty = 1; }
@@ -1750,7 +2071,7 @@ static void leds(void)
     int32_t oct = (int8_t)set.oct;
     fm1_led_key(BTN_HOME, page == PG_ORRERY || page == PG_MACRO);
     fm1_led_key(BTN_SEQ, page == PG_RING || page == PG_TIME);
-    fm1_led_key(BTN_EDIT, page == PG_ORBIT || page == PG_BODY || page == PG_COSMOS);
+    fm1_led_key(BTN_EDIT, page == PG_SOUND || page == PG_ORBIT || page == PG_BODY || page == PG_COSMOS);
     fm1_led_key(BTN_ENV, page == PG_ENV);
     fm1_led_key(BTN_LFO, page == PG_MOD || page == PG_LFO);
     fm1_led_key(BTN_FX, page == PG_FILTER || page == PG_SPACE || page == PG_HORIZON);
@@ -1771,7 +2092,14 @@ static void leds(void)
             fm1_led_key(KEY_LED(kk), play ? !on : on);
             fm1_led_key_glow(KEY_LED(kk), st < g->len);
         }
-        for (k = 0; k < 27u; k++) if (white_index(k) < 0) { fm1_led_key(KEY_LED(k), 0); fm1_led_key_glow(KEY_LED(k), 0); }
+        for (k = 0; k < 11u; k++) {
+            uint32_t kk = BLACK_KEY[k];
+            int on = 0;
+            if (k <= BK_D) on = focus == ORB_A + k;
+            else if (k >= BK_MA && k <= BK_MD) on = !sys.ring[k - BK_MA].mute && fm1_ms - flash_t[k - BK_MA] > 60u;
+            fm1_led_key(KEY_LED(kk), on);
+            fm1_led_key_glow(KEY_LED(kk), 1);
+        }
         return;
     }
     for (k = ORB_NV - ORB_NKV; k < ORB_NV; k++)
@@ -1786,8 +2114,9 @@ static void leds(void)
 static uint32_t boot_phase, story;              /* 1 the story, 2 the splash, 3 playing; story: 1 ran, 2 PLAY skipped it */
 static void app_start(void)
 {
-    if (settings_load(&set, sizeof set) || (int8_t)set.oct < -3 || (int8_t)set.oct > 3 || set.ch > 16u || set.sysi >= NSYS)
-        set.oct = 0, set.ch = 0, set.sysi = 0;
+    if (settings_load(&set, sizeof set) || set.ver != SET_VER || (int8_t)set.oct < -3 || (int8_t)set.oct > 3 || set.ch > 16u ||
+        set.sysi >= NSYS)
+        set.oct = 0, set.ch = 0, set.sysi = 0, set.intro_off = 0, set.ver = SET_VER;
     if (set.intro_off > 1u) set.intro_off = 0;
     orb_intro_system(&sys);
     orb_init(&eng, &sys, &orb_mem);
@@ -1823,13 +2152,18 @@ static void boot_pass(void)                     /* the story, then the splash (P
 }
 static void app_pass(void)                      /* one pass of the main loop */
 {
-    static uint32_t t_hint, peak_t;
+    static uint32_t t_hint, peak_t, msg_drawn;
     platform_poll();
     handle_buttons();
     handle_encoders();
     handle_keys();
     midi_in();
     if (clk_run && fm1_ms - clk_last > 2000u) clk_run = 0;
+    {   /* each track's last hit (the screens' flashes, the mute keys' wink) */
+        uint32_t r;
+        for (r = 0; r < ORB_NRING; r++) if (eng.rs[r].flash != flash_seen[r]) { flash_seen[r] = eng.rs[r].flash; flash_t[r] = fm1_ms; }
+    }
+    if (preview_t && fm1_ms >= preview_t) { orb_note_off(&eng, 99); preview_t = 0; }
     if (sys_pending != 0xFFu && fm1_ms - sys_pend_t > 450u) {   /* PRESETS: loaded once it rests */
         system_load(sys_pending);
         sys_pending = 0xFFu;
@@ -1844,6 +2178,7 @@ static void app_pass(void)                      /* one pass of the main loop */
     }
     if (knobs_dirty) { knobs_dirty = 0; draw_knobs(); }
     if ((page_animated() && fm1_ms - t_main >= 40u) || main_dirty) { main_dirty = 0; t_main = fm1_ms; draw_main(); }
+    if (msg_seq != msg_drawn) { msg_drawn = msg_seq; hint_dirty = 1; }
     if (hint_dirty || (msg_t && fm1_ms >= msg_t) || fm1_ms - t_hint > 500u) {
         if (msg_t && fm1_ms >= msg_t) msg_t = 0;
         hint_dirty = 0; t_hint = fm1_ms;

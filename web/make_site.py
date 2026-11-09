@@ -11,7 +11,7 @@ browser, the legend's film, the systems to hear, the installer.
   firmware/orbitrix-VER.fwsc  the package the page installs (its SHA-256 in the page: a damaged download is never
                               offered)
   film/astralica.mp4          the legend of Astralica (tools/make_film.sh)
-  audio/                      the thirteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
+  audio/                      the fourteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
                               one's spectrum as a picture (WebP), low to high
   screens/                    the cat, the icon, the link preview, the pages' screens, the legend's poster
   .nojekyll                   (served as it is)
@@ -41,9 +41,11 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 BLOCKS, BLK, KEEP = 20, 0x30, 0x2F
 APP = {"build/web/orbitrix.wasm": "orbitrix.wasm", "web/app/worklet.js": "worklet.js", "web/app/play.js": "play.js"}
-SCREENS = {"orbit": "screen_orbit", "keys": "screen_keys", "orrery": "screen_orrery", "horizon": "screen_horizon"}
+SCREENS = {"orbit": "screen_orbit", "keys": "screen_keys", "orrery": "screen_orrery", "horizon": "screen_horizon",
+           "steps": "screen_steps", "sound": "screen_sound"}
 FILM = "build/film/astralica.mp4"
 DEMOS = [   # build/audio/tour/NN_name.wav, in the systems' order
+    ("KITTEN", "A beat to start from, on the grid: a kick, a clap, hats, a purring bass. Yours to change."),
     ("HARMONICES", "4, 5, 6 and 7 hits a bar on the chord 4:5:6:7, in the overtone scale: the idea itself."),
     ("GALILEAN", "Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way."),
     ("TRAPPIST", "A resonant chain, 1:1 3:2 5:3 8:5: glassy plucks that mutate."),

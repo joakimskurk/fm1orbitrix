@@ -5,11 +5,12 @@
   harmonically beautiful. The look is the user's two ORBITRIX drawings: deep indigo, violet frames with cut corners, a
   lime title pill, the ring colours cyan, magenta, yellow, violet (A–D), lime for KEYS, pixel stars.
 - The code: `firmware/src/orb_engine.h` (the engine, no platform, shared with the host tools), `orb_systems.h` (the
-  thirteen systems), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
+  sound library, 25 sounds by name, and the fourteen systems: KITTEN, the beat to start from, first), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
   The laws live in `tools/gen_tables.py`: change them there and rerun it, never edit `orb_tables.h`.
 - After every engine change: `tests/run_orb.sh` (tests, the same under ASan/UBSan, renders, spectrograms, bench). After
-  an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt` and `splash.txt`, and look at
-  the screens. Then `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
+  an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt`, `splash.txt` and `groove.txt`
+  (KITTEN made into a groove: STEPS' black keys, IDEA, UNDO, SOUND, REC), and look at the screens;
+  `tools/readme_screens.sh` remakes the README's. Then `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
   the FM-1 last), `tests/run_tests.sh`.
 - The legend of Astralica (the intro, `intro()` in orbitrix.c, its system `orb_intro_system`): on the host only with
   `ORB_INTRO=1`; `tools/make_film.sh` makes it a film with its sound (`build/film/astralica.mp4`).

@@ -21,9 +21,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/readme/screen_splash.png" width="240" alt="The splash: the cat-planet in its yellow ring, stars twinkling, planets going round">
-  <img src="docs/readme/screen_orrery.png" width="240" alt="ORRERY: four rings of steps around the sun, the planets on them, the rings' ratios at the right">
-  <img src="docs/readme/screen_orbit.png" width="240" alt="ORBIT: the voice's eccentric orbit, the left and right views through it, the live wave">
+  <img src="docs/readme/screen_orrery.png" width="240" alt="HOME: Astralica as the sun, four rings of steps round her, each track's sound at the right">
+  <img src="docs/readme/screen_steps.png" width="240" alt="STEPS: the track's ring with its hits as paws, its sound, and the keys as they are: the steps on the white ones, what the black ones do">
+  <img src="docs/readme/screen_sound.png" width="240" alt="SOUND: the track's sound by name, its kind, its wave">
 </p>
 
 Four planets circle a sun. How fast each one goes against the others is a small ratio, 1:1, 5:4, 3:2, 7:4, and the
@@ -37,6 +37,30 @@ The voice is a planet on an ellipse, and what you hear is where it is.
 > and in the browser on [the page](https://joakimskurk.github.io/fm1orbitrix/) (the same C, compiled to WebAssembly).
 > It builds for the FM-1 and the SMK-37 and passes Dinghy's checks and tests. It has **not yet been tested on a real
 > FM-1**, and there is no release yet.
+
+## A groove in a minute
+
+1. Switch on. The legend plays; **PLAY** skips it. **KITTEN** is waiting: a kick, a clap, hats, a purring bass, on the
+   grid. Press **PLAY**.
+2. Press **SEQ**: **STEPS**. The white keys are the steps of a track: tap one, rest → hit → accent → rest. The black
+   keys do the rest, and the screen draws each one over its key:
+
+   | Black keys | |
+   | --- | --- |
+   | **F# G# A# C#** (lower) | pick track A, B, C, D |
+   | **D#** (lower) | **IDEA**: a new pattern for the track, as its sound wants one (a kick on the beat, a snare's backbeat, hats between, a bass on the root, a melody on the chord's tones) |
+   | **F# G# A# C#** (upper) | mute A, B, C, D (lit while it plays; muted, it naps) |
+   | **D#** (upper) · **F#** (top) | **CLEAR** the track · **UNDO** (and again: redo) |
+
+3. Press **EDIT**: **SOUND**. K1 picks the track's sound by name from 25 (BOOM, THUMP, TOM, PAT, CLAP, TICK, TSSS,
+   ZAP, PURR, GROWL, SUB, SWOOP, PLUCK, PAW, GLASS, BELL, STAR, TIDAL, PIXEL, LEAD, FLUTE, MEOW, CLOUD, DRONE, COMET);
+   stopped, you hear it at once. K2–K4: TONE, DECAY, LEVEL; with SEL: OCT, PAN, SPACE, WOBBLE.
+4. The keys play the **focus**, the chip at the top: a track's sound (where its ring plays it) or, as K, the keys' own.
+   **REC** writes what you play into the track, the note you hear. **SELECT** turns the focus.
+5. **HOME**: K1–K4 set each track's hits; with SEL, their levels. **SAVE**, **SAVE** keeps it in U1.
+
+Each button's pages show on the hint line as you press it, this one lit: **EDIT** is SOUND → ORBIT → BODY → COSMOS,
+from the friendly to the deep.
 
 ## The legend of Astralica
 
@@ -113,9 +137,9 @@ more voices are for the keys.
 
 | | |
 | --- | --- |
-| **RATIO** | The ring's speed against a 16th: 1:4 … 1:1 … 5:4, 3:2, 7:4 … 4:1. The clock counts 2520 ticks a 16th (lcm 1..10), so every ratio meets the others exactly, forever. |
-| **LEN**, **HITS**, **ROT** | Up to 64 steps, hits spread evenly and turned. Set steps by hand on the white keys (RING). |
-| **DEG** | The degree the ring sings; each step adds its own (hold a step, turn K1). The screen names it as a ratio. |
+| **SPEED** | The ring's speed against a 16th: 1:4 … 1:1 … 5:4, 3:2, 7:4 … 4:1. The clock counts 2520 ticks a 16th (lcm 1..10), so every ratio meets the others exactly, forever. |
+| **LEN**, **HITS**, **ROT** | Up to 64 steps, hits spread evenly and turned. Set steps by hand on the white keys (STEPS). |
+| **NOTE** | The degree the ring sings; each step adds its own (hold a step, turn K1). The screen names it as a ratio. |
 | **DIR** | FWD, REV, PING, SPIRAL (the pattern turns one step each lap: rhythmic precession), RND. |
 | **LOGIC** | FREE, AND x, NOT x, XOR x against another ring's current step, or CONJ: only together with another ring. NOT makes interlocking parts. |
 | **Conjunctions** | When rings fire on the same tick, those hits are accented and the CONJ modulation source flares. The long cycle's downbeats show up by themselves. |
@@ -125,7 +149,7 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
 **HUM** (humanised timing and velocity) and **VAR** apply to all four rings.
 
 <p align="center">
-  <img src="docs/readme/screen_ring.png" width="240" alt="RING: one ring big, each hit as far out as its degree is high">
+  <img src="docs/readme/screen_steps.png" width="240" alt="STEPS: one ring big, each hit a paw as far out as its note is high; the keys below">
   <img src="docs/readme/screen_time.png" width="240" alt="TIME: the four lanes across one bar, each ring's hits where they fall">
   <img src="docs/readme/screen_mod.png" width="240" alt="MOD: the eight slots of the modulation matrix">
 </p>
@@ -151,12 +175,13 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Thirteen systems
+## Fourteen systems
 
-Named after real resonances in the sky.
+The first is a beat to start from; the others are named after real resonances in the sky.
 
 | | Rings | |
 | --- | --- | --- |
+| **KITTEN** | 1:1 1:1 1:1 1:1 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
 | **HARMONICES** | 1:1 5:4 3:2 7:4, 4 5 6 7 hits a bar | 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
 | **GALILEAN** | 1:1 1:2 1:4 2:1 | Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way |
 | **TRAPPIST** | 1:1 3:2 5:3 8:5 | a resonant chain of glassy plucks that mutate |
@@ -175,29 +200,30 @@ There are also eight places of your own, U1–U8.
 
 ## The controls
 
-Every page is laid out the same way. The top line holds the page, the focus (KEYS, A–D), the system, the sun and the
-tempo. Then come the picture, the hint line (ALGORITHM's value, the load) and K1–K4 as four boxes.
+Every page is laid out the same way. The top line holds the page, the focus (K for the keys, or A–D), the system,
+the sun with Astralica's head, and the tempo. Then come the picture, the hint line (a message, a button's pages, or
+ALGORITHM's value and the load) and K1–K4 as four boxes.
 
 | Control | What it does |
 | --- | --- |
-| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their rotation) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) |
-| **SEQ** | RING (the focused ring) → TIME (tempo, swing, mutate, the lanes) |
-| **EDIT** | ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
+| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their levels) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) |
+| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
+| **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
 | **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN) · ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel, INTRO) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
-| **SELECT** | the focus: KEYS, A, B, C, D |
+| **SELECT** | the focus: K (the keys), A, B, C, D: what the pages edit and the keys play |
 | **PRESETS** | the system, loaded once it rests; in SAVE, the place |
-| **PLAY** · **REC** | the orrery · the keys write into the focused ring |
+| **PLAY** · **REC** | the orrery · the keys write into the focused track |
 | **SAVE**, SAVE | store the system in U1–U8 |
 | **SEL + a key** | the sun moves there |
-| **SEL + SEQ** | the focused ring muted or not |
-| **OCT− OCT+** | the keys' octave; on RING, which 16 steps the white keys show |
-| **RING's white keys** | the steps: a tap goes rest → hit → accent; hold one and turn K1 for its degree |
+| **SEL + SEQ** | the focused track muted or not |
+| **OCT− OCT+** | the keys' octave; on STEPS, which 16 steps the white keys show |
+| **STEPS' keys** | white: the steps (a tap goes rest → hit → accent; hold one and turn K1 for its note); black: tracks, IDEA, mutes, CLEAR, UNDO |
 
-**MIDI:** notes play the keys (USB and the TRS jack, OMNI or a channel); CC 1 is MODW, channel pressure AFT. A clock
-sets the tempo, and START and STOP run the orrery.
+**MIDI:** notes play the focus (USB and the TRS jack, OMNI or a channel), and REC writes them; CC 1 is MODW,
+channel pressure AFT. A clock sets the tempo, and START and STOP run the orrery.
 
 ## Build it
 
@@ -212,7 +238,8 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the thirteen systems with a progression on the keys, `build/look/` their spectrograms.
+`build/audio/tour/` holds the fourteen systems with a progression on the keys, `build/audio/lib/` every sound SOUND
+can pick, `build/look/` their spectrograms. `tools/readme_screens.sh` makes the screens here.
 
 Hold **OCT−** while switching on for the USB rescue. Any firmware in the
 [FM-1 Firmware Hub](https://thefirmwarehub.com) can be installed over ORBITRIX, and back. Installing firmware is at
@@ -224,7 +251,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend's film, the thirteen systems to hear, and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend's film, the fourteen systems to hear, and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
@@ -241,7 +268,7 @@ run one a millisecond.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the thirteen systems
+firmware/src/orb_systems.h  the sound library (25 sounds by name) and the fourteen systems
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)

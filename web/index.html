@@ -179,8 +179,9 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 
 <h2 id="play">Play it here</h2>
 <p>This is the firmware itself, the same C as on the FM-1, running on a web FM-1. Press Start. First comes the
-  legend of Astralica (<b>PLAY</b> skips it); then press <b>PLAY</b> to start the orrery, and turn <b>PRESETS</b> for
-  the thirteen systems.</p>
+  legend of Astralica (<b>PLAY</b> skips it); then <b>KITTEN</b> is waiting, a beat to start from: press <b>PLAY</b>.
+  <b>SEQ</b> opens its steps on the keys, <b>EDIT</b> its sounds by name, and <b>PRESETS</b> turns to the other
+  thirteen systems.</p>
 <div class="fm1" id="fm1">
   <div class="fm1-top">
     <div class="side fm1-left">
@@ -229,6 +230,11 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
     the knobs turn the second row, and a key moves the sun.</div>
   <div><b>What it keeps</b> (its settings, your systems in U1–U8: SAVE, SAVE) stays in this browser. A <b>MIDI
     keyboard</b> plays it with velocity, and its clock runs the orrery.</div>
+  <div><b>On STEPS</b> (SEQ) the white keys are the track's steps: a click goes rest, hit, accent. The black ones, as the
+    screen draws them: the lower F# G# A# C# pick track A–D, D# is <b>IDEA</b> (a new pattern, as the sound wants
+    one), the upper four mute A–D, then <b>CLEAR</b> and <b>UNDO</b>.</div>
+  <div><b>The keys play the focus</b>, the chip at the top (K: the keys' own sound; A–D: that track's). On
+    <b>SOUND</b> (EDIT) K1 picks its sound by name; <b>REC</b> writes what you play into the track.</div>
 </div>
 
 <h2 id="legend">The legend of Astralica</h2>
@@ -244,8 +250,8 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 </div>
 
 <h2 id="hear">Hear the systems</h2>
-<p>Thirteen systems, named after real resonances in the sky: each here for a few bars with a slow progression on the
-  keys, rendered by the firmware's own engine. The picture is the spectrum, low notes at the bottom: click it to jump.</p>
+<p>Fourteen systems: KITTEN to start from, and thirteen named after real resonances in the sky. Each is here for a
+  few bars with a slow progression on the keys, rendered by the firmware's own engine. The picture is the spectrum, low notes at the bottom: click it to jump.</p>
 <div id="demos"></div>
 
 <h2 id="how">How it works</h2>
@@ -259,6 +265,12 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
   <div class="card"><img src="screens/orrery.png" alt="ORRERY: four rings round the sun"><div><h3>The orrery</h3>
     <p>Four rings step at ratios to a 16th (1:1, 5:4, 3:2, 7:4 …) on a clock that makes them meet exactly. Where they
       meet, the hits are accented. Logic between them (AND, NOT, XOR, CONJ), mutation, spirals.</p></div></div>
+  <div class="card"><img src="screens/steps.png" alt="STEPS: the track's ring, its hits as paws, the keys below"><div><h3>A groove in a minute</h3>
+    <p>Pick a track with a black key, tap its steps on the white ones, or ask for an IDEA: a kick on the beat, a snare's
+      backbeat, hats between, a bass on the root, a melody on the chord's tones. UNDO takes it back.</p></div></div>
+  <div class="card"><img src="screens/sound.png" alt="SOUND: the track's sound by name"><div><h3>Sounds by name</h3>
+    <p>Twenty-five, from BOOM, PAT and TICK to PURR, PAW, GLASS, STAR, MEOW and COMET, each balanced and in its own
+      register; TONE, DECAY and LEVEL under them, and the whole orbit beneath that.</p></div></div>
   <div class="card"><img src="screens/horizon.png" alt="HORIZON: a black hole"><div><h3>The strange part</h3>
     <p>TIDE: the planets pull on each other (FM between the voices, on the sun's harmonics). INSPIRAL: merger chirps.
       BEAM: pulsar pulses. HORIZON: the music falls into a black hole, redshifted, frozen, partly backwards.</p></div></div>

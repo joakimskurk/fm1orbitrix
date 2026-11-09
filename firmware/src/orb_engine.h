@@ -79,7 +79,8 @@ typedef struct {                            /* a sound: what a part plays. 0..99
     uint8_t tide;                           /* how hard the other planets pull this one (TIDE: their sum on its phase) */
     uint8_t insp, inspt;                    /* INSPIRAL: from up to 4 octaves under, a binary's chirp onto the note; its time */
     uint8_t beam;                           /* BEAM: the planet's light pulses at the moon's ratio (AM) */
-    uint8_t rsv[2];
+    uint8_t lib;                            /* (the app's: the library sound it came from, 1.., 0 none; the engine leaves it) */
+    uint8_t rsv;
 } orb_snd_t;                                /* 32 B */
 
 typedef struct {                            /* a ring */
@@ -123,7 +124,8 @@ typedef struct {
     int32_t sl, sls;                        /* sling Q15 and its step */
     int32_t env, eenv;                      /* amplitude envelope Q24; eccentricity envelope Q24 */
     uint8_t stage, estage, part, on;        /* env stage 0 off 1 A 2 D 3 S 4 R; ecc env 1 A 2 D 0 done */
-    uint8_t id, kill, rsv[2];               /* kill: shed (the load was too high): fades in ~10 ms */
+    uint8_t id, kill, insp_grow, rsv;       /* kill: shed (the load was too high): fades in ~10 ms; insp_grow: the chirp
+                                             * started from silence, so it may grow (a ringing voice keeps its level) */
     int32_t target;                         /* pitch, 1/256 semitone (MIDI 60 = 15360) */
     int32_t poff, pvel;                     /* gravity's spring: offset (1/65536 semitone) and its speed */
     int32_t fall;                           /* infall, 1/256 semitone, decaying */
@@ -334,7 +336,12 @@ static void orb_push(orb_t *o, uint8_t type, uint8_t id, uint8_t vel, int32_t pi
     __asm__ volatile("" ::: "memory");
     o->evw = w + 1u;
 }
-static void orb_note_on(orb_t *o, uint8_t id, int32_t pitch, uint8_t vel) { orb_push(o, EV_ON, id, vel, pitch); }
+static void orb_note_on(orb_t *o, uint8_t id, int32_t pitch, uint8_t vel) { orb_push_part(o, EV_ON, id, vel, pitch, ORB_KEYS); }
+/* a key played with another part's sound (A..D) on the keys' voices: the sequence goes on, untouched, on the rings' own */
+static void orb_note_on_part(orb_t *o, uint8_t id, int32_t pitch, uint8_t vel, uint32_t part)
+{
+    orb_push_part(o, EV_ON, id, vel, pitch, (uint8_t)(part <= ORB_D ? part : ORB_KEYS));
+}
 /* a ring's pattern was written (a step, its degree, LEN HITS ROT, a system): MUTATE's variation of it goes, the lap plays
  * it as written. r: 0..3, or ORB_NRING for all */
 static void orb_pattern_edited(orb_t *o, uint32_t r) { orb_push(o, EV_PAT, (uint8_t)r, 0, 0); }
@@ -389,6 +396,7 @@ static void orb_trigger(orb_t *o, uint32_t vi, uint32_t part, int32_t pitch, int
         if (v->insp_T < 8) v->insp_T = 8;
         v->insp_t = 0;
         v->insp_drop = (int32_t)s->insp * 12288 / 99;                                    /* up to 48 semitones */
+        v->insp_grow = (uint8_t)!sounding;
         v->estage = 0;
         v->poff = 0; v->pvel = 0;
     }
@@ -549,7 +557,7 @@ static void orb_voice_tick(orb_t *o, orb_voice_t *v)
         int32_t vs = orb_lin(s->vsens), vel = 32767 - (((32767 - v->vel) * vs) >> 15);
         amp = (((v->env >> 9) * vel) >> 15);                 /* Q15 */
         amp = (amp * lvl) >> 16;                             /* a voice at most half scale */
-        if (insp_left) amp = (amp * (32767 - ((insp_left * 21845) >> 16))) >> 15;   /* a chirp grows: 1/3 .. 1 */
+        if (insp_left && v->insp_grow) amp = (amp * (32767 - ((insp_left * 21845) >> 16))) >> 15;   /* a chirp grows: 1/3 .. 1 */
     }
     v->as = orb_rz(amp - v->a, 5);
     if (!v->stage && v->a < 64 && v->a > -64) { v->a = 0; v->as = 0; }   /* (done: no residue keeps it rendering) */
@@ -1191,11 +1199,14 @@ static void orb_events(orb_t *o)
             {   /* gravity: a key falls from the key played before it */
                 uint32_t newest = 0;
                 for (k = ORB_NV - ORB_NKV; k < ORB_NV; k++)
-                    if (o->v[k].stage && o->v[k].age >= newest && k != pick) { newest = o->v[k].age; from = o->v[k].target - (int32_t)o->sys->snd[0].oct * 3072; }
+                    if (o->v[k].stage && o->v[k].age >= newest && k != pick) {
+                        newest = o->v[k].age;
+                        from = o->v[k].target - (int32_t)o->sys->snd[o->v[k].part % ORB_NPART].oct * 3072;
+                    }
                 if (from == INT32_MIN && o->sys->macro[MAC_GRAVITY] > 50) from = et;
             }
             o->v[pick].id = e->id;
-            orb_trigger(o, pick, ORB_KEYS, e->pitch, (int32_t)e->vel * 258, -1, from);
+            orb_trigger(o, pick, e->part <= ORB_D ? e->part : ORB_KEYS, e->pitch, (int32_t)e->vel * 258, -1, from);
             o->lastvel = (int32_t)e->vel * 258;
             break;
         }
@@ -1215,7 +1226,7 @@ static void orb_events(orb_t *o)
         case EV_GLIDE:                      /* the target moves; the spring carries the pitch there from where it is */
             for (k = ORB_NV - ORB_NKV; k < ORB_NV; k++)
                 if (o->v[k].on && o->v[k].id == e->id) {
-                    int32_t nt = e->pitch + (int32_t)o->sys->snd[ORB_KEYS].oct * 3072;
+                    int32_t nt = e->pitch + (int32_t)o->sys->snd[o->v[k].part % ORB_NPART].oct * 3072;
                     o->v[k].poff = orb_clamp(o->v[k].poff + (o->v[k].target - nt) * 256, -3072 * 256, 3072 * 256);
                     o->v[k].target = nt;
                 }
