@@ -227,3 +227,30 @@ voice's decay reaches its floor; SWOOP retriggered every 8th note swoops each ti
 Tests: `test_library` (every sound loads with its register; the keys play a track on their own voices, the ring's left
 alone); `tests/scripts/groove.txt` (KITTEN made into a groove); `tests/scripts/readme.txt` and `tools/readme_screens.sh`
 (the README's screens).
+
+## D16 — Astronomical cuteness (2026-11-09)
+
+The user: "astronomical cuteness is what I want now". Decided: cute everywhere, without a control moving or a page
+getting harder to read; the cat's world, not stickers on the instrument.
+
+- **Astralica alive** (HOME): she bobs on the beat and blinks, as before; now a note rises from her each bar, her eyes
+  close happily (^ ^: the eye's top row) at an IDEA, a SAVE, a system loaded and PLAY, she sings along in a bubble when
+  the keys play (mew, nya, mrrp, prr, in turn), and she naps (zz) when stopped. Where the orbits meet, a twinkle.
+- **Her kittens**: the planets are kitten heads in their tracks' colours (HOME, ORBIT, LFO, ORBIT PAD, COSMOS round her;
+  TIME's playhead carries one). An accent is a heart (HOME, STEPS), a hit on STEPS a paw, and hearts rise from the
+  track when a step is set or an IDEA comes. The little Astralica sits at the ORBIT's focus and in COSMOS's middle.
+- **Ears and paws**: the title pill and the focus chip wear cat's ears, every gauge ends in a paw, the keys sounding on
+  KEYS show a paw. The macros: CHAOS a ball of yarn (curved strands turning, its thread loose), SPECTRAL a rainbow,
+  FRACT paws walking up, TIDE a fish bobbing on the tide, HORIZON a black hole with ears (and on its page the hole
+  itself is cat-shaped), ORBIT a kitten going round, MUTATE a strand of yarn.
+- **Words**: "AN IDEA, nya~", "NAPS zz" / "IS AWAKE", "ALL CLEAN", "SAVED, mrrp!", "AN EMPTY BOX".
+- **Sounds**: BOOP (a soft blip falling onto its note), SQUEAK (a toy's chirp up), BLOOP (a bubble, from far under),
+  TOY (a toy piano's tine and clang), MEW (her voice in short: it falls from above as her mouth opens and closes); the
+  library is 30, rendered and balanced (peaks −8 to −14 dBFS for these), none with a click.
+- **MILKY WAY**, system 1: a lullaby. A music box (STAR) twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a
+  purring bass at half speed, PENTA (nothing can be wrong), swing 22, a long ping-pong echo and a wide nebula, CONJ →
+  MOON; the keys mew (at a lower level: a chord of meows adds up). The sky's systems move up one; the settings' version
+  is 3.
+
+Measured: the engine unchanged (the tests' figures as before, the bench within its noise); MILKY WAY peaks −1.5 dBFS,
+RMS −22; its one click finding is a note's onset inside the loud mix (−49 dBFS, no track alone has it).

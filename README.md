@@ -52,15 +52,25 @@ The voice is a planet on an ellipse, and what you hear is where it is.
    | **F# G# A# C#** (upper) | mute A, B, C, D (lit while it plays; muted, it naps) |
    | **D#** (upper) · **F#** (top) | **CLEAR** the track · **UNDO** (and again: redo) |
 
-3. Press **EDIT**: **SOUND**. K1 picks the track's sound by name from 25 (BOOM, THUMP, TOM, PAT, CLAP, TICK, TSSS,
-   ZAP, PURR, GROWL, SUB, SWOOP, PLUCK, PAW, GLASS, BELL, STAR, TIDAL, PIXEL, LEAD, FLUTE, MEOW, CLOUD, DRONE, COMET);
+3. Press **EDIT**: **SOUND**. K1 picks the track's sound by name from 30 (BOOM, THUMP, TOM, PAT, CLAP, TICK, TSSS,
+   ZAP, BOOP, SQUEAK, BLOOP, PURR, GROWL, SUB, SWOOP, PLUCK, PAW, GLASS, BELL, STAR, TIDAL, TOY, PIXEL, LEAD, FLUTE,
+   MEOW, MEW, CLOUD, DRONE, COMET);
    stopped, you hear it at once. K2–K4: TONE, DECAY, LEVEL; with SEL: OCT, PAN, SPACE, WOBBLE.
 4. The keys play the **focus**, the chip at the top: a track's sound (where its ring plays it) or, as K, the keys' own.
    **REC** writes what you play into the track, the note you hear. **SELECT** turns the focus.
 5. **HOME**: K1–K4 set each track's hits; with SEL, their levels. **SAVE**, **SAVE** keeps it in U1.
 
 Each button's pages show on the hint line as you press it, this one lit: **EDIT** is SOUND → ORBIT → BODY → COSMOS,
-from the friendly to the deep.
+from the friendly to the deep. For a lullaby, turn **PRESETS** once: **MILKY WAY**.
+
+## Astralica, at home
+
+She is the sun the orbits go round. She bobs on every beat, blinks, and a note rises from her each bar; her eyes light
+where the orbits meet, and close happily (^ ^) at an IDEA, a SAVE, a new system or PLAY. Play the keys and she sings
+along in a bubble (mew, nya, mrrp, prr). Stop, and she naps: zz. The planets are her kittens, in their tracks' colours;
+an accent is a heart, a hit on STEPS a paw, and hearts rise when you set one. Every title and focus wears ears, every
+gauge ends in a paw; TIME's playhead and the LFOs carry a kitten, the ORBIT PAD's point is one, COSMOS is five of them
+round her, CHAOS is a ball of yarn, TIDE a fish, HORIZON a black hole with ears, and on KEYS the keys you play show a paw.
 
 ## The legend of Astralica
 
@@ -175,13 +185,14 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Fourteen systems
+## Fifteen systems
 
-The first is a beat to start from; the others are named after real resonances in the sky.
+The first two are to start from, a beat and a lullaby; the others are named after real resonances in the sky.
 
 | | Rings | |
 | --- | --- | --- |
 | **KITTEN** | 1:1 1:1 1:1 1:1 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
+| **MILKY WAY** | 1:1 1:1 3:2 1:2 | a lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing; the keys mew |
 | **HARMONICES** | 1:1 5:4 3:2 7:4, 4 5 6 7 hits a bar | 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
 | **GALILEAN** | 1:1 1:2 1:4 2:1 | Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way |
 | **TRAPPIST** | 1:1 3:2 5:3 8:5 | a resonant chain of glassy plucks that mutate |
@@ -238,7 +249,7 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the fourteen systems with a progression on the keys, `build/audio/lib/` every sound SOUND
+`build/audio/tour/` holds the fifteen systems with a progression on the keys, `build/audio/lib/` every sound SOUND
 can pick, `build/look/` their spectrograms. `tools/readme_screens.sh` makes the screens here.
 
 Hold **OCT−** while switching on for the USB rescue. Any firmware in the
@@ -251,7 +262,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend's film, the fourteen systems to hear, and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend's film, the fifteen systems to hear, and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
@@ -268,7 +279,7 @@ run one a millisecond.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the sound library (25 sounds by name) and the fourteen systems
+firmware/src/orb_systems.h  the sound library (30 sounds by name) and the fifteen systems
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)

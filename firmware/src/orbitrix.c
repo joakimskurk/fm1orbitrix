@@ -8,7 +8,7 @@
  *   ENV       ENV      LFO  MOD -> LFO     FX  FILTER MAP -> SPACE -> HORIZON     GLO  ORBIT PAD     ARP  KEYS
  *   K1..K4    the four values in the row; SEL held: the second row. ALGORITHM: the page's extra (the hint line)
  *   SELECT    the focus: KEYS, A, B, C, D: what the pages edit, and what the keys play (A..D: that track's sound)
- *   PRESETS   the system (KITTEN and the sky's 13, U1..U8 your own); SAVE: SAVE again to store it where PRESETS picks
+ *   PRESETS   the system (KITTEN, MILKY WAY and the sky's 13, U1..U8 your own); SAVE: SAVE again to store it where PRESETS picks
  *   PLAY      the orrery; REC: the keys write into the focused track (playing: at its step)
  *   keys      play the focus (SOLAR: each key retuned to the sun; HARMONIC: white keys harmonics 1..16, black 17..27);
  *             SEL + a key: the sun moves there. On STEPS the white keys are the track's steps (OCT +-: the page of 16):
@@ -191,7 +191,7 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-#define SET_VER 2u                              /* (2: KITTEN first, the library) */
+#define SET_VER 3u                              /* (3: KITTEN and MILKY WAY first, the library) */
 static struct { uint8_t oct, ch, sysi, intro_off, ver; } set = {0, 0, 0, 0, SET_VER};   /* intro_off: 1 = no story at power-on */
 static uint32_t set_dirty, set_t;
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
@@ -429,19 +429,22 @@ static uint32_t pd_fill(const pd_t *d)          /* 0..1024: how full its gauge i
 static uint32_t sysi, sys_pending = 0xFFu, sys_pend_t, msg_t;
 static char msg[32];
 static uint32_t msg_seq;                        /* (a new message: the hint line at once) */
+static uint32_t happy_t, mew_t, mew_n, love_t;   /* Astralica: happy eyes till happy_t; a mew at mew_t; hearts from love_t */
+static void cat_happy(void) { happy_t = fm1_ms + 700u; }
 static void say(const char *s) { put_s(msg, s); msg_t = fm1_ms + 1400u; msg_seq++; }
 static int user_load(uint32_t u, orb_sys_t *dst) { return blob_load(u, dst, sizeof *dst); }
 static void system_load(uint32_t i)
 {
     static orb_sys_t tmp;
     if (i >= ORB_NSYSTEM) {
-        if (user_load(i - ORB_NSYSTEM, &tmp)) { say("EMPTY"); return; }
+        if (user_load(i - ORB_NSYSTEM, &tmp)) { say("AN EMPTY BOX"); return; }
     } else
         orb_system(i, &tmp);
     orb_all_off(&eng);
     sys = tmp;
     orb_pattern_edited(&eng, ORB_NRING);
     undo_forget();
+    cat_happy();
     sysi = i;
     set.sysi = (uint8_t)i;
     set_touch();
@@ -469,6 +472,30 @@ static const uint8_t ICON_SPEAKER[7] = {0x08, 0x1A, 0x79, 0x79, 0x79, 0x1A, 0x08
 static const uint8_t ICON_CROSS[7] = {0x41, 0x22, 0x14, 0x08, 0x14, 0x22, 0x41};
 static const uint8_t ICON_UNDO[7] = {0x10, 0x30, 0x7E, 0x31, 0x11, 0x01, 0x1E};
 static const uint8_t ICON_PAW[5] = {0x15, 0x00, 0x0E, 0x1F, 0x0E};
+static const uint8_t SPR_KITTY[6] = {0x41, 0x63, 0x7F, 0x6B, 0x7F, 0x3E};        /* 7 x 6: a kitten's head, its eyes open */
+static const uint8_t SPR_HEART[5] = {0x0A, 0x1F, 0x1F, 0x0E, 0x04};              /* 5 x 5 */
+static const uint8_t SPR_NOTE[7] = {0x0C, 0x0A, 0x09, 0x08, 0x38, 0x78, 0x30};   /* 7 x 7: a note, its flag */
+static const uint8_t SPR_SPARK[5] = {0x04, 0x04, 0x1F, 0x04, 0x04};              /* 5 x 5: a twinkle */
+static void spr(const uint8_t *b, int32_t w, int32_t h, int32_t x, int32_t y, uint16_t c)   /* bit w-1 at the left */
+{
+    int32_t i, j;
+    for (j = 0; j < h; j++)
+        for (i = 0; i < w; i++)
+            if (b[j] >> (w - 1 - i) & 1u) cv_pset(x + i, y + j, c);
+}
+static void spr2(const uint8_t *b, int32_t w, int32_t h, int32_t x, int32_t y, uint16_t c)   /* twice the size */
+{
+    int32_t i, j;
+    for (j = 0; j < h; j++)
+        for (i = 0; i < w; i++)
+            if (b[j] >> (w - 1 - i) & 1u) cv_rect(x + 2 * i, y + 2 * j, 2, 2, c);
+}
+static void kitty(int32_t cx, int32_t cy, uint16_t c) { spr(SPR_KITTY, 7, 6, cx - 3, cy - 3, c); }   /* a kitten planet */
+static void ears(int32_t xl, int32_t xr, int32_t y, uint16_t c)   /* two cat's ears, their tips at y, on a box below */
+{
+    int32_t k;
+    for (k = 0; k < 3; k++) { cv_rect(xl - k, y + k, 2 * k + 1, 1, c); cv_rect(xr - k, y + k, 2 * k + 1, 1, c); }
+}
 static void icon9(const uint16_t *b, int32_t x, int32_t y, int32_t sc, uint16_t c)
 {
     int32_t i, j;
@@ -485,6 +512,7 @@ static void icon_w(const uint8_t *b, int32_t n, int32_t x, int32_t y, uint16_t c
 }
 static uint32_t part_kind(uint32_t part) { return orb_lib_kind(&sys.snd[part % ORB_NPART]); }
 static void cat_draw_q8(int32_t ax, int32_t ay, uint32_t s, uint32_t acx, uint32_t acy, int blink, uint32_t look);
+static void cat_draw_small(int32_t cx, int32_t cy, uint32_t s);
 static int32_t part_level(uint32_t p);
 static uint8_t tour[4], tour_n;                 /* the pages of the button pressed last (the hint line, a moment) */
 static uint32_t tour_t;
@@ -503,10 +531,12 @@ static void draw_bar(void)                      /* the top line: the page, the f
     int32_t x;
     cv_begin(240, 22, C_BG);
     x = text_w(&FONT_S, PAGE_NAME[page]) + 12;
-    pill(2, 2, x, 18, C_LIME);
+    pill(2, 3, x, 17, C_LIME);
+    ears(7, x - 4, 0, C_LIME);
     tx(8, 3, &FONT_S, PAGE_NAME[page], C_INK, C_LIME);
     {   /* the focus: what the pages edit and the keys play */
-        pill(x + 6, 2, 18, 18, RINGC[focus]);
+        pill(x + 6, 3, 18, 17, RINGC[focus]);
+        ears(x + 9, x + 20, 0, RINGC[focus]);
         txc(x + 15, 3, &FONT_S, focus ? ORB_PART_NAME[focus] : "K", C_INK, RINGC[focus]);
         x += 24;
     }
@@ -558,6 +588,7 @@ static void draw_knobs(void)                    /* K1..K4 as four boxes; SEL hel
         fill = (int32_t)(pd_fill(d) * (uint32_t)(w - 10) >> 10);
         cv_rect(x + 5, 43, w - 10, 6, C_FDIM);
         cv_rect(x + 5, 43, fill, 6, acc);
+        spr(ICON_PAW, 5, 5, x + 3 + (fill > 2 ? fill - 2 : 0), 43, C_TXT);   /* (a paw at its end) */
         if (pd_signed(d) && d->fmt == F_SIGNED) cv_rect(x + w / 2, 41, 1, 10, C_TXT);
     }
     cv_blit(0, 184);
@@ -599,6 +630,7 @@ static void draw_hint(void)                     /* the line above the knobs: ALG
 
 /* the orrery: the four rings around the sun, the planets on them, conjunctions; the lanes at the right */
 static uint32_t flash_seen[ORB_NRING], flash_t[ORB_NRING], conj_seen, conj_t;
+
 static uint32_t ring_progress(uint32_t r)       /* 0..65535 of the current step's way (the planet glides) */
 {
     const orb_rstate_t *R = &eng.rs[r];
@@ -625,7 +657,8 @@ static void draw_orrery(void)
             uint32_t on = orb_step_on(&eng, r, i, 0);   /* (as this lap plays it: MUTATE's changes hollow) */
             if (on) {
                 uint16_t cc = g->mute ? dim565(c, 5) : (on == 2u ? mix565(c, C_TXT, 8) : c);
-                cv_rect(x - 2, y - 2, 4, 4, cc);
+                if (on == 2u && len <= 32u) spr(SPR_HEART, 5, 5, x - 2, y - 2, cc);   /* an accent: a heart */
+                else cv_rect(x - 2, y - 2, 4, 4, cc);
                 if (eng.rs[r].vm[i >> 5] >> (i & 31u) & 1u) cv_rect(x - 1, y - 1, 2, 2, C_BG);
             } else
                 cv_pset(x, y, dim565(c, 6));
@@ -635,17 +668,35 @@ static void draw_orrery(void)
             uint32_t idx = R->cur, ph = 0xC0000000u + (uint32_t)(((uint64_t)idx << 32) / len)
                          + (uint32_t)(((uint64_t)ring_progress(r) << 16) / len);
             int32_t x = cx + icos(ph, rad), y = cy + isin(ph, rad), big = fm1_ms - flash_t[r] < 120u;
-            if (big) disc(x, y, 5, dim565(C_TXT, 6));
-            disc(x, y, 3, big ? C_TXT : c);
-            if (conj_t && fm1_ms - conj_t < 160u && big) cv_line(cx, cy, x, y, mix565(c, C_TXT, 10));
+            if (big) disc(x, y, 5, dim565(c, 6));
+            kitty(x, y, big ? C_TXT : c);       /* the planets are her kittens */
+            if (conj_t && fm1_ms - conj_t < 200u && big)   /* where the orbits meet: a twinkle */
+                spr(SPR_SPARK, 5, 5, x + 4, y - 9, (fm1_ms >> 5) & 1u ? C_TXT : C_YEL);
         }
     }
     if (eng.conj_count != conj_seen) { conj_seen = eng.conj_count; conj_t = fm1_ms; }
     {   /* Astralica, the sun: she bobs on the beat, blinks, her eyes light where the orbits meet; stopped, she naps */
-        uint32_t beat = eng.T % (4u * ORB_TPS), awake = eng.playing, flare = conj_t && fm1_ms - conj_t < 220u;
+        uint32_t beat = eng.T % (4u * ORB_TPS), awake = eng.playing, flare = conj_t && fm1_ms - conj_t < 220u, k;
         int32_t bob = awake && beat < ORB_TPS ? 1 : 0;
-        int blink = !awake || (fm1_ms % 3700u) < 130u;
-        cat_draw_q8(cx, cy + bob, 256u, CAT_W, CAT_H, blink, awake && flare);
+        int blink = fm1_ms < happy_t ? 2 : !awake || (fm1_ms % 3700u) < 130u;
+        static uint32_t bar_seen, note_t[3], note_n, was_awake;
+        cat_draw_q8(cx, cy + bob, 256u, CAT_W, CAT_H, blink, awake && flare && blink != 2);
+        if (awake && (!was_awake || eng.T / (16u * ORB_TPS) != bar_seen)) { bar_seen = eng.T / (16u * ORB_TPS); note_t[note_n++ % 3u] = fm1_ms; }
+        was_awake = awake;
+        for (k = 0; k < 3u; k++) {              /* a note rises from her each bar, and fades */
+            uint32_t age = fm1_ms - note_t[k];
+            if (!note_t[k] || age > 1500u) continue;
+            spr(SPR_NOTE, 7, 7, cx + 16 + (int32_t)age / 70 + isin(age * 3000000u, 3), cy - 20 - (int32_t)age / 40,
+                dim565(k == 1u ? C_CYAN : k == 2u ? C_MAG : C_YEL, (uint32_t)orb_clamp(15 - (int32_t)age / 100, 1, 15)));
+        }
+        if (fm1_ms - mew_t < 800u && mew_t) {   /* the keys: she sings along */
+            static const char *const MEW[4] = {"mew", "nya", "mrrp", "prr"};
+            const char *w = MEW[mew_n % 4u];
+            int32_t bw = text_w(&FONT_S, w) + 8, bx = cx - 30 - bw, by = cy - 40;
+            pill(bx, by, bw, 18, C_TXT);
+            cv_rect(bx + bw - 4, by + 18, 3, 2, C_TXT); cv_pset(bx + bw - 1, by + 20, C_TXT);   /* its tail, towards her */
+            tx(bx + 4, by + 1, &FONT_S, w, C_INK, C_TXT);
+        }
         if (!awake) {                           /* zz */
             uint32_t t = fm1_ms % 2400u, k;
             for (k = 0; k < 2u; k++) {
@@ -690,16 +741,43 @@ static void arc(int32_t cx, int32_t cy, int32_t r, uint32_t fill, uint16_t c, ui
         cv_pset(x, y, cc); cv_pset(x, y + 1, cc); cv_pset(x + 1, y, cc);
     }
 }
+static const uint16_t SPR_FISH[7] = {0x070, 0x1F9, 0x3BF, 0x7FE, 0x3FF, 0x1F9, 0x070};   /* 11 x 7, facing left */
+static void spr16(const uint16_t *b, int32_t w, int32_t h, int32_t x, int32_t y, uint16_t c)
+{
+    int32_t i, j;
+    for (j = 0; j < h; j++)
+        for (i = 0; i < w; i++)
+            if (b[j] >> (w - 1 - i) & 1u) cv_pset(x + i, y + j, c);
+}
 static void macro_icon(uint32_t id, int32_t cx, int32_t cy, uint16_t c)
 {
     uint32_t t = fm1_ms, k, ph;
     switch (id) {
-    case MAC_CHAOS:
-        for (k = 0; k < 40u; k++) { ph = k * 0x0D000000u + t * 400000u; cv_pset(cx + icos(ph, (int32_t)k / 4), cy + isin(ph, (int32_t)k / 4), k & 1u ? c : C_TXT); }
+    case MAC_CHAOS: {                           /* a ball of yarn, turning, its thread loose */
+        int32_t dx, dy, ca = orb_cos(t * 150000u) >> 11, sa = orb_sin(t * 150000u) >> 11;   /* (Q4) */
+        for (dy = -8; dy <= 8; dy++)
+            for (dx = -8; dx <= 8; dx++) {
+                int32_t u, v;
+                if (dx * dx + dy * dy > 70) continue;
+                u = (dx * ca + dy * sa) >> 4;
+                v = (dy * ca - dx * sa) >> 4;
+                u += v * v / 10;                /* the strands curve round the ball */
+                cv_pset(cx - 2 + dx, cy - 1 + dy, (u + 30) % 3 == 0 ? mix565(c, C_INK, 8) : dx + dy < -9 ? mix565(c, C_TXT, 6) : c);
+            }
+        for (k = 0; k < 9u; k++) cv_pset(cx + 4 + (int32_t)k, cy + 7 + isin(k * 0x1C000000u + t * 2500000u, 2), c);
         break;
-    case MAC_SPECTRAL:
-        for (k = 0; k < 5u; k++) { int32_t h = k == 2u ? 14 : k & 1u ? 10 : 6; cv_rect(cx - 9 + (int32_t)k * 4, cy + 7 - h, 3, h, k == 2u ? C_TXT : c); }
+    }
+    case MAC_SPECTRAL: {                        /* a rainbow */
+        static const uint16_t RB[4] = {C_MAG, C_YEL, C_LIME, C_CYAN};
+        for (k = 0; k < 4u; k++)
+            for (ph = 0; ph <= 48u; ph++) {
+                uint32_t a = 0x80000000u + ph * (0x80000000u / 48u);
+                int32_t r = 12 - (int32_t)k * 2;
+                cv_pset(cx + icos(a, r), cy + 6 + isin(a, r), RB[k]);
+                cv_pset(cx + icos(a, r - 1), cy + 6 + isin(a, r - 1), RB[k]);
+            }
         break;
+    }
     case MAC_GRAVITY:                           /* three orbits round a nucleus */
         for (k = 0; k < 3u; k++)
             for (ph = 0; ph < 48u; ph++) {
@@ -709,24 +787,29 @@ static void macro_icon(uint32_t id, int32_t cx, int32_t cy, uint16_t c)
             }
         disc(cx, cy, 2, C_TXT);
         break;
-    case MAC_FRACT:
-        for (k = 0; k < 4u; k++) cv_rect(cx - 9 + (int32_t)k * 5, cy + 5 - (int32_t)k * 4, 5, 4, k & 1u ? c : C_TXT);
+    case MAC_FRACT:                             /* paws, walking up */
+        for (k = 0; k < 3u; k++)
+            spr(ICON_PAW, 5, 5, cx - 9 + (int32_t)k * 6, cy + 3 - (int32_t)k * 5, (t / 260u) % 4u > k ? C_TXT : c);
         break;
-    case MAC_TIDE:                              /* two bodies pulling: a wave between them */
-        disc(cx - 8, cy, 3, C_TXT);
-        disc(cx + 8, cy, 3, c);
-        for (k = 0; k < 12u; k++) cv_pset(cx - 5 + (int32_t)k, cy + isin(k * 0x20000000u + t * 3000000u, 3), c);
+    case MAC_TIDE:                              /* a fish, bobbing on the tide */
+        for (k = 0; k < 20u; k++) cv_pset(cx - 10 + (int32_t)k, cy + 7 + isin(k * 0x18000000u + t * 3000000u, 2), c);
+        spr16(SPR_FISH, 11, 7, cx - 6, cy - 6 + isin(t * 3000000u, 2), C_TXT);
+        cv_pset(cx - 2, cy - 4 + isin(t * 3000000u, 2), C_INK);
         break;
-    case MAC_HORIZON:                           /* a black hole and its ring */
-        for (ph = 0; ph < 64u; ph++) cv_pset(cx + icos(ph << 26, 11), cy + isin(ph << 26, 3), ph & 1u ? c : C_YEL);
-        disc(cx, cy, 5, C_INK);
-        circle(cx, cy, 6, c, 0);
+    case MAC_HORIZON:                           /* a black hole with ears, its ring */
+        for (ph = 0; ph < 64u; ph++) cv_pset(cx + icos(ph << 26, 11), cy + 2 + isin(ph << 26, 3), ph & 1u ? c : C_YEL);
+        for (k = 0; k < 4u; k++) { cv_rect(cx - 4 - (int32_t)k, cy - 8 + (int32_t)k, 2 * (int32_t)k + 1, 1, c); cv_rect(cx + 4 - (int32_t)k, cy - 8 + (int32_t)k, 2 * (int32_t)k + 1, 1, c); }
+        disc(cx, cy + 2, 5, C_INK);
+        circle(cx, cy + 2, 6, c, 0);
         break;
-    case MAC_ORBIT:
-        circle(cx, cy, 4, C_TXT, 0);
-        for (ph = 0; ph < 48u; ph++) cv_pset(cx + icos((ph << 26) + (ph << 24), 11), cy + isin((ph << 26) + (ph << 24), 4), c);
+    case MAC_ORBIT: {                           /* a kitten going round */
+        uint32_t a = t * 1200000u;
+        circle(cx, cy, 3, C_TXT, 0);
+        for (ph = 0; ph < 48u; ph++) cv_pset(cx + icos((ph << 26) + (ph << 24), 11), cy + isin((ph << 26) + (ph << 24), 5), c);
+        kitty(cx + icos(a, 11), cy + isin(a, 5), C_TXT);
         break;
-    default:                                    /* MUTATE: a strand */
+    }
+    default:                                    /* MUTATE: a strand of yarn */
         for (k = 0; k < 16u; k++) {
             int32_t x = cx - 8 + (int32_t)k, y = isin(k * 0x10000000u + t * 2000000u, 4);
             cv_pset(x, cy + y, c);
@@ -781,7 +864,7 @@ static void draw_ring(void)
         if (i / 16u == step_page) cv_pset(cx + icos(ph, R + 9), cy + isin(ph, R + 9), C_LIME);
         if (g->on[i]) {
             uint16_t pc = g->on[i] == 2u ? C_TXT : c;
-            if (len <= 32u) icon_w(ICON_PAW, 5, x - 2, y - 2, pc);
+            if (len <= 32u) spr(g->on[i] == 2u ? SPR_HEART : ICON_PAW, 5, 5, x - 2, y - 2, pc);   /* a paw; an accent a heart */
             else cv_rect(x - 1, y - 1, 3, 3, pc);
         } else
             cv_rect(x, y, 1, 1, dim565(c, 8));
@@ -791,6 +874,15 @@ static void draw_ring(void)
         disc(cx + icos(ph, R - 10), cy + isin(ph, R - 10), 3, fm1_ms - flash_t[r] < 100u ? C_TXT : dim565(C_TXT, 10));
     }
     icon9(KIND_ICON[part_kind(ORB_A + r)], cx - 9, cy - 9, 2, fm1_ms - flash_t[r] < 100u ? C_TXT : c);
+    if (love_t && fm1_ms - love_t < 900u) {     /* an edit: love */
+        uint32_t age = fm1_ms - love_t, k;
+        for (k = 0; k < 3u; k++) {
+            int32_t a = (int32_t)age - (int32_t)k * 120;
+            if (a < 0) continue;
+            spr(SPR_HEART, 5, 5, cx - 12 + (int32_t)k * 10 + isin((uint32_t)a * 4000000u, 2), cy - 14 - a / 25,
+                dim565(k == 1u ? C_TXT : C_MAG, (uint32_t)orb_clamp(15 - a / 60, 1, 15)));
+        }
+    }
     {   /* the side: the track, its sound, its speed, the page */
         char s[20], *p;
         frame(124, 2, 114, 98, dim565(c, 9));
@@ -902,7 +994,8 @@ static void draw_time(void)
     if (eng.playing) {
         uint32_t bar = 16u * ORB_TPS, ph = eng.T % bar;
         int32_t x = x0 + (int32_t)((ph / 16u) * (uint32_t)W / (bar / 16u));
-        cv_rect(x, 2, 2, 136, C_LIME);
+        cv_rect(x, 10, 2, 128, C_LIME);
+        kitty(x + 1, 5, C_LIME);
     }
     cv_blit(0, 24);
 }
@@ -935,12 +1028,12 @@ static void draw_orbit(void)
         if (k) cv_line(px, py, sx, sy, k & 1 ? c : mix565(c, C_TXT, 6));
         px = sx; py = sy;
     }
-    disc(cx + ((ef * R) >> 16) + (((ef * R) >> 15) >> 1), cy, 4, C_YEL);   /* the sun, at the focus */
+    cat_draw_small(cx + ((ef * R) >> 16) + (((ef * R) >> 15) >> 1), cy, 72u);   /* the sun at the focus: her */
     {   /* the planet, going round (fast at the near point) */
         uint32_t M = fm1_ms * 1500000u, row = (uint32_t)e >> 11, col = M >> 23;
         uint32_t E = M + ((uint32_t)ORB_KEP[row][col] << 16);
         int32_t b = 32767 - ((ef * ef) >> 16);
-        disc(cx + (((orb_cos(E) + ef / 2) * R) >> 15), cy + (((orb_sin(E) * b) >> 15) * R >> 15), 3, C_TXT);
+        kitty(cx + (((orb_cos(E) + ef / 2) * R) >> 15), cy + (((orb_sin(E) * b) >> 15) * R >> 15), C_TXT);
     }
     /* the live wave */
     frame(136, 2, 102, 76, C_FDIM);
@@ -1046,7 +1139,7 @@ static void draw_lfo(void)
         }
         {
             int32_t v = eng.lval[k], y = y0 + 38 - (v * 22 >> 15);
-            disc(232, y, 3, C_TXT);
+            kitty(231, y, C_TXT);
         }
     }
     cv_blit(0, 24);
@@ -1121,8 +1214,8 @@ static void draw_pad(void)
     {
         int32_t px = x0 + eng.orb_x * S / 9900, py = y0 + S - eng.orb_y * S / 9900;
         cv_line(cx, cy, px, py, dim565(C_LIME, 8));
-        disc(px, py, 5, C_LIME);
-        disc(px, py, 2, C_INK);
+        disc(px, py, 6, dim565(C_LIME, 5));
+        icon9(KIND_ICON[LK_VOICE], px - 4, py - 4, 1, C_LIME);
     }
     frame(146, 2, 92, 140, C_FDIM);
     put_u(put_s(s, "X "), sys.ox); tx(152, 8, &FONT_S, s, C_TXT, C_BG);
@@ -1138,7 +1231,9 @@ static void draw_pad(void)
 static void draw_keys_page(void)
 {
     static const uint8_t WK[16] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26};
-    uint32_t k, w = 0;
+    uint32_t k, w = 0, lit = 0;
+    for (k = ORB_NV - ORB_NKV; k < ORB_NV; k++)  /* (the keys sounding: a paw on each) */
+        if (eng.v[k].on && eng.v[k].id >= 1u && eng.v[k].id <= 27u) lit |= 1u << (eng.v[k].id - 1u);
     int32_t keyoct = (int8_t)set.oct;
     cv_begin(240, 144, C_BG);
     for (k = 0; k < 27u; k++) {
@@ -1153,6 +1248,7 @@ static void draw_keys_page(void)
         c = (note % 12u) == sys.sun % 12u ? C_YEL : white ? C_TXT : C_GREY;
         if (!white) continue;
         cv_rect(x, ky, kw, kh, dim565(c, 12));
+        if (lit >> k & 1u) spr2(ICON_PAW, 5, 5, x + kw / 2 - 5, ky + kh - 32, C_MAG);
         if (sys.keymode == KM_HARMONIC) {
             put_u(s, ORB_WHITE_H[k]);
             txc(x + kw / 2, ky + kh - 18, &FONT_S, s, C_INK, dim565(c, 12));
@@ -1169,6 +1265,7 @@ static void draw_keys_page(void)
         if (white) continue;
         x = 2 + (int32_t)w * 15 + 10;
         cv_rect(x, 60, 10, 48, (note % 12u) == sys.sun % 12u ? C_YEL : C_FDIM);
+        if (lit >> k & 1u) spr2(ICON_PAW, 5, 5, x, 94, C_TXT);
         if (sys.keymode == KM_HARMONIC) {
             char s[4];
             put_u(s, ORB_WHITE_H[k]);
@@ -1213,10 +1310,11 @@ static void draw_cosmos(void)
             int32_t t = (pull / 600) * (b > 4000 ? 15 : b / 267) / 15;
             if (t > 0) cv_line(px[k], py[k], px[q], py[q], dim565(mix565(RINGC[k], RINGC[q], 8), (uint32_t)orb_clamp(t + 3, 3, 15)));
         }
-    disc(cx, cy + 6, 6, C_YEL);
+    cat_draw_small(cx, cy + 6, 96u);
     for (k = 0; k < 5; k++) {
         int32_t r = 3 + lv[k] / 4000;
-        disc(px[k], py[k], r, RINGC[k]);
+        if (r > 5) disc(px[k], py[k], r, dim565(RINGC[k], 5));
+        icon9(KIND_ICON[LK_VOICE], px[k] - 4, py[k] - 4, 1, RINGC[k]);
         if ((uint32_t)k == focus) circle(px[k], py[k], r + 3, C_TXT, 0);
     }
     /* the chirp: pitch against time, from the drop up onto the note, then the ring-down */
@@ -1259,6 +1357,16 @@ static void draw_horizon(void)
         if (isin(ph, 14) < 0) cv_pset(x, y, dim565(k & 1 ? C_LIME : C_YEL, 9));
     }
     disc(cx, cy, 30, dim565(ring, 5));
+    {   /* its ears: the hole is cat-shaped */
+        int32_t k, e;
+        for (e = -1; e <= 1; e += 2)
+            for (k = 0; k < 13; k++) {
+                int32_t tx0 = cx + e * 17 - k / 2, ty = cy - 38 + k;
+                cv_rect(tx0, ty, k / 2 * 2 + 1, 1, C_INK);
+                cv_pset(tx0, ty, ring);
+                cv_pset(tx0 + k / 2 * 2, ty, ring);
+            }
+    }
     disc(cx, cy, 26, C_INK);
     circle(cx, cy, 27, ring, 0);
     circle(cx, cy, 28, dim565(ring, 10), 0);
@@ -1426,7 +1534,8 @@ static void cat_draw_q8(int32_t ax, int32_t ay, uint32_t s, uint32_t acx, uint32
             if (!k || x1 <= x0 || x1 < 0 || x0 >= 240) continue;
             c = CAT_PAL[k];
             if (k == CAT_EYE) {
-                if (blink) c = j + 1u < CAT_H && CAT[j + 1u][i] == CAT_EYE ? CAT_PAL[CAT_FACE] : CAT_PAL[CAT_WHITE];
+                if (blink == 2) c = j && CAT[j - 1u][i] == CAT_EYE ? CAT_PAL[CAT_FACE] : CAT_PAL[CAT_WHITE];   /* happy: ^ ^ */
+                else if (blink) c = j + 1u < CAT_H && CAT[j + 1u][i] == CAT_EYE ? CAT_PAL[CAT_FACE] : CAT_PAL[CAT_WHITE];
                 else if (look) c = ((fm1_ms >> 6) & 1u) ? C_LIME : C_CYAN;
             }
             cv_rect(x0, y0, x1 - x0, y1 - y0, c);
@@ -1870,12 +1979,12 @@ static void step_key(int32_t f)
         focus = ORB_A + (uint32_t)f;
         put_s(p, orb_lib_name(&sys.snd[focus]));
         drawn_bar = ~0u; knobs_dirty = 1;
-    } else if (f == BK_IDEA) { idea(r); put_s(p, "NEW IDEA"); }
+    } else if (f == BK_IDEA) { idea(r); put_s(p, "AN IDEA, nya~"); cat_happy(); love_t = fm1_ms; }
     else if (f <= BK_MD) {
         orb_ring_t *g = &sys.ring[f - BK_MA];
         g->mute = !g->mute;
-        put_s(p, g->mute ? "NAPS  zz" : "AWAKE");
-    } else if (f == BK_CLEAR) { ring_clear(r); put_s(p, "CLEARED"); }
+        put_s(p, g->mute ? "NAPS  zz" : "IS AWAKE");
+    } else if (f == BK_CLEAR) { ring_clear(r); put_s(p, "ALL CLEAN"); }
     else { ring_undo(r); put_s(p, undo[r].ok ? (undo_redo[r] ? "UNDONE" : "REDONE") : "NOTHING TO UNDO"); }
     if (!(f == BK_UNDO && !undo[r].ok)) say(s);
     main_dirty = 1;
@@ -1909,6 +2018,7 @@ static void handle_keys(void)
                 int32_t p = orb_key_pitch(&sys, sys.keymode == KM_HARMONIC ? k : note, oct, 0);
                 if (focus) p -= 24 * 256;
                 held_id[k] = (uint8_t)(k + 1u);
+                mew_t = fm1_ms; mew_n++;
                 orb_note_on_part(&eng, held_id[k], p, 100, focus);
                 midi_send(0x90u | (set.ch ? set.ch - 1u : 0u), note & 127u, 100);
                 if (rec && focus) rec_key(p);
@@ -1920,6 +2030,7 @@ static void handle_keys(void)
                 orb_ring_t *g = &sys.ring[ring_focus()];
                 if (!held_used && held_step < g->len) {   /* a tap: rest -> hit -> accent -> rest */
                     undo_take(ring_focus(), 0);
+                    if (!g->on[held_step]) love_t = fm1_ms;
                     g->on[held_step] = (uint8_t)((g->on[held_step] + 1u) % 3u);
                     orb_pattern_edited(&eng, ring_focus());
                     main_dirty = 1;
@@ -2028,7 +2139,7 @@ static void handle_buttons(void)
     if (b & (1u << BTN_FX)) goto_page3(PG_FILTER, PG_SPACE, PG_HORIZON);
     if (b & (1u << BTN_GLO)) goto_page(PG_PAD, PG_PAD);
     if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
-    if (b & (1u << BTN_PLAY)) { orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
+    if (b & (1u << BTN_PLAY)) { if (!eng.playing) cat_happy(); orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
     if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the keys: into A) */
         char s[28];
         rec = !rec; rec_pos = 0;
@@ -2055,7 +2166,7 @@ static void handle_buttons(void)
             for (i = 0; i < 11u; i++) sys.name[i] = 0;
             sys.name[0] = 'U'; sys.name[1] = (char)('1' + save_to);
             orb_all_off(&eng);
-            if (blob_save(save_to, &sys, sizeof sys) == 0) { sysi = ORB_NSYSTEM + save_to; set.sysi = (uint8_t)sysi; set_touch(); say("SAVED"); }
+            if (blob_save(save_to, &sys, sizeof sys) == 0) { sysi = ORB_NSYSTEM + save_to; set.sysi = (uint8_t)sysi; set_touch(); say("SAVED, mrrp!"); cat_happy(); }
             else say("SAVE FAILED");
             save_mode = 0;
         }

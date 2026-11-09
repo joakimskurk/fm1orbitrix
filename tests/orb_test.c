@@ -58,7 +58,7 @@ static void test_orbit(void)
     int k;
     /* a pitch whose period is a whole number of frames over 8192 (bin 64 = 344.5 Hz) */
     int32_t p = (int32_t)lround((69.0 + 12.0 * log2((64.0 * 44100.0 / 8192.0) / 440.0)) * 256.0);
-    orb_system(1, &S);                      /* (HARMONICES) */
+    orb_system(2, &S);                      /* (HARMONICES) */
     orb_init(&O, &S, &MEM);
     plain(&S.snd[0]);
     S.snd[0].ecc = 0;
@@ -125,7 +125,7 @@ static void test_orrery(void)
 {
     uint32_t r, blocks, fires[4] = {0}, last[4] = {0}, conj;
     int32_t out[512];
-    orb_system(1, &S);                      /* (HARMONICES) */
+    orb_system(2, &S);                      /* (HARMONICES) */
     for (r = 0; r < 4u; r++) {              /* every step a hit; 1:1, 3:2, 2:1, 1:2 */
         orb_ring_t *g = &S.ring[r];
         static const uint8_t P[4] = {1, 3, 2, 1}, Q[4] = {1, 2, 1, 2};
@@ -155,7 +155,7 @@ static void test_orrery(void)
     CHECK(conj >= 126 && conj <= 130, "conjunctions %u, want 128", conj);
 
     /* NOT: ring B (1:1, all hits) NOT A (1:1, every other step) fires only where A rests */
-    orb_system(1, &S);                      /* (HARMONICES) */
+    orb_system(2, &S);                      /* (HARMONICES) */
     S.ring[0].ratio = ORB_RATIO_1_1; S.ring[0].len = 16; S.ring[0].hits = 8; S.ring[0].rot = 0; orb_euclid(&S.ring[0]);
     S.ring[1].ratio = ORB_RATIO_1_1; S.ring[1].len = 16; S.ring[1].hits = 16; S.ring[1].logic = LOG_NOT; S.ring[1].ltgt = 0;
     S.ring[1].prob = 99; orb_euclid(&S.ring[1]);
@@ -172,7 +172,7 @@ static void test_orrery(void)
     {
         static orb_sys_t W;
         uint32_t b, i, r, laps[ORB_NRING] = {0}, varied = 0, seen = 0;
-        orb_system(5, &S);                  /* (SPIRAL DRIFT) */
+        orb_system(6, &S);                  /* (SPIRAL DRIFT) */
         S.mutate = 99; S.var = 99;
         S.ring[1].dg[S.ring[1].len - 1u] = 21; S.ring[1].on[S.ring[1].len - 1u] = 2;   /* (a degree past MUTATE's old -7..14) */
         W = S;
@@ -217,7 +217,7 @@ static void test_alias(void)
     int k;
     /* F6 (1378 Hz, bin 256) at full eccentricity and SLING: what is not harmonic must stay ~50 dB down */
     int32_t p = (int32_t)lround((69.0 + 12.0 * log2((256.0 * 44100.0 / 8192.0) / 440.0)) * 256.0);   /* bin 256 */
-    orb_system(1, &S);                      /* (HARMONICES) */
+    orb_system(2, &S);                      /* (HARMONICES) */
     orb_init(&O, &S, &MEM);
     plain(&S.snd[0]);
     S.snd[0].ecc = 99;
@@ -277,7 +277,7 @@ static void test_inspiral(void)
     orb_voice_t *v = &O.v[4];
     int32_t p = 57 * 256, k, first = 0, mid = 0;
     uint32_t inc_target = orb_inc(p);
-    orb_system(1, &S);                      /* (HARMONICES) */
+    orb_system(2, &S);                      /* (HARMONICES) */
     orb_init(&O, &S, &MEM);
     plain(&S.snd[0]);
     S.snd[0].insp = 50;
@@ -304,7 +304,7 @@ static void test_horizon(void)
     uint32_t b, k;
     double sq = 0;
     int32_t peak = 0;
-    orb_system(7, &S);                      /* (NEBULA) */
+    orb_system(8, &S);                      /* (NEBULA) */
     orb_init(&O, &S, &MEM);
     for (k = 0; k < 3u; k++) orb_note_on(&O, (uint8_t)(k + 1), orb_key_pitch(&S, 60u + 4u * k, 0, 0), 100);
     S.hshift = -19; S.hretro = 30; S.hgrain = 40;

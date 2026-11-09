@@ -5,7 +5,7 @@
   harmonically beautiful. The look is the user's two ORBITRIX drawings: deep indigo, violet frames with cut corners, a
   lime title pill, the ring colours cyan, magenta, yellow, violet (A–D), lime for KEYS, pixel stars.
 - The code: `firmware/src/orb_engine.h` (the engine, no platform, shared with the host tools), `orb_systems.h` (the
-  sound library, 25 sounds by name, and the fourteen systems: KITTEN, the beat to start from, first), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
+  sound library, 30 sounds by name, and the fifteen systems: KITTEN and MILKY WAY, to start from, first), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
   The laws live in `tools/gen_tables.py`: change them there and rerun it, never edit `orb_tables.h`.
 - After every engine change: `tests/run_orb.sh` (tests, the same under ASan/UBSan, renders, spectrograms, bench). After
   an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt`, `splash.txt` and `groove.txt`
