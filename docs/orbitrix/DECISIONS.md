@@ -397,3 +397,28 @@ Decided:
   as the halo rings.
 - Memory: 28 KB of the pool (331 776 B of 344 064). The cost (x86, callgrind -Os): HALO ~+60 instructions a frame;
   everything cosmic on ~+340; nothing while off.
+
+## D23 — Astral cuteness: four systems, little songs, a header (2026-11-09)
+
+The user: "Can we make some better-built patches and demos that are astral cuteness at its best? And a more fitting
+header for the preview on the git landing page." Decided:
+
+- **Four systems by hand**, the last four (16..19, so the others keep their places; SET_VER 5: the places of your own
+  moved, the settings start again): PURRSEC (a cat cafe at 84, swung, JUST: the royal road), STARDUST (a nursery of
+  stars at 100, OTONAL), MOON NAP (a lullaby at 66, UTONAL, no drums, a 30 s halo), ZOOMIES (a kitten's mad minute at
+  124, JUST, a chord a bar). In each the bass **walks the chords' roots**: a ring as long as the progression (8 bars at
+  1:2, 4 bars at 1:1, 8 at 1:4) whose sections are the chords, so the bass and the chords change together on the bar;
+  the melodies keep to **the notes every chord of the progression holds** (STARDUST: 9/8 5/4 3/2 of the series; MOON
+  NAP: the 4/3 and 8/5 under the sun), so nothing clashes whatever comes when. No MUTATE (it steps degrees off the
+  chords): the life is in the probabilities, the moons where the orbits meet, the halo. Their basses without legato
+  (a slide between roots is a glide). Written with orb_ring_pat (the steps as a string), levels set by measuring each
+  ring alone (tools/orb_render.c: ORB_NOBG, ORB_SOLO).
+- **Little songs** (orb_render song N): the system's parts by kind enter one after another: its chords alone in their
+  halo, the bass, the beat, the melodies; a break (the beat and the bass out) where the keys sing the chords' own notes
+  (a two-bar phrase, each note the chord's at that moment); all of it again; the beat out; STOP, and the tail to
+  silence. For the six with chords (MILKY WAY, AFTERGLOW and the four), build/audio/songs, and on the page above the
+  systems. On the page the systems are twenty.
+- **The header**: tools/make_header.py draws Astralica on her night with her four kittens on their dotted rings (A..D's
+  colours), the title in its lime pill with cat ears, what it is and "astral cuteness", in the firmware's own fonts
+  (read from felucca_font.h) and colours, in pixels doubled: docs/readme/header.png (1280 x 640: the README's top, and
+  the size GitHub's social preview wants), and the page's link preview at 1200 x 630 from the same drawing.

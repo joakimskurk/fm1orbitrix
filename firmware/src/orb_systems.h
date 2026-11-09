@@ -151,14 +151,39 @@ static void orb_sys_clear(orb_sys_t *s, const char *name)
     s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 20; s->bg_silk = 40; s->bg_width = 55; s->bg_halo = 70;   /* (LEVEL 0: up, and it plays) */
 }
 
+/* a ring written out by hand: speed p:q, its steps (x a hit, X an accent, . a rest; spaces and | to read by), each
+ * hit's degree from mel (cycled), its probability (0: always). LEN and HITS are what the steps say (HITS turned later
+ * spreads them again, as ever) */
+static void orb_ring_pat(orb_ring_t *r, uint32_t p, uint32_t q, const char *pat, const int8_t *mel, uint32_t nmel,
+                         uint8_t prob)
+{
+    uint32_t i, n = 0, h = 0;
+    r->ratio = orb_ratio_idx(p, q);
+    r->rot = 0; r->deg = 0; r->dir = DIR_FWD; r->logic = LOG_FREE; r->ltgt = 0; r->mute = 0;
+    r->prob = prob ? prob : 99;
+    for (i = 0; i < ORB_NSTEP; i++) { r->on[i] = 0; r->dg[i] = 0; }
+    for (i = 0; pat[i] && n < ORB_NSTEP; i++) {
+        if (pat[i] == ' ' || pat[i] == '|') continue;
+        if (pat[i] == 'x' || pat[i] == 'X') {
+            r->on[n] = pat[i] == 'X' ? 2 : 1;
+            if (nmel) r->dg[n] = mel[h % nmel];
+            h++;
+        }
+        n++;
+    }
+    r->len = (uint8_t)(n ? n : 1u);
+    r->hits = (uint8_t)h;
+}
+
 static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8_t amt)
 {
     s->mod[k].src = src; s->mod[k].dst = dst; s->mod[k].amt = amt;
 }
 
-#define ORB_NSYSTEM 16u
+#define ORB_NSYSTEM 20u
 static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"KITTEN", "MILKY WAY", "HARMONICES", "GALILEAN", "TRAPPIST", "KIRKWOOD",
-    "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION", "GW150914", "ALPHA CEN", "SGR A*", "AFTERGLOW"};
+    "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION", "GW150914", "ALPHA CEN", "SGR A*", "AFTERGLOW",
+    "PURRSEC", "STARDUST", "MOON NAP", "ZOOMIES"};
 
 /* KITTEN: a beat to start from, on the grid (all 1:1, so every step is where you look for it): a kick on the beat, a
  * clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates:
@@ -236,12 +261,115 @@ static void orb_system_afterglow(orb_sys_t *s)
     orb_mod_set(s, 1, SRC_CONJ, DST_MOON, 30);
 }
 
+/* ---- astral cuteness: four made by hand around the background radiation's chords, each one's bass walking the
+ * chords' roots (the chords and the bass change together, on the bar), its melodies on the notes every chord holds.
+ * Nothing mutates: what is written is what plays (the life is in the probabilities, the moons, the halo) */
+
+/* PURRSEC: a cat cafe at 84, swung. A soft thump and a brushed pat, hats that come and go, the purr walking the royal
+ * road (COMET: Gmaj7 A6 F#m7 Bm9 on D, two bars each), its chords in a halo; the keys a toy piano */
+static void orb_system_purrsec(orb_sys_t *s)
+{
+    static const int8_t bass[] = {5, 5, 12, 17, 12, 7, 7, 14, 19, 14, 4, 4, 11, 16, 11, -3, -3, 4, 9, 4};
+    s->tuning = 0; s->sun = 2; s->bpm = 84; s->swing = 30; s->hum = 6;
+    s->snd[0] = SND_TOY; s->snd[0].oct = 1; s->snd[0].level = 66; s->snd[0].send = 40;
+    s->snd[1] = SND_THUMP; s->snd[1].level = 84; s->snd[1].d = 50;
+    s->snd[2] = SND_SNARE; s->snd[2].level = 80; s->snd[2].dust = 70; s->snd[2].color = 62;   /* (brushed) */
+    s->snd[3] = SND_HAT; s->snd[3].level = 64; s->snd[3].pan = 62;
+    s->snd[4] = SND_BASS; s->snd[4].level = 64; s->snd[4].gate = 70; s->snd[4].flags = 0;   /* (no glide) */
+    orb_ring_pat(&s->ring[0], 1, 1, "X......x ..x.....", 0, 0, 0);
+    orb_ring_pat(&s->ring[1], 1, 1, "....X... ....X..x", 0, 0, 0);   /* (a ghost before the one) */
+    orb_ring_pat(&s->ring[2], 1, 1, "x.xX x.x. x.xX x.xx", 0, 0, 82);
+    orb_ring_pat(&s->ring[3], 1, 2, "X..x..x. x...x... X..x..x. x...x... X..x..x. x...x... X..x..x. x...x...", bass, 20, 0);
+    s->drive = 14;
+    s->dtime = 6; s->dfb = 34; s->ping = 1; s->dmix = 24; s->rmix = 30; s->rsize = 60;
+    s->bg_level = 36; s->bg_prog = 4; s->bg_change = 1; s->bg_halo = 60; s->bg_silk = 50; s->bg_width = 60;
+    s->bg_cut = 30; s->bg_glow = 12;
+    orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 20);
+    orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 20);
+}
+
+/* STARDUST: a nursery of stars at 100, on the overtone series (ORBIT: maj9 m7 6 h9 on E). A half-time thump, stars
+ * twinkling at 3:2 and glass at 5:4 on the notes all four chords share, a sub on the roots, a long halo; the keys a
+ * tidal bell */
+static void orb_system_stardust(orb_sys_t *s)
+{
+    static const int8_t star[] = {12, 10, 9, 10, 12, 17, 10, 9}, glass[] = {2, 4, 1, 4, 2},
+                        sub[] = {0, 0, 4, 2, 2, 7, 4, 4, 9, 0, 0, 4};
+    s->tuning = 1; s->sun = 4; s->bpm = 100;
+    s->snd[0] = SND_TIDAL; s->snd[0].level = 58;
+    s->snd[1] = SND_THUMP; s->snd[1].level = 86; s->snd[1].d = 46;
+    s->snd[2] = SND_STAR; s->snd[2].level = 58; s->snd[2].oct = 2;
+    s->snd[3] = SND_GLASS; s->snd[3].level = 56; s->snd[3].oct = 1;
+    s->snd[4] = SND_SUB; s->snd[4].level = 60; s->snd[4].gate = 80; s->snd[4].flags = 0;
+    orb_ring_pat(&s->ring[0], 1, 1, "X....... ......x.", 0, 0, 0);
+    orb_ring_pat(&s->ring[1], 3, 2, "x..x.x.. .x..x..x .x...x..", star, 8, 80);
+    orb_ring_pat(&s->ring[2], 5, 4, "x...x... x...x... x...", glass, 5, 0);
+    orb_ring_pat(&s->ring[3], 1, 2, "X.......x..x.... X.......x..x.... X.......x..x.... X.......x..x....", sub, 12, 0);
+    s->dtime = 8; s->dfb = 46; s->ping = 1; s->dmix = 30; s->rmix = 40; s->rsize = 80; s->rdecay = 70;
+    s->bg_level = 46; s->bg_prog = 2; s->bg_change = 1; s->bg_halo = 75; s->bg_silk = 35; s->bg_width = 70;
+    s->bg_cut = 30; s->bg_glow = 25; s->bloom = 40;
+    orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 35);   /* (where the orbits meet, the moons twinkle) */
+    orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 25);
+}
+
+/* MOON NAP: a lullaby at 66 under the sun, the subharmonic series (ORBIT: Dm Bbmaj7 Gm7 Dm6 on A). A paw rocking the
+ * chord, a music box at 5:4, now and then a star; a sub on the roots, slow; the halo at its longest but one, no
+ * drums; the keys her mew */
+static void orb_system_moonnap(orb_sys_t *s)
+{
+    static const int8_t paw[] = {4, 6, 8, 12, 6}, toy[] = {8, 6, 4, 6}, star[] = {16, 14, 12, 14}, sub[] = {-4, -4, 1, 1, -1, -1, -4, -4};
+    s->tuning = 2; s->sun = 9; s->bpm = 66;
+    s->snd[0] = SND_MEW; s->snd[0].level = 60;
+    s->snd[1] = SND_PAW; s->snd[1].level = 82;
+    s->snd[2] = SND_STAR; s->snd[2].level = 52; s->snd[2].oct = 2;
+    s->snd[3] = SND_TOY; s->snd[3].level = 68; s->snd[3].oct = 2;
+    s->snd[4] = SND_SUB; s->snd[4].level = 54; s->snd[4].gate = 99; s->snd[4].flags = 0;
+    orb_ring_pat(&s->ring[0], 1, 1, "x..x..x. ..x..x..", paw, 5, 92);
+    orb_ring_pat(&s->ring[1], 3, 2, "x..... x..... x..... x.....", star, 4, 55);
+    orb_ring_pat(&s->ring[2], 5, 4, "x...x... ....x...x...", toy, 4, 70);
+    orb_ring_pat(&s->ring[3], 1, 4, "X...x... X...x... X...x... X...x...", sub, 8, 0);
+    s->dtime = 9; s->dfb = 40; s->ping = 1; s->dmix = 28; s->rmix = 50; s->rsize = 90; s->rdecay = 75;
+    s->bg_level = 52; s->bg_prog = 2; s->bg_change = 1; s->bg_halo = 90; s->bg_silk = 50; s->bg_width = 70;
+    s->bg_cut = 30; s->bg_glow = 20; s->bloom = 30;
+    orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
+    orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 30);
+}
+
+/* ZOOMIES: a kitten's mad minute round the sun at 124. Four on the floor, a clap, a squeak chasing at 3:2 on the major
+ * pentatonic, a growl leaping octaves on the roots of a chord a bar (ORBIT: Gadd9 Em7 Cadd9 D6), the chords low in
+ * the mix, a short halo; the keys a pixel lead */
+static void orb_system_zoomies(orb_sys_t *s)
+{
+    static const int8_t sq[] = {12, 14, 16, 19, 16, 14, 12, 7, 9, 12, 14, 9},
+                        bass[] = {0, 12, 0, 12, 0, 12, 0, 12, -3, 9, -3, 9, -3, 9, -3, 9,
+                                  -7, 5, -7, 5, -7, 5, -7, 5, -5, 7, -5, 7, -5, 7, -5, 7};
+    s->tuning = 0; s->sun = 7; s->bpm = 124;
+    s->snd[0] = SND_PIXEL; s->snd[0].level = 62; s->snd[0].oct = 0;
+    s->snd[1] = SND_KICK; s->snd[1].level = 92;
+    s->snd[2] = SND_CLAP; s->snd[2].level = 92;
+    s->snd[3] = SND_SQUEAK; s->snd[3].level = 86; s->snd[3].oct = 2; s->snd[3].send = 34;
+    s->snd[4] = SND_GROWL; s->snd[4].level = 72; s->snd[4].gate = 45; s->snd[4].flags = 0; s->snd[4].a = 5;
+    orb_ring_pat(&s->ring[0], 1, 1, "X...x...x...x...", 0, 0, 0);
+    orb_ring_pat(&s->ring[1], 1, 1, "....X.......X...", 0, 0, 0);
+    orb_ring_pat(&s->ring[2], 3, 2, "x.xX..x.x..X x.x..x.X..x.", sq, 12, 85);
+    orb_ring_pat(&s->ring[3], 1, 1, "x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.", bass, 32, 0);
+    s->dtime = 5; s->dfb = 28; s->ping = 1; s->dmix = 20; s->rmix = 25; s->rsize = 55;
+    s->bg_level = 42; s->bg_prog = 2; s->bg_change = 0; s->bg_halo = 45; s->bg_silk = 40; s->bg_width = 55;
+    s->bg_cut = 40; s->bg_glow = 10;
+    orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
+    orb_mod_set(s, 1, SRC_LFO1, DST_ANG, 20);
+}
+
 static void orb_system(uint32_t i, orb_sys_t *s)
 {
     orb_sys_clear(s, ORB_SYSTEM_NAME[i % ORB_NSYSTEM]);
     if (i % ORB_NSYSTEM == 0u) { orb_system_kitten(s); return; }
     if (i % ORB_NSYSTEM == 1u) { orb_system_milky(s); return; }
     if (i % ORB_NSYSTEM == 15u) { orb_system_afterglow(s); return; }
+    if (i % ORB_NSYSTEM == 16u) { orb_system_purrsec(s); return; }
+    if (i % ORB_NSYSTEM == 17u) { orb_system_stardust(s); return; }
+    if (i % ORB_NSYSTEM == 18u) { orb_system_moonnap(s); return; }
+    if (i % ORB_NSYSTEM == 19u) { orb_system_zoomies(s); return; }
     switch (i % ORB_NSYSTEM - 2u) {           /* (the sky's: HARMONICES 0 ..) */
     case 0: {   /* HARMONICES: 4, 5, 6, 7 hits a bar on the 4:5:6:7 chord, in the overtone scale (OTONAL) */
         static const int8_t mb[] = {0, 1, 0, -1, 2}, mc[] = {0, 0, 2, 0, -2, 1}, md[] = {0, 2, 0, 4, 0, -1, 1};

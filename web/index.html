@@ -120,8 +120,8 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 .legend blockquote { margin: 0 0 12px; font: 700 15px/1.8 var(--px); color: var(--txt); }
 .legend blockquote em { color: var(--lime); font-style: normal; }
 @media (max-width: 760px) { .legend { grid-template-columns: 1fr; } }
-#demos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-@media (max-width: 760px) { #demos { grid-template-columns: 1fr; } }
+#demos, #songs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (max-width: 760px) { #demos, #songs { grid-template-columns: 1fr; } }
 .demo { background: var(--panel); border: 1px solid var(--fdim); border-radius: 10px; padding: 12px; }
 .demo-top { display: flex; gap: 12px; align-items: flex-start; }
 .demo-top b { font: 700 14px var(--px); color: var(--yel); }
@@ -260,9 +260,18 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
   </div>
 </div>
 
+<h2 id="songs-h">Astral cuteness: little songs</h2>
+<p>Six systems with the background radiation's chords, each arranged as a little song by the firmware's own engine: the
+  chords alone in their halo, then the parts come in one by one (the bass, the beat, the melodies), a break where the
+  keys sing the chords' own notes, all of it again, and the tail ringing out. Nothing in them is played by hand but the
+  keys, and they only sing what the chords hold.</p>
+<div id="songs"></div>
+
 <h2 id="hear">Hear the systems</h2>
-<p>Sixteen systems: KITTEN and MILKY WAY to start from, and fourteen named after the sky, the last the oldest light of all. Each is here for a
-  few bars with a slow progression on the keys, rendered by the firmware's own engine. The picture is the spectrum, low notes at the bottom: click it to jump.</p>
+<p>Twenty systems: KITTEN and MILKY WAY to start from, fourteen named after the sky (the last the oldest light of all),
+  and four of astral cuteness: PURRSEC, STARDUST, MOON NAP and ZOOMIES. Each is here for a few bars with a slow
+  progression on the keys, rendered by the firmware's own engine. The picture is the spectrum, low notes at the bottom:
+  click it to jump.</p>
 <div id="demos"></div>
 
 <h2 id="how">How it works</h2>
@@ -340,6 +349,7 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 const $ = (id) => document.getElementById(id);
 const meta = /*META*/;
 const DEMOS = /*DEMOS*/;
+const SONGS = /*SONGS*/;
 
 /* ---- the demos: a player each, its spectrum the seek bar */
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -347,7 +357,7 @@ const ICON = { play: '<svg viewBox="0 0 18 18"><path d="M4 2l12 7-12 7z"/></svg>
                pause: '<svg viewBox="0 0 18 18"><path d="M3 2h4v14H3zM11 2h4v14h-4z"/></svg>' };
 const HZ = [10000, 1000, 100];                   /* the guides: the picture is 40 Hz .. 16 kHz, log */
 const players = [];
-for (const d of DEMOS) {
+for (const [d, box] of [...SONGS.map((x) => [x, "songs"]), ...DEMOS.map((x) => [x, "demos"])]) {
   const el = document.createElement("div");
   el.className = "demo";
   el.innerHTML = `<div class="demo-top"><button class="pp" aria-label="Play ${d.title}">${ICON.play}</button>
@@ -357,7 +367,7 @@ for (const d of DEMOS) {
     <div class="hover"></div><div class="head"></div>
     <input type="range" min="0" max="1000" value="0" step="1" aria-label="Position in ${d.title}"></div>
     <div class="clock"><span>0:00</span><span class="now">0:00</span><span>${mmss(d.secs)}</span></div>`;
-  $("demos").append(el);
+  $(box).append(el);
   const audio = new Audio();
   audio.preload = "none";
   audio.src = d.src;

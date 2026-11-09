@@ -195,7 +195,7 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-#define SET_VER 4u                              /* (4: KITTEN and MILKY WAY first, the library, no legend at power-on) */
+#define SET_VER 5u                              /* (5: twenty systems, so U1.. moved: the settings start again) */
 static struct { uint8_t oct, ch, sysi, ver; } set = {0, 0, 0, SET_VER};
 static uint32_t set_dirty, set_t;
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }

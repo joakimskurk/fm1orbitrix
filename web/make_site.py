@@ -12,8 +12,9 @@ browser, the legend, the systems to hear, the installer.
                               offered)
   film/legend.webp, .m4a      the legend of Astralica: an animation on a transparent night, and its sound
                               (tools/make_legend.py: the firmware's legend, filmed on the host)
-  audio/                      the sixteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
-                              one's spectrum as a picture (WebP), low to high
+  audio/                      the twenty systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
+                              one's spectrum as a picture (WebP), low to high; audio/songs/ the little songs
+                              (orb_render song: the systems with chords, arranged)
   screens/                    the cat, the icon, the link preview, the pages' screens, the legend's poster
   .nojekyll                   (served as it is)
 
@@ -62,6 +63,18 @@ DEMOS = [   # build/audio/tour/NN_name.wav, in the systems' order
     ("ALPHA CEN", "A triple star: the rings pull hard on each other, the three-body problem, tuned."),
     ("SGR A*", "The black hole at the centre: when the pad's point dips, everything slides in, redshifted and partly backwards."),
     ("AFTERGLOW", "The oldest light under everything: chords from the overtone series, a blooming nebula, echoes that tire a fourth lower each time."),
+    ("PURRSEC", "A cat café at 84, swung: a soft thump, a brushed pat, the purr walking the royal road under its chords; the keys a toy piano."),
+    ("STARDUST", "A nursery of stars on the overtone series: stars at 3:2, glass at 5:4, a sub on the chords' roots, a long halo."),
+    ("MOON NAP", "A lullaby on the subharmonics: a paw rocking the chord, a music box, a slow sub, a thirty-second halo; the keys mew."),
+    ("ZOOMIES", "A kitten's mad minute at 124: four on the floor, a squeak chasing at 3:2, a growl leaping octaves, a chord a bar."),
+]
+SONGS = [   # build/audio/songs/NN_name.wav (orb_render song): the systems with chords, arranged
+    ("PURRSEC", "Its chords in a halo, then the purr, the beat, the hats; a break where the toy piano sings the chords' own notes; the tail."),
+    ("STARDUST", "The overtone chords alone, the sub, the half-time thump, the stars and the glass; the bell sings in the break."),
+    ("MOON NAP", "No drums: the chords, the sub, the paw rocking, the music box and the stars; her mew in the break; thirty seconds of halo."),
+    ("ZOOMIES", "The chords low, the growl, four on the floor and the clap, the squeak chasing; the pixel lead sings in the break."),
+    ("MILKY WAY", "The lullaby arranged: the pentatonic chords, the bass, the soft kick, the boops and the music box; she mews in the break."),
+    ("AFTERGLOW", "The oldest light: chords on the overtone series in a long halo, the sub, glass at 5:4, a music box at 7:4, tired echoes."),
 ]
 SPEC_W, SPEC_H, SPEC_N = 1200, 160, 8192
 SPEC_LO, SPEC_HI, SPEC_DB = 40.0, 16000.0, 75.0
@@ -115,17 +128,10 @@ def encode(wav, m4a):
 
 
 def og_image(out):
-    """the link preview, 1200 x 630: the splash on the night, the stars about it"""
-    im = Image.new("RGB", (1200, 630), (10, 6, 26))
-    d = ImageDraw.Draw(im)
-    rng = np.random.default_rng(7)
-    for _ in range(260):
-        x, y = rng.integers(0, 1200), rng.integers(0, 630)
-        c = [(240, 232, 255), (164, 116, 255), (198, 255, 26), (255, 79, 168), (38, 224, 255)][rng.integers(0, 5)]
-        d.rectangle([x, y, x + 1, y + 1], fill=c)
-    splash = Image.open(ROOT / "docs" / "readme" / "screen_splash.png").convert("RGB").resize((560, 560), Image.NEAREST)
-    im.paste(splash, (320, 35))
-    im.save(out)
+    """the link preview, 1200 x 630: the README's header (tools/make_header.py), drawn at this size"""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import make_header
+    make_header.draw(1200, 630).save(out)
 
 
 def main(pkg, version, out):
@@ -142,10 +148,14 @@ def main(pkg, version, out):
     tour = sorted((ROOT / "build" / "audio" / "tour").glob("[0-9][0-9]_*.wav"))
     if len(tour) != len(DEMOS):
         raise SystemExit(f"build/audio/tour: {len(tour)} renders, {len(DEMOS)} wanted (tests/run_orb.sh renders them)")
+    songs = {w.stem.split("_", 1)[1].replace("_", " ").upper(): w
+             for w in (ROOT / "build" / "audio" / "songs").glob("[0-9][0-9]_*.wav")}
+    if set(songs) != {t for t, _ in SONGS}:
+        raise SystemExit(f"build/audio/songs: {sorted(songs)}, wanted {[t for t, _ in SONGS]} (tests/run_orb.sh)")
     name = f"orbitrix-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     if out.exists():
         shutil.rmtree(out)
-    for sub in ("firmware", "screens", "audio", "app", "film"):
+    for sub in ("firmware", "screens", "audio", "audio/songs", "app", "film"):
         (out / sub).mkdir(parents=True)
     shutil.copy(pkg, out / "firmware" / name)
     for src, dst in APP.items():
@@ -166,19 +176,29 @@ def main(pkg, version, out):
         encode(wav, out / "audio" / f"{stem}.m4a")
         demos.append({"id": stem, "title": title, "about": about, "src": f"audio/{stem}.m4a",
                       "spectrum": f"audio/{stem}.webp", "secs": round(len(x) / fs, 1)})
+    song_list = []
+    for title, about in SONGS:
+        wav = songs[title]
+        x, fs = read_wav(wav)
+        stem = wav.stem
+        spectrum(x, fs, out / "audio" / "songs" / f"{stem}.webp")
+        encode(wav, out / "audio" / "songs" / f"{stem}.m4a")
+        song_list.append({"id": "song_" + stem, "title": title, "about": about, "src": f"audio/songs/{stem}.m4a",
+                          "spectrum": f"audio/songs/{stem}.webp", "secs": round(len(x) / fs, 1)})
     meta = json.dumps({"version": version, "product": product, "pkg": "firmware/" + name,
                        "sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw)})
     lib = strip_module((HERE / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8"))
     html = (HERE / "index.html").read_text(encoding="utf-8")
-    for mark in ("/*LIB*/", "/*META*/", "/*DEMOS*/"):
+    for mark in ("/*LIB*/", "/*META*/", "/*DEMOS*/", "/*SONGS*/"):
         if html.count(mark) != 1:
             raise SystemExit(f"web/index.html must hold {mark} once")
     html = html.replace("/*LIB*/", lib).replace("/*META*/", meta).replace("/*DEMOS*/", json.dumps(demos))
+    html = html.replace("/*SONGS*/", json.dumps(song_list))
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / ".nojekyll").write_text("")
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
-    print(f"site: {out}: index.html ({len(html)} B), firmware/{name} ({len(raw)} B, {product}), {len(demos)} demos, "
+    print(f"site: {out}: index.html ({len(html)} B), firmware/{name} ({len(raw)} B, {product}), {len(demos)} demos, {len(song_list)} songs, "
           f"ORBITRIX to play ({(out / 'app' / 'orbitrix.wasm').stat().st_size // 1024} KB), the legend, "
           f"{size // 1024} KB in all")
 

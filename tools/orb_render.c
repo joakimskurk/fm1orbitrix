@@ -11,6 +11,9 @@
  *                                                drum, a phrase for the rest, played as the keys play a part (A's voice)
  *   orb_render bg N PROG SECONDS OUT.wav [alone] system N with the background radiation's chords PROG (0..7, its
  *                                                level as the system has it, or 45), "alone": the rings and keys quiet
+ *   orb_render song N OUT.wav                    a little song from system N: its chords alone, then its parts come
+ *                                                in by kind (bass, beat, melodies), a break where the keys sing the
+ *                                                chords' own notes, all of it, the beat out, STOP and the tail
  *   orb_render bench                             the worst case: 8 voices, everything on; ns and x86 instructions a frame
  * Each prints the render's peak, RMS and DC. (MUTATE is the engine's own, at each ring's lap.) */
 #include <math.h>
@@ -91,6 +94,7 @@ static void reset(uint32_t sys)
         for (r = 0; r < ORB_NRING; r++) S.ring[r].mute = r != so;
         if (so < 4u) S.snd[0].level = 0;
     }
+    if (getenv("ORB_NOBG")) S.bg_level = 0;  /* ORB_NOBG=1: without the background radiation */
     orb_init(&O, &S, &MEM);
 }
 
@@ -156,6 +160,76 @@ static void lib_phrase(uint32_t li)
     run_ms(1500);
 }
 
+
+/* ---- a little song: the system's parts by kind enter one after another, the keys sing the chords' own notes */
+static void run_to(uint32_t tick)           /* render until the orrery's clock reaches tick */
+{
+    int32_t blk[512];
+    uint32_t guard = 0;
+    while ((int32_t)(O.T - tick) < 0 && guard++ < 1000000u) { memset(blk, 0, sizeof blk); orb_render(&O, blk, 256); emit(blk, 256); }
+}
+static int32_t chord_tone(uint32_t tick, uint32_t k)   /* the k-th note (from the top's fourth down) of the chord then */
+{
+    uint32_t t = S.tuning % ORB_NTUNING, p = S.bg_prog % ORB_NBGPROG, n = ORB_BGP_N[t][p], c, i, nu = 0;
+    int32_t sun = (int32_t)(S.sun % 12u), base = (48 + 12 * S.bg_temp + sun - (sun > 6 ? 12 : 0)) * 256, up[8];
+    const int16_t *V;
+    c = (tick + 2u * ORB_TPS) / ((16u * ORB_TPS) << (S.bg_change & 3u)) % n;
+    V = ORB_BGP_V[t][p][c];
+    for (i = 1; i < ORB_NBG; i++) if (V[i] != -32768) up[nu++] = base + V[i];
+    i = nu > 4u ? nu - 4u + k : k;
+    return up[i < nu ? i : nu - 1u];
+}
+static void song(uint32_t sysn)
+{
+    enum { G_BASS = 1, G_BEAT = 2, G_MEL = 4, G_KEYS = 8 };
+    static const uint8_t SECT[7] = {0, G_BASS, G_BASS | G_BEAT, G_BASS | G_BEAT | G_MEL, G_MEL | G_KEYS,
+                                    G_BASS | G_BEAT | G_MEL | G_KEYS, G_BASS | G_MEL};
+    static const uint8_t BARS[2][7] = {{2, 2, 4, 4, 4, 4, 2}, {2, 2, 2, 4, 2, 4, 2}};   /* (slow ones: shorter) */
+    /* the keys' phrase, two bars of 16ths: when each note starts, how long, which chord note (0 the top's fourth) */
+    static const uint8_t PH_AT[2][8] = {{0, 3, 6, 8, 16, 19, 22, 24}, {0, 6, 8, 16, 22, 24, 0, 0}};
+    static const uint8_t PH_LEN[2][8] = {{3, 3, 2, 7, 3, 3, 2, 7}, {6, 2, 7, 6, 2, 7, 0, 0}};
+    static const uint8_t PH_K[2][8] = {{1, 2, 3, 2, 1, 0, 1, 3}, {2, 3, 1, 1, 0, 2, 0, 0}};
+    uint32_t grp[ORB_NRING], r, sec, slow, nph, bar = 0, nbeat = 0, step, off_at[4] = {0, 0, 0, 0}, nk = 0, mels = 0;
+    reset(sysn);
+    slow = S.bpm < 90u;
+    nph = slow ? 6u : 8u;
+    for (r = 0; r < ORB_NRING; r++) {
+        uint32_t k = orb_lib_kind(&S.snd[ORB_A + r]);
+        grp[r] = k == LK_BASS ? G_BASS : k == LK_KICK || k == LK_SNARE || k == LK_HAT ? G_BEAT : G_MEL;
+        if (grp[r] == G_BEAT) nbeat++;
+    }
+    if (!nbeat)                             /* (no beat: the first melody comes in where it would) */
+        for (r = 0; r < ORB_NRING; r++) if (grp[r] == G_MEL && !mels++) grp[r] = G_BEAT;
+    orb_play(&O, 1);
+    for (sec = S.bg_level ? 0u : 1u; sec < 7u; sec++) {
+        uint32_t b;
+        for (b = 0; b < BARS[slow][sec]; b++, bar++) {
+            for (r = 0; r < ORB_NRING; r++) S.ring[r].mute = !(SECT[sec] & grp[r]);
+            for (step = 0; step < 16u; step++) {
+                uint32_t s = bar * 16u + step, ph = ((b & 1u) ? 16u : 0u) + step, q;
+                run_to(s * ORB_TPS > 256u ? s * ORB_TPS - 256u : 0u);
+                for (q = 0; q < 4u; q++) if (off_at[q] && off_at[q] <= s) { orb_note_off(&O, (uint8_t)(q + 1u)); off_at[q] = 0; }
+                if (SECT[sec] & G_KEYS)
+                    for (q = 0; q < nph; q++)
+                        if (PH_AT[slow][q] == ph) {
+                            uint32_t id = nk++ % 3u;
+                            if (off_at[id]) orb_note_off(&O, (uint8_t)(id + 1u));
+                            orb_note_on(&O, (uint8_t)(id + 1u), chord_tone(s * ORB_TPS, PH_K[slow][q]), q & 1u ? 84 : 100);
+                            off_at[id] = s + PH_LEN[slow][q];
+                        }
+            }
+        }
+    }
+    run_to(bar * 16u * ORB_TPS - 256u);
+    for (r = 0; r < 4u; r++) orb_note_off(&O, (uint8_t)(r + 1u));
+    orb_play(&O, 0);
+    {   /* the tail: until the chords and their halo are silent (at most 40 s), and a breath more */
+        uint32_t ms = 0;
+        while ((O.bg_on || O.g_on) && ms < 40000u) { run_ms(100); ms += 100u; }
+        run_ms(1500);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc >= 5 && !strcmp(argv[1], "system")) {
@@ -183,6 +257,9 @@ int main(int argc, char **argv)
         orb_play(&O, 0);
         run_ms(4000u + (S.bg_halo ? ORB_HALO_SEC[S.bg_halo % 100u] * 500u : 0u));   /* (HALO: its tail too) */
         write_wav(argv[5]);
+    } else if (argc >= 4 && !strcmp(argv[1], "song")) {
+        song((uint32_t)atoi(argv[2]));
+        write_wav(argv[3]);
     } else if (argc >= 3 && !strcmp(argv[1], "tour")) {
         uint32_t i, secs = argc > 3 ? (uint32_t)atoi(argv[3]) : 16u;
         for (i = 0; i < ORB_NSYSTEM; i++) {

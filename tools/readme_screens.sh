@@ -14,4 +14,5 @@ rm -f build/host/orbitrix-*.png
 sh tests/run_host.sh tests/scripts/cosmos.txt > /dev/null
 cp build/host/orbitrix-4800.png docs/readme/screen_cosmos.png
 cp build/host/orbitrix-6600.png docs/readme/screen_horizon.png
-echo "docs/readme: the screens"
+python3 tools/make_header.py > /dev/null           # the header (and the repository's social preview)
+echo "docs/readme: the screens, the header"

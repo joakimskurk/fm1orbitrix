@@ -1,12 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="128" alt="ORBITRIX">
-</p>
-
-<h1 align="center">ORBITRIX</h1>
-
-<p align="center">
-  <b>An orbital groove engine for the M-VAVE FM-1.</b><br>
-  Every rhythm is an interval, and every interval a rhythm.
+  <img src="docs/readme/header.png" width="100%" alt="ORBITRIX: Astralica, the cat who is the sun, with her four kittens on their rings; an orbital groove engine for the M-VAVE FM-1. Every rhythm an interval, every interval a rhythm.">
 </p>
 
 <p align="center">
@@ -205,9 +198,11 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Sixteen systems
+## Twenty systems
 
-The first two are to start from, a beat and a lullaby; the others are named after real resonances in the sky.
+The first two are to start from, a beat and a lullaby; the next fourteen are named after real resonances in the sky; the
+last four are astral cuteness, made by hand around the background radiation's chords: in each, the bass walks the
+chords' roots (they change together, on the bar) and the melodies keep to the notes every chord holds.
 
 | | Rings | |
 | --- | --- | --- |
@@ -227,6 +222,10 @@ The first two are to start from, a beat and a lullaby; the others are named afte
 | **ALPHA CEN** | 1:1 4:3 5:3 1:4 | a triple star: the rings pull hard on each other (TIDE), the three-body problem, tuned |
 | **SGR A*** | 1:2 2:3 1:3 3:4 | the black hole at the centre: deep, UTONAL; when the pad's point dips, everything slides in, redshifted and partly backwards |
 | **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation's chords on the overtone series, the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
+| **PURRSEC** | 1:1 1:1 1:1 1:2 | a cat café at 84, swung: a soft thump, a brushed pat, hats that come and go, the purr walking the royal road (Gmaj7 A6 F#m7 Bm9 on D) under its chords in a halo; the keys a toy piano |
+| **STARDUST** | 1:1 3:2 5:4 1:2 | a nursery of stars at 100 on the overtone series (maj9 m7 6 h9): a half-time thump, stars twinkling at 3:2 and glass at 5:4 on the notes all four chords share, a sub on the roots, a long halo; the keys a tidal bell |
+| **MOON NAP** | 1:1 3:2 5:4 1:4 | a lullaby at 66 on the subharmonics (Dm Bbmaj7 Gm7 Dm6): a paw rocking the chord, a music box, now and then a star, a slow sub, the halo at 30 s, no drums; the keys her mew |
+| **ZOOMIES** | 1:1 1:1 3:2 1:1 | a kitten's mad minute at 124: four on the floor, a clap, a squeak chasing at 3:2, a growl leaping octaves on the roots of a chord a bar, a short halo; the keys a pixel lead |
 
 There are also eight places of your own, U1–U8.
 
@@ -271,7 +270,8 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the sixteen systems with a progression on the keys, `build/audio/lib/` every sound SOUND
+`build/audio/tour/` holds the twenty systems with a progression on the keys, `build/audio/songs/` little songs of the
+ones with chords (`orb_render song`: the chords alone, the parts coming in, a break where the keys sing, the tail), `build/audio/lib/` every sound SOUND
 can pick, `build/look/` their spectrograms. `tools/readme_screens.sh` makes the screens here.
 
 Hold **OCT−** while switching on for the USB rescue. Any firmware in the
@@ -284,7 +284,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend, the sixteen systems to hear, and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend, the songs and the twenty systems to hear, and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
@@ -301,11 +301,13 @@ run one a millisecond.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the sound library (30 sounds by name) and the sixteen systems
+firmware/src/orb_systems.h  the sound library (30 sounds by name) and the twenty systems
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)
 tools/make_legend.py        the legend for the page: an animation on a transparent night (WebP) and its sound
+tools/make_header.py        the header above (1280 x 640, also the repository's social preview) and the page's link
+                            preview, in the firmware's own fonts and colours
 tools/make_film.sh          a film of the firmware on the host (the legend by default) -> build/film/astralica.mp4
 web/                        the page: index.html, make_site.py, app/ (the web FM-1, the audio thread, the panel)
 tools/orb_render.c          the engine to WAV; tools/orb_look.py the spectrograms
