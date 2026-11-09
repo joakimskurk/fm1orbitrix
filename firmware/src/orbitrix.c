@@ -35,7 +35,11 @@ static uint32_t fm1_ticks(void) { return fm1_ms * 24000u; }
 /* ---- the engine, its memory, the interrupt */
 static orb_t eng;
 static orb_sys_t sys;
+#ifdef DINGHY_WEB
+static orb_mem_t orb_mem;                       /* (the page: plain memory, no zeros in the .wasm) */
+#else
 static orb_mem_t orb_mem __attribute__((section(".pool")));
+#endif
 static volatile uint32_t cpu_t, cpu_max;        /* the render's time (ticks) a callback: the latest, the worst */
 
 static volatile uint32_t shed_n;              /* voices shed so far (the hint line says so) */
@@ -1171,23 +1175,35 @@ static void cat_draw(int32_t ox, int32_t oy, uint32_t t)
             cv_rect(ox + (int32_t)i * 3, oy + (int32_t)j * 3, 3, 3, c);
         }
 }
-static void splash(int tail)                    /* tail: after the story, its echoes and its NEBULA die out meanwhile */
+static struct { uint32_t t0, last, tail; uint8_t dfb, dmix, rmix; } spl;
+static void splash_begin(int tail)              /* tail: after the story, its echoes and its NEBULA die out meanwhile */
+{
+    uint32_t rel;
+    spl.t0 = fm1_ms;
+    spl.last = fm1_ms - 1000u;
+    spl.tail = (uint32_t)tail;
+    spl.dfb = sys.dfb; spl.dmix = sys.dmix; spl.rmix = sys.rmix;
+    lcd_fill(0, 0, 240, 240, C_BG);
+    fm1_input_edges(&rel);
+}
+static int splash_pass(void)                    /* a pass (a millisecond on the host and the page); 0: it is over */
 {
     static const int16_t PS[6][2] = {{24, 26}, {214, 44}, {18, 112}, {222, 122}, {60, 8}, {184, 136}};
     static const int16_t DOT[6][2] = {{200, 14}, {12, 66}, {70, 136}, {166, 10}, {230, 90}, {40, 100}};
     static const uint16_t PC[3] = {C_CYAN, C_MAG, C_LIME};
-    uint32_t t0 = fm1_ms, f, rel;
     int32_t ox = (240 - (int32_t)CAT_W * 3) / 2, oy = 30;
-    uint8_t dfb = sys.dfb, dmix = sys.dmix, rmix = sys.rmix;
-    lcd_fill(0, 0, 240, 240, C_BG);
-    fm1_input_edges(&rel);
-    for (f = 0; fm1_ms - t0 < 1900u && f < 400u; f++) {
-        uint32_t t = fm1_ms - t0, k, t1 = fm1_ms, pass;
-        if (fm1_input_edges(&rel) & (1u << BTN_PLAY)) break;   /* PLAY: straight in */
-        if (tail) {                             /* the feedback first, then the returns, gone by the end */
-            sys.dfb = (uint8_t)(dfb * (1900u - t) / 1900u);
-            if (t > 1100u) { sys.dmix = (uint8_t)(dmix * (1900u - t) / 800u); sys.rmix = (uint8_t)(rmix * (1900u - t) / 800u); }
-        }
+    uint32_t t, k, pass, rel;
+    platform_poll();
+    t = fm1_ms - spl.t0;
+    if (t >= 1900u) return 0;
+    if (fm1_input_edges(&rel) & (1u << BTN_PLAY)) return 0;   /* PLAY: straight in */
+    if (spl.tail) {                             /* the feedback first, then the returns, gone by the end */
+        sys.dfb = (uint8_t)(spl.dfb * (1900u - t) / 1900u);
+        if (t > 1100u) { sys.dmix = (uint8_t)(spl.dmix * (1900u - t) / 800u); sys.rmix = (uint8_t)(spl.rmix * (1900u - t) / 800u); }
+    }
+    if (fm1_ms - spl.last < 30u) return 1;     /* ~30 frames a second */
+    spl.last = fm1_ms;
+    {
         cv_begin(240, 144, C_BG);
         stars(240, 144, 1, 50);
         for (k = 0; k < 6u; k++) cv_rect(DOT[k][0], DOT[k][1], 3, 3, ((t / 140u + k) % 5u) ? C_TXT : dim565(C_TXT, 6));
@@ -1215,8 +1231,8 @@ static void splash(int tail)                    /* tail: after the story, its ec
         txc(120, 48, &FONT_S, "AN ORBITAL GROOVE ENGINE", C_GREY, C_BG);
         txc(120, 68, &FONT_S, "v" APP_VER, C_DIMT, C_BG);
         cv_blit(0, 144);
-        do platform_poll(); while (fm1_ms - t1 < 30u);   /* ~30 frames a second */
     }
+    return 1;
 }
 
 /* ---- the legend of Astralica: a story at power-on (any key or button skips it; KEYS: INTRO OFF), scored by the
@@ -1402,19 +1418,34 @@ static void intro_scene(uint32_t t)
         tx(x0 + 12, 3, &FONT_S, "PRESS PLAY TO SKIP", c, C_BG);
     }
 }
-static int intro(void)                          /* 0: it ran to the end; 1: skipped (PLAY) */
+static struct { uint32_t t0, cue, last, skipped; } itr;
+static void intro_begin(void)
 {
-    uint32_t t0 = fm1_ms, cue = 0, rel, f, skipped = 0;
+    uint32_t rel;
     int32_t sun = 36;                            /* C2 */
+    itr.t0 = fm1_ms; itr.cue = 0; itr.last = fm1_ms - 1000u; itr.skipped = 0;
     fm1_input_edges(&rel);
     lcd_fill(0, 0, 240, 240, C_BG);
     orb_note_on(&eng, 1, sun * 256, 104);        /* the silent universe: a drone, C2 and G2 */
     orb_note_on(&eng, 2, (sun + 7) * 256 + 5, 92);
-    for (f = 0; f < 2000u; f++) {
-        uint32_t t = fm1_ms - t0, t1 = fm1_ms, h;
-        if (t >= I_END) break;
-        if (fm1_input_edges(&rel) & (1u << BTN_PLAY)) { skipped = 1; break; }
-        fm1_led_key(BTN_PLAY, (t / 300u) & 1u);  /* PLAY blinks: press it to skip */
+}
+static void intro_end(void)
+{
+    fm1_led_key(BTN_PLAY, 0);
+    orb_play(&eng, 0);
+    orb_all_off(&eng);
+    sys.macro[MAC_HORIZON] = 0;                 /* (its mix glides out: no click) */
+}
+static int intro_pass(void)                     /* a pass; 0: over (itr.skipped: PLAY skipped it) */
+{
+    uint32_t rel, cue = itr.cue, t, h;
+    int32_t sun = 36;
+    platform_poll();
+    t = fm1_ms - itr.t0;
+    if (t >= I_END) return 0;
+    if (fm1_input_edges(&rel) & (1u << BTN_PLAY)) { itr.skipped = 1; return 0; }
+    fm1_led_key(BTN_PLAY, (t / 300u) & 1u);      /* PLAY blinks: press it to skip */
+    {
         /* the score */
         if (cue == 0 && t >= I_T2) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 0), 127, 120); cue++; }
         if (cue == 1 && t >= I_T2 + 1100u) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 4), 120, 110); cue++; }
@@ -1436,20 +1467,18 @@ static int intro(void)                          /* 0: it ran to the end; 1: skip
         if (cue == 14 && t >= I_T5 + 1760u) { orb_glide(&eng, 4, 86 * 256); cue++; }
         if (cue == 15 && t >= I_T5 + 1960u) { orb_glide(&eng, 4, 79 * 256); cue++; }
         if (cue == 16 && t >= I_T5 + 2120u) { orb_note_off(&eng, 4); cue++; }
-        for (h = 0; h < 2u; h++) {              /* the picture, in two strips */
-            cv_begin(240, h ? 96u : 144u, C_BG);
-            cv_oy = h ? -144 : 0;
-            intro_scene(t);
-            cv_oy = 0;
-            cv_blit(0, h ? 144u : 0u);
-        }
-        do platform_poll(); while (fm1_ms - t1 < 40u);   /* 25 frames a second */
     }
-    fm1_led_key(BTN_PLAY, 0);
-    orb_play(&eng, 0);
-    orb_all_off(&eng);
-    sys.macro[MAC_HORIZON] = 0;                 /* (its mix glides out: no click) */
-    return (int)skipped;
+    itr.cue = cue;
+    if (fm1_ms - itr.last < 40u) return 1;     /* 25 frames a second */
+    itr.last = fm1_ms;
+    for (h = 0; h < 2u; h++) {                  /* the picture, in two strips */
+        cv_begin(240, h ? 96u : 144u, C_BG);
+        cv_oy = h ? -144 : 0;
+        intro_scene(t);
+        cv_oy = 0;
+        cv_blit(0, h ? 144u : 0u);
+    }
+    return 1;
 }
 
 /* ---- MIDI in (the main loop, and app_idle while the screen draws) */
@@ -1747,65 +1776,100 @@ static void leds(void)
     }
 }
 
-static void app_main(void)
+static uint32_t boot_phase, story;              /* 1 the story, 2 the splash, 3 playing; story: 1 ran, 2 PLAY skipped it */
+static void app_start(void)
 {
-    uint32_t r, laps[ORB_NRING] = {0}, mrng = 0x1234567u, t_hint = 0, peak_t = 0, story = 0;
     if (settings_load(&set, sizeof set) || (int8_t)set.oct < -3 || (int8_t)set.oct > 3 || set.ch > 16u || set.sysi >= NSYS)
         set.oct = 0, set.ch = 0, set.sysi = 0;
     if (set.intro_off > 1u) set.intro_off = 0;
     orb_intro_system(&sys);
     orb_init(&eng, &sys, &orb_mem);
-#ifdef DINGHY_HOST
-    if (getenv("ORB_INTRO")) story = 1 + intro();   /* (the host's scripts are timed from the splash: the story on ask) */
+#if defined(DINGHY_HOST) && !defined(DINGHY_WEB)
+    story = getenv("ORB_INTRO") != 0;          /* (the host's scripts are timed from the splash: the story on ask) */
 #else
-    if (!set.intro_off) story = 1 + intro();   /* the legend of Astralica (1: to the end, 2: PLAY skipped it) */
+    story = !set.intro_off;                    /* the legend of Astralica, unless KEYS: INTRO OFF */
 #endif
-    if (story != 2) splash(story != 0);        /* (PLAY skipped the story: the splash too) */
+    if (story) { intro_begin(); boot_phase = 1; }
+    else { splash_begin(0); boot_phase = 2; }
+}
+static void boot_finish(void)                   /* the system to play, once the story's tails have gone */
+{
     orb_all_off(&eng);
-    if (set.sysi) system_load(set.sysi);       /* the system to play, once the story's tails have gone */
+    if (set.sysi) system_load(set.sysi);
     else orb_system(0, &sys);
     sysi = set.sysi;
     set_dirty = 0;
     lcd_fill(0, 0, 240, 240, C_BG);
-    for (;;) {
-        platform_poll();
-        handle_buttons();
-        handle_encoders();
-        handle_keys();
-        midi_in();
-        if (clk_run && fm1_ms - clk_last > 2000u) clk_run = 0;
-        for (r = 0; r < ORB_NRING; r++)         /* MUTATE: at each ring's lap */
-            if (eng.rs[r].laps != laps[r]) {
-                uint32_t amt = sys.mutate + sys.macro[MAC_CHAOS] / 2u;
-                laps[r] = eng.rs[r].laps;
-                orb_mutate(&sys.ring[r], amt > 99u ? 99u : amt, sys.var, &mrng);
-                if (amt) main_dirty = 1;
-            }
-        if (sys_pending != 0xFFu && fm1_ms - sys_pend_t > 450u) {   /* PRESETS: loaded once it rests */
-            system_load(sys_pending);
-            sys_pending = 0xFFu;
-            drawn_bar = ~0u; knobs_dirty = main_dirty = hint_dirty = 1;
-        }
-        leds();
-        idle_ok = 1;
-        {
-            uint32_t bar = page | focus << 4 | sysi << 8 | sys.sun << 13 | (uint32_t)sys.bpm << 17 | eng.playing << 25 |
-                           rec << 26 | save_mode << 27 | save_to << 28;
-            if (bar != drawn_bar) { drawn_bar = bar; draw_bar(); }
-        }
-        if (knobs_dirty) { knobs_dirty = 0; draw_knobs(); }
-        if ((page_animated() && fm1_ms - t_main >= 40u) || main_dirty) { main_dirty = 0; t_main = fm1_ms; draw_main(); }
-        if (hint_dirty || (msg_t && fm1_ms >= msg_t) || fm1_ms - t_hint > 500u) {
-            if (msg_t && fm1_ms >= msg_t) msg_t = 0;
-            hint_dirty = 0; t_hint = fm1_ms;
-            draw_hint();
-        }
-        idle_ok = 0;
-        if (fm1_ms - peak_t > 1000u) { peak_t = fm1_ms; cpu_max = 0; eng.peak = 0; }
-        if (set_dirty && fm1_ms - set_t > 2000u && !eng.playing) {   /* settings: when nothing plays (an erase stalls) */
-            uint32_t v, quiet = 1;
-            for (v = 0; v < ORB_NV; v++) if (eng.v[v].stage) quiet = 0;
-            if (quiet) { settings_save(&set, sizeof set); set_dirty = 0; }
-        }
+    boot_phase = 3;
+}
+static void boot_pass(void)                     /* the story, then the splash (PLAY skips both) */
+{
+    if (boot_phase == 1) {
+        if (intro_pass()) return;
+        intro_end();
+        story = 1u + itr.skipped;
+        if (itr.skipped) boot_finish();
+        else { splash_begin(1); boot_phase = 2; }
+    } else if (boot_phase == 2) {
+        if (!splash_pass()) boot_finish();
     }
+}
+static void app_pass(void)                      /* one pass of the main loop */
+{
+    static uint32_t laps[ORB_NRING], mrng = 0x1234567u, t_hint, peak_t;
+    uint32_t r;
+    platform_poll();
+    handle_buttons();
+    handle_encoders();
+    handle_keys();
+    midi_in();
+    if (clk_run && fm1_ms - clk_last > 2000u) clk_run = 0;
+    for (r = 0; r < ORB_NRING; r++)         /* MUTATE: at each ring's lap */
+        if (eng.rs[r].laps != laps[r]) {
+            uint32_t amt = sys.mutate + sys.macro[MAC_CHAOS] / 2u;
+            laps[r] = eng.rs[r].laps;
+            orb_mutate(&sys.ring[r], amt > 99u ? 99u : amt, sys.var, &mrng);
+            if (amt) main_dirty = 1;
+        }
+    if (sys_pending != 0xFFu && fm1_ms - sys_pend_t > 450u) {   /* PRESETS: loaded once it rests */
+        system_load(sys_pending);
+        sys_pending = 0xFFu;
+        drawn_bar = ~0u; knobs_dirty = main_dirty = hint_dirty = 1;
+    }
+    leds();
+    idle_ok = 1;
+    {
+        uint32_t bar = page | focus << 4 | sysi << 8 | sys.sun << 13 | (uint32_t)sys.bpm << 17 | eng.playing << 25 |
+                       rec << 26 | save_mode << 27 | save_to << 28;
+        if (bar != drawn_bar) { drawn_bar = bar; draw_bar(); }
+    }
+    if (knobs_dirty) { knobs_dirty = 0; draw_knobs(); }
+    if ((page_animated() && fm1_ms - t_main >= 40u) || main_dirty) { main_dirty = 0; t_main = fm1_ms; draw_main(); }
+    if (hint_dirty || (msg_t && fm1_ms >= msg_t) || fm1_ms - t_hint > 500u) {
+        if (msg_t && fm1_ms >= msg_t) msg_t = 0;
+        hint_dirty = 0; t_hint = fm1_ms;
+        draw_hint();
+    }
+    idle_ok = 0;
+    if (fm1_ms - peak_t > 1000u) { peak_t = fm1_ms; cpu_max = 0; eng.peak = 0; }
+    if (set_dirty && fm1_ms - set_t > 2000u && !eng.playing) {   /* settings: when nothing plays (an erase stalls) */
+        uint32_t v, quiet = 1;
+        for (v = 0; v < ORB_NV; v++) if (eng.v[v].stage) quiet = 0;
+        if (quiet) { settings_save(&set, sizeof set); set_dirty = 0; }
+    }
+}
+
+static void app_main(void)                      /* the FM-1 and the host: the start, the story, the splash, the loop for
+                                                 * ever. The page (DINGHY_WEB, web/app/web_host.c): a pass a call */
+{
+#ifdef DINGHY_WEB
+    static int started;
+    if (!started) { started = 1; app_start(); return; }
+    if (boot_phase < 3u) boot_pass();
+    else app_pass();
+#else
+    app_start();
+    while (boot_phase < 3u) boot_pass();
+    for (;;) app_pass();
+#endif
 }

@@ -135,3 +135,22 @@ The user saw a couple of glitches in the legend's film, and wanted "press play t
   retriggering its own sounding voice (a 1 ms re-attack): left as a pluck's nature.
 - **PRESS PLAY TO SKIP** at the top while it plays, PLAY blinking; only PLAY skips (a key pressed by chance does not),
   and it skips the splash too, straight to the instrument.
+
+## D13 — The page, with ORBITRIX to play on it (2026-11-09)
+
+The user: a page, with a version on it that can be tried. Decided, as RoboSeq's and FM-1 Clock's pages do: the
+firmware itself, `orbitrix.c` unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`, no C library),
+its sound made in an AudioWorklet (`worklet.js`), whose quanta run the main loop for the milliseconds they are worth:
+the sound is the time base, as the audio interrupt is on the FM-1.
+
+- For that the app runs as passes: `app_start`, `boot_pass` (the story, the splash), `app_pass` (the main loop's
+  body). On the FM-1 and the host they run in a loop, as before (the screens checked pixel for pixel: unchanged but
+  for PLAY now skipping the splash); on the page `app_main` is one pass a call.
+- The web FM-1 adds to RoboSeq's: buttons held and let go (SEL is a layer), the keys' two light layers (lit, and the
+  sun's glow), MIDI straight into the firmware (velocity, CC 1, a clock), and the store: the settings and U1..U8,
+  kept in the browser. On the page SEL latches (a mouse cannot hold it and turn a knob), and Shift holds it.
+- The engine's memory is plain memory there (no `.pool` section: its zeros would be in the file): 313 KB, 109 KB as
+  served.
+- The page: Astralica at the top, the FM-1 to play, the legend's film, the thirteen systems with their spectra, how
+  it works, the installer (SLOOP's protocol, as the other pages carry it). Tried in headless Chromium: Start, the
+  legend plays, PLAY skips it, PLAY runs the orrery, a key lights, PRESETS turns the system; no errors.

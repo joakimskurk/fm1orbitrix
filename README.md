@@ -17,6 +17,10 @@
 </p>
 
 <p align="center">
+  <a href="https://joakimskurk.github.io/fm1orbitrix/"><b>The page: play it in the browser, and install it from there →</b></a>
+</p>
+
+<p align="center">
   <img src="docs/readme/screen_splash.png" width="240" alt="The splash: the cat-planet in its yellow ring, stars twinkling, planets going round">
   <img src="docs/readme/screen_orrery.png" width="240" alt="ORRERY: four rings of steps around the sun, the planets on them, the rings' ratios at the right">
   <img src="docs/readme/screen_orbit.png" width="240" alt="ORBIT: the voice's eccentric orbit, the left and right views through it, the live wave">
@@ -29,7 +33,8 @@ But every note sits on the sun's harmonic series, so the whole thing fuses into 
 
 The voice is a planet on an ellipse, and what you hear is where it is.
 
-> **Status:** in development. Everything here runs on the host: the same C, the sound as WAV, the screen as images.
+> **Status:** in development. Everything here runs on the host (the same C, the sound as WAV, the screen as images)
+> and in the browser on [the page](https://joakimskurk.github.io/fm1orbitrix/) (the same C, compiled to WebAssembly).
 > It builds for the FM-1 and the SMK-37 and passes Dinghy's checks and tests. It has **not yet been tested on a real
 > FM-1**, and there is no release yet.
 
@@ -212,6 +217,24 @@ Hold **OCT−** while switching on for the USB rescue. Any firmware in the
 [FM-1 Firmware Hub](https://thefirmwarehub.com) can be installed over ORBITRIX, and back. Installing firmware is at
 your own risk.
 
+## On the page
+
+[joakimskurk.github.io/fm1orbitrix](https://joakimskurk.github.io/fm1orbitrix/) runs the firmware itself in the
+browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
+sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
+the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
+the browser. The page also has the legend's film, the thirteen systems to hear, and the installer (Web MIDI, Chrome or
+Edge). CI builds and publishes it from `main` (`web/make_site.py`).
+
+```sh
+sh web/app/build.sh                                  # -> build/web/orbitrix.wasm (clang and lld)
+python3 web/make_site.py build/orbitrix.fwsc dev build/site    # after tests/run_orb.sh and tools/make_film.sh
+```
+
+Departures from Dinghy's own files: `platform.c` includes `web/app/web_host.c` instead of `tests/host.c` when
+`DINGHY_WEB` is set; `orbitrix.c` runs its start, the story, the splash and its main loop as passes, so the page can
+run one a millisecond.
+
 ## Where things are
 
 ```
@@ -222,6 +245,7 @@ firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)
 tools/make_film.sh          a film of the firmware on the host (the legend by default) -> build/film/astralica.mp4
+web/                        the page: index.html, make_site.py, app/ (the web FM-1, the audio thread, the panel)
 tools/orb_render.c          the engine to WAV; tools/orb_look.py the spectrograms
 tests/orb_test.c            the engine's tests
 ```

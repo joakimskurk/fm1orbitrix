@@ -1,5 +1,5 @@
 # ORBITRIX: every page, with the orrery playing and a chord on the keys (tests/run_host.sh tests/scripts/pages.txt)
-1700 btn 12
+2000 btn 12
 2000 keys 0x4890
 2900 shot
 3100 btn 8

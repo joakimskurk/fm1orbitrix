@@ -148,13 +148,13 @@ def main():
     y0, y1, x0, x1 = ys[0], ys[-1], xs[0], xs[-1]
     w, h = x1 - x0 + 1, y1 - y0 + 1
     crop = [row[x0:x1 + 1] for row in g[y0:y1 + 1]]
-    img = Image.new("RGB", (w * 8, h * 8), PAL[BG])
+    img = Image.new("RGBA", (w * 8, h * 8), (0, 0, 0, 0))   # (transparent round her: any page's night shows through)
     for j in range(h):
         for i in range(w):
             if crop[j][i]:
                 for yy in range(8):
                     for xx in range(8):
-                        img.putpixel((i * 8 + xx, j * 8 + yy), PAL[crop[j][i]])
+                        img.putpixel((i * 8 + xx, j * 8 + yy), PAL[crop[j][i]] + (255,))
     img.save(OUT_PNG)
 
     def rgb565(c):

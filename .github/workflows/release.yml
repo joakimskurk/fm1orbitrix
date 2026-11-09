@@ -2,10 +2,13 @@
 # attestation (actions/attest-build-provenance): the Firmware Hub shows "Built from source" for exactly these files.
 # The JieLi toolchain comes from pkgman.jieliapp.com (tools/get_toolchain.sh), the AC79 SDK from gitee.com, as in
 # sloopDX's and OberVave's workflows. Run by hand (workflow_dispatch) for a test build without a release.
+# On every push to main also the page (the site job below): ORBITRIX to play in the browser, the legend, the systems,
+# the installer, on GitHub Pages.
 name: release
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -84,3 +87,57 @@ jobs:
             build/orbitrix-[0-9]*.fwsc
             build/SHA256SUMS
           generate_release_notes: true
+
+  # The page (GitHub Pages, https://joakimskurk.github.io/fm1orbitrix/): ORBITRIX to play in the browser (the
+  # firmware's own code, WebAssembly), the legend's film, the systems to hear, and the installer with the package this
+  # run built and tested. From main only; Pages takes its site from GitHub Actions (Settings -> Pages).
+  site:
+    needs: firmware
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: orbitrix-fwsc
+          path: build
+      - name: GitHub Pages switched on?
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/pages" >/dev/null 2>&1; then
+            echo "on=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=GitHub Pages is off::Settings -> Pages -> Build and deployment -> Source: GitHub Actions, then run the build again"
+            echo "on=0" >> "$GITHUB_OUTPUT"
+          fi
+      - name: ffmpeg, numpy and Pillow (the audio, the spectra, the film); clang and lld (ORBITRIX for the browser)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg python3-numpy python3-pil clang lld
+      - name: The systems (the engine on the host) and the legend's film
+        run: |
+          ORB_ASAN=0 sh tests/run_orb.sh
+          APP_VER="dev-${GITHUB_SHA::7}" sh tools/make_film.sh
+      - name: ORBITRIX to play on the page (the firmware's own code, WebAssembly)
+        run: APP_VER="dev-${GITHUB_SHA::7}" sh web/app/build.sh
+      - name: The site
+        run: python3 web/make_site.py build/orbitrix.fwsc "dev-${GITHUB_SHA::7}" _site
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.pages.outputs.on == '1'
+        with:
+          path: _site
+      - id: deploy
+        if: steps.pages.outputs.on == '1'
+        uses: actions/deploy-pages@v4
