@@ -1205,8 +1205,8 @@ static void draw_space(void)
 }
 
 /* BACKGROUND: the first light, as its map is drawn (an oval of the whole sky, its tiny fluctuations warm and cold,
- * drifting), Astralica at its middle; below, its acoustic peaks as they sound now (the sun's harmonics: odd taller with
- * baryons, the high ones damped by SILK), its temperature */
+ * drifting), Astralica at its middle; below, its voices as they sound now (each breathing on its own, the highs
+ * softened by SILK), its temperature */
 static void draw_bg(void)
 {
     static const uint16_t MAP[8] = {RGB(20, 24, 110), RGB(36, 70, 200), RGB(60, 140, 235), RGB(120, 210, 240),
