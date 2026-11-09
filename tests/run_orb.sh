@@ -18,7 +18,7 @@ if [ "${ORB_ASAN:-1}" != 0 ]; then            # again with the sanitizers: overf
     cc $SAN -o build/orb/orb_test_asan tests/orb_test.c -lm
     build/orb/orb_test_asan > build/orb/orb_test_asan.txt 2>&1 || { tail -20 build/orb/orb_test_asan.txt; exit 1; }
     cc $SAN -o build/orb/orb_render_asan tools/orb_render.c -lm
-    for i in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do   # every system with the keys, every macro on three of them
+    for i in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19; do   # every system with the keys, every macro on three
         build/orb/orb_render_asan system $i 12 build/orb/asan.wav keys > build/orb/asan.txt 2>&1 ||
             { tail -20 build/orb/asan.txt; exit 1; }
     done
@@ -41,7 +41,7 @@ for m in 0 1 2 3 4 5 6; do                               # SPIRAL DRIFT, each ma
 done
 build/orb/orb_render lib build/audio/lib                # every sound SOUND can pick, a beat or a phrase each
 mkdir -p build/audio/songs; rm -f build/audio/songs/*.wav   # little songs of the systems with chords (the page's)
-for s in "1 milky_way" "3 purrsec" "4 zoomies" "5 catwalk" "7 luna_nova" "10 snowglobe" "11 stardust" "13 moon_nap"; do
+for s in "3 purrsec" "7 luna_nova" "10 snowglobe" "17 nom_nom"; do   # (the page's: a few, the most unlike)
     set -- $s; build/orb/orb_render song $1 build/audio/songs/$(printf %02d $1)_$2.wav
 done
 mkdir -p build/audio/chords                             # the background radiation's chords alone, each progression

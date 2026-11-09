@@ -599,6 +599,24 @@ static void test_cosmic(void)
         CHECK(off > 10u * 44100u && off < 120u * 44100u, "halo: silent after %.1f s", off / 44100.0);
         CHECK(!O.bg_ol[1] && !O.bg_or[1], "halo: off, but its output is not 0");
     }
+    {   /* HOLD: ASTRALICA's drone (one hit in two bars) still sounding, not released, just before its next hit */
+        uint32_t t, held = 1, n = 0;
+        orb_system(16, &S);
+        orb_init(&O, &S, &MEM);
+        orb_play(&O, 1);
+        for (t = 0; t < (uint32_t)(12.0 * 44100 / 256); t++) {
+            uint32_t ticks = 2u * 16u * ORB_TPS, ph;
+            memset(out, 0, sizeof out);
+            orb_render(&O, out, 256);
+            ph = O.T % ticks;
+            if (O.T > ticks && ph > ticks - 5000u && ph < ticks - 2600u) {   /* (just before its release, 3 % early) */
+                n++;
+                if (!O.v[0].stage || O.v[0].stage == 4u) held = 0;
+            }
+        }
+        printf("hold: the drone held to its next hit (%u looks just before it)\n", n);
+        CHECK(n > 0 && held, "hold: the drone was released early");
+    }
     S.tuning = 0; S.bg_prog = 0; S.bpm = 112; S.bg_halo = 0;
     /* NEBULA, all the way: size, decay, BLOOM, no damping, the pad glowing into it; then off: it must die away */
     S.rmix = 99; S.rsize = 99; S.rdecay = 99; S.rdamp = 0; S.bloom = 99; S.bg_glow = 99; S.bg_cut = 30;

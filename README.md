@@ -77,7 +77,8 @@ seventeen seconds, drawn and scored by the firmware itself (its own screen and e
 horizon; her tummy glowing and gurgling as they turn in it; then plop, plop, plop, plop: four little cosmic swirls,
 each becoming a kitten that flies out to its ring, and each ring starts to sing as its kitten arrives. Last her meow,
 echoing from universe to universe. The kittens are the planets that go round her on HOME. The FM-1 itself starts
-with the splash and goes straight to the instrument.
+with the splash and goes straight to the instrument; the legend's sound is in it as four systems to play (ASTRALICA,
+NOM NOM, TUMMY, MULTIVERSE: its drone, chirps, gurgles, plops, glass rings and meow, in its echoes and nebula).
 
 <p align="center">
   <img src="docs/readme/intro_strip.png" width="880" alt="The legend: Astralica arrives; one big ass cat; in her tummy the planets change; plop; they form the ORBITRIX; her song rings through the multiverses">
@@ -198,7 +199,7 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Sixteen systems
+## Twenty systems
 
 Each is its own kind of music, with its own tempo, sounds and space, and each sounds right the moment it plays. In
 every one with chords the bass and the melodies FOLLOW them: they play the chord's own notes, so they change with it on
@@ -222,6 +223,10 @@ the bar, and whatever CHORDS is turned to, nothing clashes.
 | **MOON NAP** | a lullaby, 66 | on the subharmonics (Dm Bbmaj7 Gm7): a paw rocking the chord, a music box at 5:4, now and then a star, a slow sub, a 30 s halo, no drums; her mew |
 | **AFTERGLOW** | ambient, 70 | the oldest light: chords on the overtone series in a long halo, a sub, glass at 5:4, stars at 7:4, boops at 3:2, the nebula blooming, echoes that tire |
 | **PULSAR** | minimal techno, 128 | four on the floor, open hats off the beat, zaps pulsing on the chord (BEAM), a rolling sub, a resonant filter breathing slowly |
+| **ASTRALICA** | the legend's universe, 100 | the film itself: the dark drone held on the sun, the orrery's glass rings at 5:4 3:2 7:4 on 4:5:6:7, the legend's long echoes and vast nebula; the keys her meow |
+| **NOM NOM** | the legend's universe, 88 | the planets eaten, half time: a soft thump, chirps falling in from octaves under on the eighths, plops at 3:2 on the rings' notes, the drone under; her meow |
+| **TUMMY** | the legend's universe, 76 | her tummy glowing and gurgling: bubbles in a syncopated sixteenth, boops at 5:4, glints of glass at 7:4, the drone low, everything wobbling (TIDE); she mews |
+| **MULTIVERSE** | the legend's universe, 60 | her meow from universe to universe, no beat: the drone held four bars at a time, a meow whose echoes come back a fourth lower each time (TIRED LIGHT), bells at 7:4, a star |
 
 There are also eight places of your own, U1–U8.
 
@@ -254,7 +259,7 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 | Control | What it does |
 | --- | --- |
 | **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their levels) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) → CUTE (MOOD CHORDS HALO BPM · CHORD LV CHANGE SWING KEYS) |
-| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC · ALGORITHM: FOLLOW; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
+| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC · ALGORITHM: FOLLOW; the keys as above) → TIME (tempo, swing, mutate, the lanes · ALGORITHM: HOLD, a note held till the ring's next hit: a drone) |
 | **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
 | **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED BLOOM) · BACKGROUND (LEVEL CHORDS CHANGE HALO · SILK WIDTH LOW CUT TEMP · ALGORITHM: GLOW) → ORBIT PAD · KEYS (mode: SOLAR, HARMONIC or CHORD; tuning, sun, octave, gravity, MIDI channel) |
@@ -287,7 +292,7 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the sixteen systems with a progression on the keys, `build/audio/songs/` little songs of the
+`build/audio/tour/` holds the twenty systems with a progression on the keys, `build/audio/songs/` little songs of the
 ones with chords (`orb_render song`: the chords alone, the parts coming in, a break where the keys sing, the tail), `build/audio/lib/` every sound SOUND
 can pick, `build/look/` their spectrograms. `tools/readme_screens.sh` makes the screens here.
 
@@ -301,7 +306,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend, the songs and the sixteen systems to hear, and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend, a few songs and systems to hear (the most unlike), and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
@@ -318,7 +323,7 @@ run one a millisecond.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the sound library (30 sounds by name), the sixteen systems and CUTE
+firmware/src/orb_systems.h  the sound library (30 sounds by name), the twenty systems and CUTE
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)

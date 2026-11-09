@@ -195,7 +195,7 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-#define SET_VER 6u                              /* (6: the new set of sixteen, U1.. moved: the settings start again) */
+#define SET_VER 7u                              /* (7: twenty systems, U1.. moved: the settings start again) */
 static struct { uint8_t oct, ch, sysi, ver; } set = {0, 0, 0, SET_VER};
 static uint32_t set_dirty, set_t;
 static uint32_t drawn_bar;                      /* (the bar drawn for: ~0 draws it again; defined with the screens') */
@@ -228,7 +228,7 @@ static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME"
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE, F_HALO, F_MOOD };
+       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE, F_HALO, F_MOOD, F_HOLD };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -258,7 +258,7 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
     [PG_TIME] = {P_BPM, {"SWING", W_SYS, F_PCT, SO(swing), 0, 99}, {"MUTATE", W_SYS, F_PCT, SO(mutate), 0, 99},
                  {"HUM", W_SYS, F_PCT, SO(hum), 0, 99}, {"VAR", W_SYS, F_PCT, SO(var), 0, 99},
                  {"GATE", W_SND, F_PCT, NO(gate), 1, 99}, {"MUTE", W_RING, F_ONOFF, RO(mute), 0, 1},
-                 {"TRIG", W_SND, F_TRIG, NO(flags), 0, 3}, P_BPM},
+                 {"TRIG", W_SND, F_TRIG, NO(flags), 0, 3}, {"HOLD", W_SND, F_HOLD, NO(flags), 0, 1}},
     [PG_SOUND] = {{"SOUND", W_SND, F_LIB, NO(lib), 1, ORB_NLIB - 1}, {"TONE", W_SND, F_NUM, NO(ecc), 0, 99},
                   {"DECAY", W_SND, F_TIME, NO(d), 0, 99}, {"LEVEL", W_SND, F_NUM, NO(level), 0, 99},
                   {"OCT", W_SND, F_OCT, NO(oct), -3, 3}, {"PAN", W_SND, F_PAN, NO(pan), 0, 99},
@@ -365,6 +365,7 @@ static int32_t pd_get(const pd_t *d)
         return r->logic == LOG_FREE ? 0 : r->logic == LOG_CONJ ? 13 : 1 + ((int32_t)r->logic - 1) * 4 + (r->ltgt & 3);
     }
     if (d->fmt == F_TRIG) return *p & 3u;
+    if (d->fmt == F_HOLD) return (*p & SF_HOLD) ? 1 : 0;
     return pd_signed(d) ? (int32_t)(int8_t)*p : (int32_t)*p;
 }
 /* SOUND: a sound from the library into the focus; stopped, you hear it at once (playing: at its next hit) */
@@ -395,6 +396,7 @@ static void pd_set(const pd_t *d, int32_t v)
         return;
     }
     if (d->fmt == F_TRIG) { *p = (uint8_t)((*p & ~3u) | (uint32_t)v); return; }
+    if (d->fmt == F_HOLD) { *p = (uint8_t)(v ? (*p | SF_HOLD) : (*p & ~SF_HOLD)); return; }
     if (d->fmt == F_LIB) { lib_pick((uint32_t)v); return; }
     if (d->fmt == F_MOOD) { mood_turn((uint32_t)v); drawn_bar = ~0u; return; }
     if (d->where == W_RING && d->off == RO(follow)) {   /* FOLLOW: its notes kept where they were */
@@ -455,6 +457,7 @@ static void pd_text(const pd_t *d, char *s)
         break;
     }
     case F_TRIG: put_s(s, v == 0 ? "FREE" : v == 1 ? "PHASE" : v == 2 ? "LEGATO" : "BOTH"); break;
+    case F_HOLD: put_s(s, v ? "TILL NEXT" : "GATE"); break;
     case F_CH: if (v) put_u(s, (uint32_t)v); else put_s(s, "OMNI"); break;
     case F_SLOT: put_u(s, (uint32_t)v + 1u); break;
     case F_INSP: if (v) put_s(put_i(s, -(v * 48 / 99), 0), "st"); else put_s(s, "OFF"); break;

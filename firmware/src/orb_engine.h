@@ -46,6 +46,7 @@ enum { DST_ECC, DST_SLING, DST_ANG, DST_SPR, DST_MOON, DST_DUST, DST_PIXEL, DST_
        DST_SEND, DST_FDBK, DST_RAD, DST_PREC, DST_LEVEL, DST_PROB, DST_TIDE, DST_HORIZON, DST_BEAM, ORB_NDST };
 #define SF_PHASE 1u                         /* snd flags: the orbit restarts at the near point on a hit */
 #define SF_LEGATO 2u                        /* a ring's notes glide into each other while it sounds */
+#define SF_HOLD 4u                          /* a ring's note holds till its next hit (a drone), whatever GATE says */
 
 static const char *const ORB_PART_NAME[ORB_NPART] = {"KEYS", "A", "B", "C", "D"};
 static const char *const ORB_DIR_NAME[ORB_NDIR] = {"FWD", "REV", "PING", "SPIRAL", "RND"};
@@ -838,7 +839,14 @@ static void orb_ring_fire(orb_t *o, uint32_t r, int32_t pitch, int32_t vel)
     orb_rstate_t *R = &o->rs[r];
     const orb_ring_t *g = &o->sys->ring[r];
     const orb_snd_t *s = &o->sys->snd[ORB_A + r];
-    uint32_t gf = orb_gate_frames(o->sys, orb_step_ticks(g), s->gate);
+    uint32_t ticks = orb_step_ticks(g), gate = s->gate, gf;
+    if (s->flags & SF_HOLD) {               /* HOLD: as long as till the ring's next written hit (going forward) */
+        uint32_t len = g->len ? g->len : 1u, k, d = len;
+        for (k = 1u; k < ORB_NSTEP && k <= len; k++) if (g->on[(R->cur + k) % len]) { d = k; break; }
+        ticks *= d;
+        gate = 97;                          /* (its release just before the next) */
+    }
+    gf = orb_gate_frames(o->sys, ticks, gate);
     orb_trigger(o, r, ORB_A + r, pitch, vel, (int32_t)(gf < 32u ? 32u : gf), R->last_p);
     R->last_p = pitch;
     R->flash++;

@@ -180,10 +180,10 @@ static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8
     s->mod[k].src = src; s->mod[k].dst = dst; s->mod[k].amt = amt;
 }
 
-#define ORB_NSYSTEM 16u
+#define ORB_NSYSTEM 20u
 static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"KITTEN", "MILKY WAY", "HARMONICES", "PURRSEC", "ZOOMIES",
     "CATWALK", "SPIRAL", "LUNA NOVA", "SGR A*", "BOOP BOP", "SNOWGLOBE", "STARDUST", "ALPHA CEN", "MOON NAP", "AFTERGLOW",
-    "PULSAR"};
+    "PULSAR", "ASTRALICA", "NOM NOM", "TUMMY", "MULTIVERSE"};
 
 /* (the made ones: a library sound on a part, centred, at a level, never sliding; a ring that FOLLOWs the chords) */
 static void orb_lib_load(orb_snd_t *s, uint32_t li, uint32_t part);
@@ -579,13 +579,105 @@ static void orb_system_pulsar(orb_sys_t *s)
     s->bg_cut = 45; s->bg_glow = 8;
 }
 
+/* ---- the legend's universe: what the film of Astralica is made of (orb_intro_system), as systems to play. The dark
+ * drone on the sun (held: SF_HOLD), the planets' chirps falling in from octaves under (COMET), her tummy's gurgles
+ * (BLOOP), the plops (BOOP), the orrery's glass rings on the overtone series, her meow; long echoes, a vast nebula,
+ * GRAVITY pulling every note into tune. Each its own tempo and rhythm */
+
+/* ASTRALICA: the film itself, 100: the drone held on the sun, the orrery's three rings at 5:4 3:2 7:4 on 4:5:6:7 in the
+ * overtone scale, the echoes and the nebula of the legend; the keys her meow */
+static void orb_system_astralica(orb_sys_t *s)
+{
+    static const int8_t mb[] = {0, 1, 0, -1, 2}, mc[] = {0, 0, 2, 0, -2, 1}, md[] = {0, 2, 0, 4, 0, -1, 1};
+    orb_rdef_t B = {5, 4, 20, 5, 0, 2, DIR_FWD, 0, 0, 0, mb, 5, 0};
+    orb_rdef_t C = {3, 2, 24, 6, 0, 4, DIR_FWD, 0, 0, 0, mc, 6, 0};
+    orb_rdef_t D = {7, 4, 28, 7, 0, 6, DIR_FWD, 0, 0, 90, md, 7, 0};
+    s->tuning = 1; s->sun = 0; s->bpm = 100;
+    orb_put(s, ORB_KEYS, LIB_MEOW, 62);
+    orb_put(s, ORB_A, LIB_DRONE, 38); s->snd[ORB_A].oct = 0; s->snd[ORB_A].flags |= SF_HOLD;
+    orb_put(s, ORB_B, LIB_GLASS, 0);
+    orb_put(s, ORB_C, LIB_PLUCK, 0);
+    orb_put(s, ORB_D, LIB_BELL, 56);
+    orb_ring_pat(&s->ring[0], 1, 4, "X.......", 0, 0, 0);
+    orb_ring_set(&s->ring[1], &B); orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+    s->dtime = 9; s->dfb = 62; s->ping = 1; s->dmix = 46; s->rmix = 62; s->rsize = 92; s->rdecay = 84; s->rdamp = 50;
+    s->hshift = -12; s->hretro = 25; s->hgrain = 60;
+    s->macro[MAC_GRAVITY] = 72; s->macro[MAC_ORBIT] = 20;
+    orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
+}
+
+/* NOM NOM: the planets eaten, 88, half time: a soft thump on one and three, chirps falling in from octaves under on
+ * the eighths, plops at 3:2 on the rings' own notes (4:5:6:7), the drone held under; the keys her meow */
+static void orb_system_nomnom(orb_sys_t *s)
+{
+    static const int8_t chirp[] = {8, 12, 16, 14}, plop[] = {8, 10, 12, 14, 12, 10};
+    s->tuning = 1; s->sun = 7; s->bpm = 88;
+    orb_put(s, ORB_KEYS, LIB_MEOW, 62);
+    orb_put(s, ORB_A, LIB_THUMP, 92);
+    orb_put(s, ORB_B, LIB_COMET, 96); s->snd[ORB_B].oct = 0; s->snd[ORB_B].send = 50;
+    orb_put(s, ORB_C, LIB_BOOP, 86); s->snd[ORB_C].oct = 1;
+    orb_put(s, ORB_D, LIB_DRONE, 30); s->snd[ORB_D].oct = 0; s->snd[ORB_D].flags |= SF_HOLD;
+    orb_ring_pat(&s->ring[0], 1, 1, "X.......X.......", 0, 0, 0);
+    orb_ring_pat(&s->ring[1], 1, 2, "X...x.x. x.......", chirp, 4, 0);
+    orb_ring_pat(&s->ring[2], 3, 2, "x.....x..x..x.....x..x..", plop, 6, 80);
+    orb_ring_pat(&s->ring[3], 1, 4, "X...............", 0, 0, 0);
+    s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 40; s->rmix = 55; s->rsize = 90; s->rdecay = 80; s->rdamp = 50;
+    s->macro[MAC_GRAVITY] = 72;
+    orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
+    orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 25);
+}
+
+/* TUMMY: her tummy, glowing and gurgling, 76: bubbles gurgling up in a syncopated sixteenth, boops at 5:4 answering,
+ * glints of glass high at 7:4, the drone held low; the planets tug at each other (TIDE) so it all wobbles; she mews */
+static void orb_system_tummy(orb_sys_t *s)
+{
+    static const int8_t gurgle[] = {0, 2, 1, 4, 0, 3}, boop[] = {4, 2, 6, 2}, glint[] = {8, 10, 12, 14};
+    s->tuning = 1; s->sun = 3; s->bpm = 76;
+    orb_put(s, ORB_KEYS, LIB_MEW, 0);
+    orb_put(s, ORB_A, LIB_BLOOP, 99); s->snd[ORB_A].oct = 1;
+    orb_put(s, ORB_B, LIB_BOOP, 88); s->snd[ORB_B].oct = 1;
+    orb_put(s, ORB_C, LIB_GLASS, 60);
+    orb_put(s, ORB_D, LIB_DRONE, 32); s->snd[ORB_D].oct = 0; s->snd[ORB_D].flags |= SF_HOLD;
+    orb_ring_pat(&s->ring[0], 1, 1, "x..xx...x.x..x..", gurgle, 6, 72);
+    orb_ring_pat(&s->ring[1], 5, 4, "x...x.x.....x...x...", boop, 4, 64);
+    orb_ring_pat(&s->ring[2], 7, 4, "x......x.....x..x.......x...", glint, 4, 70);
+    orb_ring_pat(&s->ring[3], 1, 4, "X.......", 0, 0, 0);
+    s->macro[MAC_TIDE] = 20; s->macro[MAC_GRAVITY] = 60;
+    orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 40);
+    orb_mod_set(s, 1, SRC_LFO2, DST_ECC, 25);
+    s->dtime = 6; s->dfb = 48; s->ping = 1; s->dmix = 34; s->rmix = 50; s->rsize = 80; s->rdecay = 72;
+}
+
+/* MULTIVERSE: her meow, echoing from universe to universe, 60, no beat: the drone held for four bars at a time, a
+ * meow now and then whose echoes come back a fourth lower each time (TIRED LIGHT), bells at 7:4, a star at 3:2, the
+ * sun's own chord far under in a long halo; the keys a tidal bell */
+static void orb_system_multiverse(orb_sys_t *s)
+{
+    static const int8_t meow[] = {7, 9, 6}, bell[] = {4, 6, 9}, star[] = {12, 10};
+    s->tuning = 1; s->sun = 7; s->bpm = 60;
+    orb_put(s, ORB_KEYS, LIB_TIDAL, 58);
+    orb_put(s, ORB_A, LIB_DRONE, 36); s->snd[ORB_A].oct = 0; s->snd[ORB_A].flags |= SF_HOLD;
+    orb_put(s, ORB_B, LIB_MEOW, 70); s->snd[ORB_B].oct = 1; s->snd[ORB_B].send = 70;
+    orb_put(s, ORB_C, LIB_BELL, 50);
+    orb_put(s, ORB_D, LIB_STAR, 70);
+    orb_ring_pat(&s->ring[0], 1, 4, "X...............", 0, 0, 0);
+    orb_ring_pat(&s->ring[1], 1, 4, "x.......x.......", meow, 3, 70);
+    orb_ring_pat(&s->ring[2], 7, 4, "x......x...........x........", bell, 3, 80);
+    orb_ring_pat(&s->ring[3], 3, 2, "x.......................", star, 2, 70);
+    s->dtime = 10; s->dfb = 70; s->ping = 1; s->dmix = 50; s->tired = 5;
+    s->rmix = 70; s->rsize = 96; s->rdecay = 88; s->rdamp = 45; s->bloom = 40;
+    s->macro[MAC_GRAVITY] = 72;
+    s->bg_level = 26; s->bg_prog = 0; s->bg_halo = 90; s->bg_silk = 55; s->bg_width = 70; s->bg_cut = 30; s->bg_glow = 25;
+}
+
 static void orb_system(uint32_t i, orb_sys_t *s)
 {
     static void (*const F[ORB_NSYSTEM])(orb_sys_t *) = {orb_system_kitten, orb_system_milky, orb_system_harmonices,
         orb_system_purrsec, orb_system_zoomies, orb_system_catwalk, orb_system_spiral, orb_system_lunanova,
         orb_system_sgra, orb_system_boopbop, orb_system_snowglobe, orb_system_stardust, orb_system_alphacen,
-        orb_system_moonnap, orb_system_afterglow, orb_system_pulsar};
-    static const uint8_t MOOD_OF[ORB_NSYSTEM] = {1, 0, 2, 1, 3, 1, 2, 1, 1, 3, 0, 2, 2, 0, 2, 3};   /* (CUTE's, from here) */
+        orb_system_moonnap, orb_system_afterglow, orb_system_pulsar, orb_system_astralica, orb_system_nomnom,
+        orb_system_tummy, orb_system_multiverse};
+    static const uint8_t MOOD_OF[ORB_NSYSTEM] = {1, 0, 2, 1, 3, 1, 2, 1, 1, 3, 0, 2, 2, 0, 2, 3, 2, 1, 1, 0};   /* (CUTE's) */
     orb_sys_clear(s, ORB_SYSTEM_NAME[i % ORB_NSYSTEM]);
     F[i % ORB_NSYSTEM](s);
     s->mood = MOOD_OF[i % ORB_NSYSTEM];

@@ -456,3 +456,25 @@ musical) and all four tools offered. Decided:
   AFTERGLOW, PULSAR (minimal techno). Out: GALILEAN, TRAPPIST, KIRKWOOD, NEBULA, ROCHE, LAGRANGE, ACCRETION, GW150914
   (glides, chaos, or a twin of another). Every melody's register checked (the highest a star at E6 .. F7 in the music
   boxes), every part's level measured alone. SET_VER 6.
+
+## D25 — The legend's universe in the synth; the page cut to the most unlike (2026-11-09)
+
+The user: "I wish there were more variety, so cut the number of sound examples; and I'd like the sound universe of
+the intro film in the synth: is it made outside our engine?" It is not: the legend is the engine, the same code, with
+its own system (orb_intro_system: the DRONE on the keys held on C2 and G2, the planets' chirps on A (COMET: INSPIRAL
+from octaves under), then BLOOP gurgles, then BOOP plops, HARMONICES's three rings, the meow) and a script that holds
+notes and changes sounds; its space is far larger than the systems' (echoes at 62 % feedback, a 92 % nebula, GRAVITY
+72). Asked, the user chose: cut the page only (the synth keeps every system), and several systems in the legend's
+universe, each its own tempo and rhythm. Decided:
+
+- **HOLD** (SF_HOLD, TIME's ALGORITHM): a ring's note lasts till its next written hit (going forward), whatever GATE
+  says, released just before it: a drone on a ring. Its retrigger every two or four bars breathes (the DRONE's own
+  slow attack).
+- **Four systems**, the last four (16..19, the others keep their places; SET_VER 7): ASTRALICA (the film itself, 100:
+  the drone, the 4:5:6:7 rings, the legend's echoes and nebula; the keys her meow), NOM NOM (88, half time: chirps
+  falling in on the eighths, plops at 3:2, a thump), TUMMY (76: gurgles in a syncopated sixteenth, boops at 5:4, glass
+  glints at 7:4, TIDE wobbling it), MULTIVERSE (60, no beat: a meow on a ring whose echoes tire a fourth lower each
+  time, bells at 7:4, a star, the sun's chord far under in a 30 s halo). The drone's level set by measuring (it is a
+  held note: at a ring's level it drowned the rest; now each part within a few dB).
+- **The page**: six systems (ASTRALICA, ZOOMIES, BOOP BOP, ALPHA CEN, SGR A*, MULTIVERSE) and four songs (PURRSEC, LUNA
+  NOVA, SNOWGLOBE, NOM NOM), picked to be as unlike each other as they come, in place of sixteen and eight.
