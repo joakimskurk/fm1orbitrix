@@ -110,5 +110,28 @@ The words are the user's, the tone kept.
 - Two engine calls came of it, useful beyond the intro: `orb_part_on` (a ring's sound played directly, on its voice)
   and `orb_glide` (a held key's note moves to another pitch on gravity's spring). The meow is three of those: mi-, AA,
   ow (G5 -> B5 -> E5), with the eccentricity envelope opening and closing it, the ping-pong delay sending it on.
-- Any key or button skips it; it can be switched off (KEYS, SEL row: INTRO, kept in the settings). On the host it
+- PLAY skips it (D12); it can be switched off (KEYS, SEL row: INTRO, kept in the settings). On the host it
   plays only with ORB_INTRO=1 (the scripts are timed from the splash); `tools/make_film.sh` films it.
+
+## D12 — The glitches, and PRESS PLAY TO SKIP (2026-11-09)
+
+The user saw a couple of glitches in the legend's film, and wanted "press play to skip". Found and fixed:
+
+- **Pictures:** the planets blinked (the test of behind and in front of her was the wrong way round: those behind
+  vanished, those in front were drawn twice); her size jumped where the zoom turned back (2232 -> 1800) and her anchor
+  jumped twice; the stars changed pattern when the streaks began; the cats in the bubbles were drawn at under a pixel a
+  cell, so cells fell out (now each pixel takes its cell). Every change of scene is now continuous (checked frame by
+  frame).
+- **Sound:** a RETRO grain in HORIZON could lap the write head at the longest lag and read fresh sound (two clicks at
+  8.0 s; its upper lag now counts the grain going back); HORIZON's mix jumped when its depth did (it glides now, ~10
+  ms); NEBULA's lines jumped to a new size (they glide, a frame a tick); the drone changed timbre in its release when the
+  keys became the meow (it goes earlier now); the story's echoes changed pitch when the system to play came in (it comes
+  after the splash, and the echoes die out during it). In the engine at large: the moon's radius, the dust, the beam,
+  the tide and the projection's angles changed in steps a tick (RND -> MOON, CONJ -> TIDE clicked): they ramp over the
+  tick's frames now, as the amplitude did.
+- **A click detector** in `tools/orb_look.py`: a lone spike in the second difference (4 times anything else within
+  20 ms: a sharp waveform, high ECC or PIXEL, has an edge every period and is not lone), where the level does not rise
+  (not an attack). The legend and its skip: none. What it still flags in the systems (a few in 16 s) are a ring
+  retriggering its own sounding voice (a 1 ms re-attack): left as a pluck's nature.
+- **PRESS PLAY TO SKIP** at the top while it plays, PLAY blinking; only PLAY skips (a key pressed by chance does not),
+  and it skips the splash too, straight to the instrument.

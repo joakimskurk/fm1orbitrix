@@ -123,8 +123,8 @@ white keys are the steps (OCT± the page of 16); a held step key and K1 set its 
 
 ## 8. Budget and rules
 
-v0.2, counted on the chip's code (JieLi clang -Os): the voice loop 292 instructions a frame with everything on (TIDE and
-BEAM added ~47), ~110 plain; the FX loop ~700 a frame with the filter, NEBULA (half rate) and HORIZON all on. The
+v0.2, counted on the chip's code (JieLi clang -Os): the voice loop 310 instructions a frame with everything on (TIDE,
+BEAM and the ramps of D12 added ~65), ~116 plain; the FX loop ~700 a frame with the filter, NEBULA (half rate) and HORIZON all on. The
 absolute worst case (8 voices, everything) is ~60 % of the chip; typical systems well under half. The interrupt
 measures itself: over 80 % of the 5.8 ms, the quietest voice fades out (`orb_shed`, at most one each 50 ms).
 

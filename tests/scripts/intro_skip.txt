@@ -1,0 +1,8 @@
+# ORBITRIX: PLAY skips the legend (here mid-way, as the universe falls in), and the splash with it (ORB_INTRO=1)
+800 btn 0
+1600 keys 0x10
+1700 keys 0
+7000 btn 12
+7400 shot
+8400 shot
+9000 end

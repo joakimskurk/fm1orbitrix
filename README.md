@@ -41,7 +41,7 @@ rings through the multiverses.
 
 ORBITRIX tells it at power-on, in about fourteen seconds, scored by its own engine: a drone, a chirp as each planet
 falls in, the universe sliding into her horizon, the orrery's rings, and her meow, echoing from universe to universe.
-Any key or button skips it; KEYS → SEL → INTRO turns it off.
+**Press PLAY to skip it** (the splash too, straight to the instrument); KEYS → SEL → INTRO turns it off.
 
 <p align="center">
   <img src="docs/readme/intro_strip.png" width="880" alt="The legend: Astralica arrives; one big ass cat; the orbits sing; her song rings through the multiverses">

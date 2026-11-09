@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 joakimskurk
 """Look at a render: a spectrogram (log frequency), the waveform envelope, and numbers (peak, RMS, DC, the
-spectral centroid, the largest jump between frames: a click, the share of energy above 16 kHz).
+spectral centroid, the largest jump between frames, the share of energy above 16 kHz, and clicks: a lone spike in the
+second difference, 4 times anything else within 20 ms, where the level does not rise, i.e. not a note's attack).
 
   python3 tools/orb_look.py build/audio/x.wav [more.wav ...]     -> build/look/x.png, and a line each
 """
@@ -29,6 +30,24 @@ def colour(v):                                  # 0..1 -> indigo .. violet .. ma
             t = (v - a) / (b - a)
             return tuple(int(ca[i] + (cb[i] - ca[i]) * t) for i in range(3))
     return stops[-1][1]
+
+
+def clicks(x, fs):
+    """the times of clicks: a lone spike in the second difference. Lone: 4 times anything else within 20 ms of it (a
+    sharp waveform, high eccentricity or PIXEL, has an edge every period: not lone), and not an attack (the level after
+    it no more than 6 dB up)"""
+    d2 = np.abs(np.diff(x, n=2, axis=0)).max(axis=1)
+    out = []
+    for i in range(882, len(d2) - 882, 441):
+        k = i + int(np.argmax(d2[i:i + 441]))
+        if d2[k] < 0.002 or k < 882 or k > len(d2) - 882:
+            continue
+        rest = max(d2[k - 882:k - 44].max(), d2[k + 44:k + 882].max()) + 1e-6
+        pre = np.sqrt((x[k - 441:k - 20] ** 2).mean()) + 1e-9
+        post = np.sqrt((x[k + 20:k + 441] ** 2).mean()) + 1e-9
+        if d2[k] / rest > 4 and 20 * np.log10(post / pre) < 6:
+            out.append(k / fs)
+    return out
 
 
 def look(path, out_dir):
@@ -72,8 +91,10 @@ def look(path, out_dir):
     cen = (spec * f).sum() / spec.sum()
     hf = spec[f > 16000].sum() / spec.sum()
     jump = np.abs(np.diff(x, axis=0)).max()
+    ck = clicks(x, fs)
     print(f"{Path(path).name:34s} peak {20*np.log10(pk+1e-9):6.1f}  rms {20*np.log10(rms+1e-9):6.1f}  dc {x.mean():+.4f}"
-          f"  centroid {cen:6.0f} Hz  >16k {10*np.log10(hf+1e-12):6.1f} dB  max step {jump:.3f}  -> {out}")
+          f"  centroid {cen:6.0f} Hz  >16k {10*np.log10(hf+1e-12):6.1f} dB  max step {jump:.3f}"
+          f"  clicks {len(ck)}{' at ' + ', '.join(f'{t:.2f}' for t in ck[:4]) if ck else ''}  -> {out}")
 
 
 if __name__ == "__main__":

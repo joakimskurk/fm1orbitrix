@@ -131,12 +131,14 @@ typedef struct {
     int32_t vel;                            /* Q15 */
     int32_t jit[3];                         /* CHAOS's random walks (Q15) */
     int32_t cl, sl_, cr, sr;                /* the projection, Q12, with the pan in it */
+    int32_t dcl, dsl, dcr, dsr;             /* ... and their steps a frame (a tick's change spread over its frames) */
     int32_t gx, gvx, gvy, mr, dq;           /* gains Q12 (row), moon radius Q15, dust Q15 */
+    int32_t mrs, dqs, bqs, tks;             /* the steps a frame of the moon, the dust, the beam, the tide: no jumps */
     int32_t kc, nl1, nl2;                   /* dust colour: coefficient Q15, the two noise states */
     int32_t pixm, hp;                       /* pixel mask; dust high-pass (1) or low-pass (0) */
     int32_t send;                           /* Q15 */
     uint32_t rng, age;
-    uint32_t tk;                            /* TIDE: the others' pull on the phase */
+    int32_t tk;                             /* TIDE: the others' pull on the phase (0..98301) */
     int32_t bq;                             /* BEAM's depth, Q15 */
     int32_t insp_t, insp_T, insp_drop;      /* INSPIRAL: ticks so far, its length (0 = done), the drop (1/256 st) */
 } orb_voice_t;
@@ -203,7 +205,7 @@ typedef struct {
     uint8_t own_live[ORB_NV];
     /* HORIZON: the write index, the source point (Q16), two grains */
     uint32_t h_w, h_P, h_wi, h_G, h_rate, h_rw;
-    int32_t h_depth, h_mix, h_v;
+    int32_t h_depth, h_mix, h_v, h_on;     /* h_mix glides (no click when the depth jumps); h_on while it is not 0 */
     uint32_t h_pos[2], h_wph[2];
     int32_t h_dir[2], h_t[2];
     volatile int32_t h_level;               /* how deep it is now (the screen), 0..99 */
@@ -536,13 +538,13 @@ static void orb_voice_tick(orb_t *o, orb_voice_t *v)
         v->minc = (v->inc >> 8) * ratio;
         if (v->inc >> 8 && v->minc / (v->inc >> 8) != ratio) v->minc = 0;       /* (overflow: no moon) */
         if (v->minc > 0x70000000u) mr = 0;  /* above ~19 kHz: none */
-        v->mr = orb_clamp(mr, 0, 24575);
+        v->mrs = orb_rz(orb_clamp(mr, 0, 24575) - v->mr, 5);
     }
     /* dust and its colour; pixel */
     {
         int32_t d = orb_lin(s->dust) + md[DST_DUST], c = s->color;
         d = orb_clamp(d, 0, 32767);
-        v->dq = (d * d) >> 15;              /* a curve: the first half is gentle */
+        v->dqs = orb_rz(((d * d) >> 15) - v->dq, 5);   /* a curve: the first half is gentle */
         if (c < 50) { v->hp = 0; v->kc = 1200 + c * 640; }
         else { v->hp = 1; v->kc = (c - 50) * 640 + 200; }
         if (v->kc > 32767) v->kc = 32767;
@@ -581,16 +583,16 @@ static void orb_voice_tick(orb_t *o, orb_voice_t *v)
         gr = (gr * 23170) >> 15;
         gl = gl * 2 > 32767 ? 32767 : gl * 2;
         gr = gr * 2 > 32767 ? 32767 : gr * 2;
-        v->cl = (orb_cos(tl) * gl) >> 18;   /* Q12 */
-        v->sl_ = (orb_sin(tl) * gl) >> 18;
-        v->cr = (orb_cos(tr) * gr) >> 18;
-        v->sr = (orb_sin(tr) * gr) >> 18;
+        v->dcl = orb_rz(((orb_cos(tl) * gl) >> 18) - v->cl, 5);   /* Q12 */
+        v->dsl = orb_rz(((orb_sin(tl) * gl) >> 18) - v->sl_, 5);
+        v->dcr = orb_rz(((orb_cos(tr) * gr) >> 18) - v->cr, 5);
+        v->dsr = orb_rz(((orb_sin(tr) * gr) >> 18) - v->sr, 5);
     }
     v->send = orb_clamp(orb_lin(s->send) + md[DST_SEND], 0, 32767);
     {   /* TIDE: how hard the others pull (the macro, its modulation, the sound's share); BEAM */
         int32_t mt = orb_clamp(orb_lin(sy->macro[MAC_TIDE]) + md[DST_TIDE], 0, 32767);
-        v->tk = (uint32_t)((mt * (int32_t)s->tide) / 99) * 3u;            /* up to 98301: ~1.4 rad at 0.3 of the others */
-        v->bq = orb_clamp(orb_lin(s->beam) + md[DST_BEAM], 0, 32767);
+        v->tks = orb_rz((mt * (int32_t)s->tide) / 99 * 3 - v->tk, 5);   /* up to 98301: ~1.4 rad at 0.3 of the others */
+        v->bqs = orb_rz(orb_clamp(orb_lin(s->beam) + md[DST_BEAM], 0, 32767) - v->bq, 5);
     }
 }
 
@@ -600,10 +602,10 @@ static void orb_voice_render(orb_voice_t *v, int32_t *bd, int32_t *bs, const int
     int32_t e = v->e, es = v->es, a = v->a, as = v->as, sl = v->sl, sls = v->sls;
     int32_t gx = v->gx, gvx = v->gvx, gvy = v->gvy, mr = v->mr, dq = v->dq, kc = v->kc, n1 = v->nl1, n2 = v->nl2;
     int32_t cl = v->cl, sL = v->sl_, cr = v->cr, sR = v->sr, pm = v->pixm, send = v->send, hp = v->hp;
-    int use_v = sl > 0 || sls > 0, use_m = mr > 0, use_d = dq > 0, use_p = pm != -1, use_s = send > 0;
-    int32_t bq = v->bq;
-    uint32_t tk = v->tk;
-    int use_t = tp && tk, use_b = bq > 0, use_o = tn != 0;   /* (tn: TIDE is on: every voice gives its share) */
+    int32_t dcl = v->dcl, dsl = v->dsl, dcr = v->dcr, dsr = v->dsr, mrs = v->mrs, dqs = v->dqs, bqs = v->bqs, tks = v->tks;
+    int32_t bq = v->bq, tk = v->tk;
+    int use_v = sl > 0 || sls > 0, use_m = mr > 0 || mrs > 0, use_d = dq > 0 || dqs > 0, use_p = pm != -1, use_s = send > 0;
+    int use_t = tp && (tk > 0 || tks > 0), use_b = bq > 0 || bqs > 0, use_o = tn != 0;   /* (tn: TIDE on: all give) */
     for (i = 0; i < ORB_SUB; i++) {
         uint32_t row, col, E;
         int32_t wr, wc, d0, d1, d, cE, sE, x, y, L, R;
@@ -612,7 +614,8 @@ static void orb_voice_render(orb_voice_t *v, int32_t *bd, int32_t *bs, const int
         M += inc;
         e += es;                            /* (0..65535 by the ramp's construction) */
         a += as;
-        Mt = use_t ? M + (uint32_t)(tp[i] - ow[i]) * tk : M;   /* TIDE: the others' sum on the phase (a phase wraps) */
+        if (use_t) { tk += tks; Mt = M + (uint32_t)(tp[i] - ow[i]) * (uint32_t)tk; }   /* TIDE: the others' sum on the phase */
+        else Mt = M;
         row = (uint32_t)e >> 11;
         wr = e & 2047;
         col = Mt >> 23;
@@ -643,11 +646,13 @@ static void orb_voice_render(orb_voice_t *v, int32_t *bd, int32_t *bs, const int
             mm += minc;
             orb_sincos(mm, &ms, &mc);
             if (use_m) {
+                mr += mrs;
                 x += (mr * mc) >> 15;
                 y += (mr * ms) >> 15;
             }
             if (use_b) {                    /* BEAM: a narrow pulse of light at the moon's phase, (1 + cos)/2 to the 4th */
                 int32_t q = (mc + 32768) >> 1, g;
+                bq += bqs;
                 q = (q * q) >> 15;
                 q = (q * q) >> 15;
                 g = 32767 - (((32767 - q) * bq) >> 15);
@@ -664,10 +669,12 @@ static void orb_voice_render(orb_voice_t *v, int32_t *bd, int32_t *bs, const int
             n2 += ((ny - n2) * kc) >> 15;
             ox = hp ? nx - n1 : n1;
             oy = hp ? ny - n2 : n2;
+            dq += dqs;
             x += (((ox - x) >> 1) * dq) >> 14;   /* (halved: x - ox spans ~3 units) */
             y += (((oy - y) >> 1) * dq) >> 14;
         }
         if (use_p) { x &= pm; y &= pm; }
+        cl += dcl; sL += dsl; cr += dcr; sR += dsr;
         L = (x * cl + y * sL) >> 15;        /* Q12 */
         R = (x * cr + y * sR) >> 15;
         L = (L * a) >> 12;                  /* Q15 */
@@ -685,6 +692,9 @@ static void orb_voice_render(orb_voice_t *v, int32_t *bd, int32_t *bs, const int
         }
     }
     v->M = M; v->mm = mm; v->rng = rng; v->e = e; v->a = a; v->sl = sl; v->nl1 = n1; v->nl2 = n2;
+    v->cl = cl; v->sl_ = sL; v->cr = cr; v->sr = sR;
+    v->mr = use_m ? mr : mr + mrs * (int32_t)ORB_SUB; v->dq = use_d ? dq : dq + dqs * (int32_t)ORB_SUB;   /* (unused: at once) */
+    v->bq = use_b ? bq : bq + bqs * (int32_t)ORB_SUB; v->tk = use_t ? tk : tk + tks * (int32_t)ORB_SUB;
 }
 
 /* ---- the orrery */
@@ -909,7 +919,7 @@ static void orb_fx_tick(orb_t *o)
         int32_t d = orb_clamp(orb_lin(sy->macro[MAC_HORIZON]) + o->md[DST_HORIZON], 0, 32767), sh, i, f;
         uint32_t G = 256u + (uint32_t)sy->hgrain * 39u;
         if (G > 4096u) G = 4096u;
-        if (d && !o->h_depth) {             /* falling in: the grains start, staggered by half */
+        if (d && !o->h_on) {                /* falling in: the grains start, staggered by half */
             o->h_P = (o->h_w - 3u * G) << 16;
             o->h_t[0] = 0;
             o->h_t[1] = (int32_t)G / 2;
@@ -919,7 +929,12 @@ static void orb_fx_tick(orb_t *o)
         }
         o->h_depth = d;
         o->h_level = (d * 99) >> 15;
-        o->h_mix = d >= 8192 ? 32767 : d * 4;                   /* all wet a quarter of the way in */
+        {   /* all wet a quarter of the way in; the mix glides there (~10 ms), out too */
+            int32_t mt = d >= 8192 ? 32767 : d * 4;
+            o->h_mix += mt > o->h_mix ? (mt - o->h_mix + 7) >> 3 : -((o->h_mix - mt + 7) >> 3);
+            if (o->h_mix < 0) o->h_mix = 0;
+            o->h_on = d || o->h_mix;
+        }
         o->h_v = 65536 - (d * 2);                               /* the source slows to a standstill */
         sh = (int32_t)orb_clamp(sy->hshift, -24, 24) * 256 * (d >> 3) / 4096 + 24 * 256;   /* Q8, 0 .. 48 semitones */
         i = sh >> 8;
@@ -933,7 +948,11 @@ static void orb_fx_tick(orb_t *o)
     {
         static const int16_t BASE[4] = {1499, 1889, 2381, 2999};   /* (at 22 kHz: 68 .. 136 ms) */
         int32_t sz = 11000 + (int32_t)sy->rsize * 220, i;   /* Q15: 0.34 .. 1.0 */
-        for (i = 0; i < 4; i++) o->r_len[i] = orb_clamp((BASE[i] * sz) >> 15, 200, (int32_t)ORB_RLEN - 16);
+        for (i = 0; i < 4; i++) {           /* a new size: the lines glide there, a frame a tick (a jump would click) */
+            int32_t tl = orb_clamp((BASE[i] * sz) >> 15, 200, (int32_t)ORB_RLEN - 16);
+            if (!o->r_len[i]) o->r_len[i] = tl;
+            else o->r_len[i] += tl > o->r_len[i] ? 1 : tl < o->r_len[i] ? -1 : 0;
+        }
         o->r_g = 16384 + (int32_t)sy->rdecay * 158;          /* 0.5 .. 0.977 */
         o->r_damp = 4000 + (99 - (int32_t)sy->rdamp) * 290;  /* the lines' low-pass */
     }
@@ -1035,11 +1054,12 @@ static void orb_fx_render(orb_t *o, int32_t *out)
                 mm->hb[o->h_w] = (int16_t)orb_clamp(m, -32767, 32767);
                 o->h_w = (o->h_w + 1u) & (ORB_HLEN - 1u);
             }
-            if (o->h_depth) {
+            if (o->h_on) {
                 uint32_t g, G = o->h_G, half = (o->h_rate >> 1) * (G >> 4) >> 12, lag, lo, hi;   /* rate * G / 2 */
                 int32_t wl = 0, wr = 0;
-                lo = half + G + 256u;
-                hi = ORB_HLEN - G - 512u;
+                lo = half + G + 256u;           /* a forward grain at the fastest rate never reaches the write head */
+                hi = ORB_HLEN - G - half - 512u;   /* a RETRO grain, going back while the write goes on, never laps it */
+                if (hi < lo) hi = lo;
                 o->h_P += (uint32_t)o->h_v;
                 lag = (o->h_w - (o->h_P >> 16)) & (ORB_HLEN - 1u);
                 if (lag < lo) o->h_P = (o->h_w - lo) << 16;

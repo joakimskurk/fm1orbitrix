@@ -14,9 +14,10 @@
 - The legend of Astralica (the intro, `intro()` in orbitrix.c, its system `orb_intro_system`): on the host only with
   `ORB_INTRO=1`; `tools/make_film.sh` makes it a film with its sound (`build/film/astralica.mp4`).
 - Hear it and see it: the user listens to `build/audio/`. What can be measured, measure it (`tools/orb_look.py`:
-  spectrogram, centroid, energy above 16 kHz, the largest jump between frames).
+  spectrogram, centroid, energy above 16 kHz, the largest jump between frames, clicks: keep the legend and the
+  systems at none but a ring's own re-attacks).
 - The budget (docs/RULES.md): the audio ISR under half of its 5.8 ms. The voice loop on the chip is ~110
-  instructions a frame plain, ~292 with SLING, MOON, DUST, PIXEL, TIDE, BEAM and the send; the FX ~700 a frame with
+  instructions a frame plain, ~310 with SLING, MOON, DUST, PIXEL, TIDE, BEAM and the send; the FX ~700 a frame with
   the filter, NEBULA and HORIZON on. Over 80 % the interrupt sheds the quietest voice (`orb_shed`). Count with
   callgrind on the host (`-Os`) or on the chip's own code (JieLi clang `-Os -c`, objdump). The app shows `CPU nn%` on
   the hint line.
