@@ -159,7 +159,7 @@ int main(int argc, char **argv)
             uint32_t k;
             for (k = 0; ORB_SYSTEM_NAME[i][k] && k < 15u; k++) {
                 char ch = ORB_SYSTEM_NAME[i][k];
-                low[k] = ch == ' ' ? '_' : (ch >= 'A' && ch <= 'Z') ? (char)(ch + 32) : ch;
+                low[k] = (ch >= 'A' && ch <= 'Z') ? (char)(ch + 32) : (ch >= '0' && ch <= '9') ? ch : '_';   /* (a file name) */
             }
             low[k] = 0;
             snprintf(name, sizeof name, "%s/%02u_%s.wav", argv[2], i, low);
