@@ -16,16 +16,18 @@
 <link rel="icon" href="screens/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Chakra+Petch:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0a061a; --panel: #120b2c; --panel2: #1a1040; --frame: #7042e8; --fdim: #34207a;
   --lime: #c6ff1a; --cyan: #26e0ff; --mag: #ff4fa8; --yel: #ffe81a; --vio: #a474ff;
   --txt: #f0e8ff; --grey: #9a8ac8; --dim: #5c4c90; --ink: #10082a;
-  --px: "Silkscreen", ui-monospace, monospace; --sans: "Space Grotesk", system-ui, sans-serif;
+  --px: "Silkscreen", ui-monospace, monospace; --sans: "Chakra Petch", system-ui, sans-serif;
+  color-scheme: dark;                            /* one look, the night: the form controls and the scrollbars follow it */
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   margin: 0; background: var(--bg); color: var(--txt); font: 17px/1.6 var(--sans);
   background-image:
@@ -37,8 +39,8 @@ body {
 }
 a { color: var(--cyan); }
 a:hover { color: var(--lime); }
-.wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
-h1, h2, h3, .px { font-family: var(--px); font-weight: 700; letter-spacing: 0.02em; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, .px { font-family: var(--px); font-weight: 700; letter-spacing: 0.02em; text-wrap: balance; }
 h2 { font-size: 26px; margin: 56px 0 14px; color: var(--lime); display: flex; align-items: center; gap: 12px; }
 h2::before { content: ""; width: 14px; height: 14px; background: var(--mag); box-shadow: 4px 4px 0 var(--vio); flex: none; }
 h3 { font-size: 16px; margin: 0 0 6px; color: var(--yel); }
@@ -58,6 +60,7 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 .btn { font: 700 15px var(--px); text-decoration: none; padding: 11px 18px; border-radius: 6px; border: 2px solid var(--frame); color: var(--txt); background: var(--panel); cursor: pointer; }
 .btn.go { background: var(--lime); color: var(--ink); border-color: var(--lime); }
 .btn:hover { border-color: var(--lime); color: var(--lime); }
+.btn:focus-visible, .b:focus-visible, .pp:focus-visible, #go:focus-visible, .fm1-foot button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 .btn.go:hover { color: var(--ink); filter: brightness(1.08); }
 .note { margin: 22px auto 0; max-width: 680px; font-size: 14px; color: var(--grey); border: 1px dashed var(--fdim); border-radius: 8px; padding: 8px 14px; }
 .box { background: var(--panel); border: 2px solid var(--fdim); border-radius: 10px; padding: 18px 20px; }
