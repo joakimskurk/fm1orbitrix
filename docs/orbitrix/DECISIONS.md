@@ -96,3 +96,19 @@ chat only, so `tools/gen_splash.py` redraws it on the drawing's own grid (~24 px
 off it; given as `assets/cat_source.png`, the picture itself is sampled instead. On the splash it is 3x, with
 plus-stars twinkling as in the drawing, three planets going round it (behind it on the far side), a glint along the
 ring, a shooting star and a blink.
+
+## D11 — The legend of Astralica (2026-11-09)
+
+The user: "Big ass cat Astralica takes over the universe to make her cat music ring through the multiverses." Decided:
+a story at power-on, before the splash, ~14 s, five scenes (the silent universe; then came Astralica; she grew, and
+grew: one big ass cat; she ate the planets and made their orbits sing; now her song rings through the multiverses).
+The words are the user's, the tone kept.
+
+- It is scored by the engine on its own system (`orb_intro_system`): a drone on the keys, a chirp on A each time a
+  planet goes in (INSPIRAL, timed to land as it vanishes), HORIZON rising as the zoom streams the stars, the orrery's
+  B C D, then the keys turn into her meow.
+- Two engine calls came of it, useful beyond the intro: `orb_part_on` (a ring's sound played directly, on its voice)
+  and `orb_glide` (a held key's note moves to another pitch on gravity's spring). The meow is three of those: mi-, AA,
+  ow (G5 -> B5 -> E5), with the eccentricity envelope opening and closing it, the ping-pong delay sending it on.
+- Any key or button skips it; it can be switched off (KEYS, SEL row: INTRO, kept in the settings). On the host it
+  plays only with ORB_INTRO=1 (the scripts are timed from the splash); `tools/make_film.sh` films it.

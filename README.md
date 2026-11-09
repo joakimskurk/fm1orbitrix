@@ -33,6 +33,20 @@ The voice is a planet on an ellipse, and what you hear is where it is.
 > It builds for the FM-1 and the SMK-37 and passes Dinghy's checks and tests. It has **not yet been tested on a real
 > FM-1**, and there is no release yet.
 
+## The legend of Astralica
+
+In the beginning the universe was silent. Then came **Astralica**, a black cat in a violet coat with a yellow ring
+round her. She grew, and grew: one big ass cat. She ate the planets and made their orbits sing, and now her song
+rings through the multiverses.
+
+ORBITRIX tells it at power-on, in about fourteen seconds, scored by its own engine: a drone, a chirp as each planet
+falls in, the universe sliding into her horizon, the orrery's rings, and her meow, echoing from universe to universe.
+Any key or button skips it; KEYS → SEL → INTRO turns it off.
+
+<p align="center">
+  <img src="docs/readme/intro_strip.png" width="880" alt="The legend: Astralica arrives; one big ass cat; the orbits sing; her song rings through the multiverses">
+</p>
+
 ## The sound: orbit synthesis
 
 | | |
@@ -164,7 +178,7 @@ tempo. Then come the picture, the hint line (ALGORITHM's value, the load) and K1
 | **SEQ** | RING (the focused ring) → TIME (tempo, swing, mutate, the lanes) |
 | **EDIT** | ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN) · ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN) · ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel, INTRO) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: KEYS, A, B, C, D |
@@ -207,6 +221,7 @@ firmware/src/orb_systems.h  the thirteen systems
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)
+tools/make_film.sh          a film of the firmware on the host (the legend by default) -> build/film/astralica.mp4
 tools/orb_render.c          the engine to WAV; tools/orb_look.py the spectrograms
 tests/orb_test.c            the engine's tests
 ```

@@ -11,6 +11,8 @@
   an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt` and `splash.txt`, and look at
   the screens. Then `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
   the FM-1 last), `tests/run_tests.sh`.
+- The legend of Astralica (the intro, `intro()` in orbitrix.c, its system `orb_intro_system`): on the host only with
+  `ORB_INTRO=1`; `tools/make_film.sh` makes it a film with its sound (`build/film/astralica.mp4`).
 - Hear it and see it: the user listens to `build/audio/`. What can be measured, measure it (`tools/orb_look.py`:
   spectrogram, centroid, energy above 16 kHz, the largest jump between frames).
 - The budget (docs/RULES.md): the audio ISR under half of its 5.8 ms. The voice loop on the chip is ~110

@@ -401,4 +401,39 @@ static void orb_system(uint32_t i, orb_sys_t *s)
     }
     }
 }
+
+/* ---- the intro: the legend of Astralica (orbitrix.c's intro() plays it). Its own system: a drone on the keys, the
+ * chirp of a planet eaten on A, the orrery's three rings on B C D (HARMONICES's), and then the keys become her meow */
+static const orb_snd_t SND_DRONE = {.ecc = 22, .moon = 30, .mratio = 1, .ang = 40, .spr = 85, .prec = 45, .dust = 12,
+    .color = 20, .a = 72, .d = 80, .s = 85, .r = 74, .eamt = 15, .ea = 70, .ed = 80, .vsens = 20, .level = 74, .pan = 50,
+    .send = 72, .gate = 99, .oct = 0, .tide = 30};
+static const orb_snd_t SND_CHIRP = {.ecc = 50, .sling = 40, .ang = 10, .spr = 30, .insp = 80, .inspt = 64, .a = 2,
+    .d = 72, .s = 0, .r = 64, .eamt = 70, .ea = 0, .ed = 56, .vsens = 30, .level = 96, .pan = 50, .send = 45, .gate = 99,
+    .oct = 0};
+static const orb_snd_t SND_MEOW = {.ecc = 14, .sling = 25, .ang = 35, .spr = 45, .moon = 30, .mratio = 1, .dust = 10,
+    .color = 40, .a = 26, .d = 62, .s = 55, .r = 56, .eamt = 75, .ea = 44, .ed = 58, .vsens = 0, .level = 92, .pan = 50,
+    .send = 78, .gate = 90, .oct = 0};
+
+static void orb_intro_system(orb_sys_t *s)
+{
+    static const int8_t mb[] = {0, 1, 0, -1, 2}, mc[] = {0, 0, 2, 0, -2, 1}, md[] = {0, 2, 0, 4, 0, -1, 1};
+    orb_rdef_t A = {1, 1, 16, 0, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0};
+    orb_rdef_t B = {5, 4, 20, 5, 0, 2, DIR_FWD, 0, 0, 0, mb, 5, 0};
+    orb_rdef_t C = {3, 2, 24, 6, 0, 4, DIR_FWD, 0, 0, 0, mc, 6, 0};
+    orb_rdef_t D = {7, 4, 28, 7, 0, 6, DIR_FWD, 0, 0, 90, md, 7, 0};
+    orb_sys_clear(s, "ASTRALICA");
+    s->tuning = 1; s->sun = 0; s->bpm = 100;
+    s->snd[0] = SND_DRONE;
+    s->snd[1] = SND_CHIRP;
+    s->snd[2] = SND_GLASS;
+    s->snd[3] = SND_PLUCK;
+    s->snd[4] = SND_BELL; s->snd[4].level = 56;
+    orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
+    orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+    s->ring[0].mute = 1;                    /* A only sounds when a planet is eaten (orb_part_on) */
+    s->dtime = 9; s->dfb = 62; s->ping = 1; s->dmix = 46; s->rmix = 62; s->rsize = 92; s->rdecay = 84; s->rdamp = 50;
+    s->hshift = -12; s->hretro = 25; s->hgrain = 60;
+    s->macro[MAC_GRAVITY] = 72; s->macro[MAC_ORBIT] = 20;
+    orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
+}
 #endif

@@ -186,7 +186,7 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-static struct { uint8_t oct, ch, sysi, rsv; } set = {0, 0, 0, 0};
+static struct { uint8_t oct, ch, sysi, intro_off; } set = {0, 0, 0, 0};   /* intro_off: 1 = no story at power-on */
 static uint32_t set_dirty, set_t;
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
 
@@ -198,7 +198,7 @@ static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "RING", "TIME",
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_NONE };
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI };
+       F_INSP, F_GRAIN, F_SEMI, F_INTRO };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -271,7 +271,7 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
     [PG_KEYS] = {{"MODE", W_SYS, F_KMODE, SO(keymode), 0, 1}, {"TUNING", W_SYS, F_TUNING, SO(tuning), 0, ORB_NTUNING - 1},
                  {"SUN", W_SYS, F_NOTE, SO(sun), 0, 11}, {"OCT", W_SET, F_OCT, 0, -3, 3},
                  {"GRAVITY", W_SYS, F_PCT, SO(macro[MAC_GRAVITY]), 0, 99}, {"MIDI CH", W_SET, F_CH, 1, 0, 16},
-                 P_NONE, P_NONE, P_BPM},
+                 {"INTRO", W_SET, F_INTRO, 3, 0, 1}, P_NONE, P_BPM},
 };
 static uint32_t page = PG_ORRERY, focus = ORB_A, slot;   /* focus: 0 KEYS, 1..4 A..D */
 static uint32_t ring_focus(void) { return focus ? focus - 1u : 0u; }
@@ -368,6 +368,7 @@ static void pd_text(const pd_t *d, char *s)
     case F_INSP: if (v) put_s(put_i(s, -(v * 48 / 99), 0), "st"); else put_s(s, "OFF"); break;
     case F_SEMI: put_s(put_i(s, v, 1), "st"); break;
     case F_GRAIN: put_s(put_u(s, (256u + (uint32_t)v * 39u) * 10u / 441u), "ms"); break;
+    case F_INTRO: put_s(s, v ? "OFF" : "ON"); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
 }
@@ -1211,6 +1212,195 @@ static void splash(void)
     }
 }
 
+/* ---- the legend of Astralica: a story at power-on (any key or button skips it; KEYS: INTRO OFF), scored by the
+ * engine itself (orb_intro_system). The screen is drawn whole each frame, as two canvases (240 x 144, then 96) */
+static void cat_draw_q8(int32_t ax, int32_t ay, uint32_t s, uint32_t acx, uint32_t acy, int blink, uint32_t look)
+{   /* Astralica at s / 256 pixels a cell, the cell (acx, acy) / 2 at screen (ax, ay); look: 1 her eyes glow */
+    uint32_t i, j;
+    int32_t ox = ax - (int32_t)((acx * s) >> 9), oy = ay - (int32_t)((acy * s) >> 9);
+    for (j = 0; j < CAT_H; j++) {
+        int32_t y0 = oy + (int32_t)((j * s) >> 8), y1 = oy + (int32_t)(((j + 1u) * s) >> 8);
+        if (y1 <= y0 || y1 < -cv_oy || y0 >= (int32_t)cv_h - cv_oy) continue;
+        for (i = 0; i < CAT_W; i++) {
+            uint32_t k = CAT[j][i];
+            int32_t x0 = ox + (int32_t)((i * s) >> 8), x1 = ox + (int32_t)(((i + 1u) * s) >> 8);
+            uint16_t c;
+            if (!k || x1 <= x0 || x1 < 0 || x0 >= 240) continue;
+            c = CAT_PAL[k];
+            if (k == CAT_EYE) {
+                if (blink) c = j + 1u < CAT_H && CAT[j + 1u][i] == CAT_EYE ? CAT_PAL[CAT_FACE] : CAT_PAL[CAT_WHITE];
+                else if (look) c = ((fm1_ms >> 6) & 1u) ? C_LIME : C_CYAN;
+            }
+            cv_rect(x0, y0, x1 - x0, y1 - y0, c);
+        }
+    }
+}
+static uint32_t typed(const char *s, uint32_t t0, uint32_t t, char *out)   /* typewriter: a letter each 34 ms */
+{
+    uint32_t n = t < t0 ? 0u : (t - t0) / 34u, k;
+    for (k = 0; s[k] && k < n && k < 30u; k++) out[k] = s[k];
+    out[k] = 0;
+    return k;
+}
+#define I_T2 2600u                              /* then came Astralica */
+#define I_T3 4800u                              /* she grew */
+#define I_T4 8200u                              /* the orbits sing */
+#define I_T5 10800u                             /* the multiverses */
+#define I_END 14400u
+static void intro_scene(uint32_t t, uint32_t half)
+{
+    static const uint16_t PC[3] = {C_CYAN, C_MAG, C_LIME};
+    static const uint16_t EAT[3] = {5300, 6100, 6900};
+    static const int16_t BUB[6][2] = {{36, 34}, {204, 30}, {22, 120}, {218, 112}, {78, 150}, {164, 152}};
+    int32_t cx = 120, cy = 92, k;
+    uint32_t s = 0, acx = 48, acy = 36;        /* (anchor in half cells: the centre of her) */
+    char line[2][32];
+    const char *l1 = "", *l2 = "";
+    uint32_t t1 = 0, t2 = 0;
+    /* where she is, how big */
+    if (t >= I_T2 && t < I_T3) s = 64u + (t - I_T2) * 192u / (I_T3 - I_T2);
+    else if (t >= I_T3 && t < I_T4) {           /* exponential: x2 each 1.1 s, into her face */
+        uint32_t u = t - I_T3, oct = u / 1100u, fr = (u % 1100u) * 256u / 1100u;
+        s = (256u << oct) + ((256u << oct) * fr >> 8);
+        acx = 48u; acy = 30u;
+    } else if (t >= I_T4 && t < I_T5) {
+        uint32_t u = t - I_T4;
+        s = u < 600u ? 1800u - u * 1416u / 600u : 384u;
+    } else if (t >= I_T5) s = 384u - orb_clamp((int32_t)(t - I_T5) / 30, 0, 80);
+    /* the stars: still, then streaming out as she grows */
+    if (t >= I_T3 + 800u && t < I_T4) {
+        uint32_t q, sd = 4242u, sp = (t - I_T3) / 8u;
+        for (q = 0; q < 70u; q++) {
+            uint32_t ph = orb_xs(&sd), r0 = (orb_xs(&sd) >> 24) + sp * (2u + (q & 3u));
+            int32_t r = (int32_t)(r0 % 170u) + 4, len = 2 + (int32_t)sp / 40;
+            cv_line(cx + icos(ph, r), cy + isin(ph, r), cx + icos(ph, r + len), cy + isin(ph, r + len), dim565(C_TXT, 6u + (q & 7u)));
+        }
+    } else
+        stars(240, 240, 99, 80);
+    /* before her: a dim star and three planets round it; they spiral into her and are eaten */
+    if (t < I_T2 + 400u) disc(cx, cy, 3 + (t > I_T2 ? (int32_t)(t - I_T2) / 40 : 0), t > I_T2 ? C_TXT : dim565(C_YEL, 9));
+    for (k = 0; k < 3; k++) {
+        uint32_t ph = t * (1500000u + (uint32_t)k * 700000u) + (uint32_t)k * 0x55555555u;
+        int32_t r = 40 + k * 22, ry;
+        if (t >= I_T3) {
+            if (t >= EAT[k]) {                  /* eaten: a flash, then nothing */
+                if (t < EAT[k] + 140u) disc(cx, cy, 30 - (int32_t)(t - EAT[k]) / 6, mix565(PC[k], C_TXT, 8));
+                continue;
+            }
+            r = r * (int32_t)(EAT[k] - t) / (int32_t)(EAT[k] - I_T3);
+        }
+        ry = r / 3 + 2;
+        if (s && isin(ph, 1000) < 0 && t >= I_T2) continue;   /* (behind her: drawn after, if in front) */
+        disc(cx + icos(ph, r), cy + isin(ph, ry), 4 - k / 2, PC[k]);
+    }
+    /* the orbits that sing: four rings from hers, their steps lit as the orrery plays */
+    if (t >= I_T4 + 300u && t < I_T5 + 1200u) {
+        uint32_t r;
+        int32_t grow = orb_clamp((int32_t)(t - I_T4 - 300u) / 6, 0, 100);
+        for (r = 0; r < 4u; r++) {
+            int32_t rx = (60 + (int32_t)r * 16) * grow / 100, ryy = (16 + (int32_t)r * 6) * grow / 100;
+            uint32_t q, len = sys.ring[r].len ? sys.ring[r].len : 1u;
+            uint16_t c = RINGC[r + 1u];
+            if (t > I_T5) c = dim565(c, (uint32_t)orb_clamp(15 - (int32_t)(t - I_T5) / 80, 0, 15));
+            for (q = 0; q < len; q++) {
+                uint32_t ph = (uint32_t)(((uint64_t)q << 32) / len) + t * 200000u * (r + 1u);
+                int lit = sys.ring[r].on[q] && eng.playing && eng.rs[r].cur == q;
+                cv_rect(cx + icos(ph, rx) - 1, cy + 4 + isin(ph, ryy) - 1, lit ? 4 : 2, lit ? 4 : 2, lit ? C_TXT : c);
+            }
+        }
+    }
+    /* the multiverses: waves going out at each echo, and a universe a bubble each, a cat in it */
+    if (t >= I_T5 + 200u) {
+        uint32_t q, e = (t - I_T5 - 200u);
+        for (q = 0; q < 6u; q++) {
+            uint32_t at = 400u + q * 600u;      /* the delay's quarters at 100 bpm */
+            int32_t age, rr;
+            if (e < at) continue;
+            age = (int32_t)(e - at);
+            rr = 20 + age / 5;
+            if (rr < 160) circle(cx, cy, rr, dim565(RINGC[1u + q % 4u], (uint32_t)orb_clamp(15 - age / 60, 2, 15)), 2);
+            circle(BUB[q][0], BUB[q][1], 22, dim565(C_VIO, 9), 0);
+            circle(BUB[q][0], BUB[q][1], 23, dim565(C_FRAME, 6), 3);
+            cat_draw_q8(BUB[q][0], BUB[q][1], 96u, 48u, 36u, age < 150 && age > 60, 0);
+        }
+    }
+    if (s) cat_draw_q8(cx, cy, s, acx, acy, (t > I_T2 + 1500u && t < I_T2 + 1620u) || (t > I_T5 + 2400u && t < I_T5 + 2520u),
+                       t >= I_T4 && t < I_T5);
+    for (k = 0; k < 3 && s && t < I_T3 + 200u; k++) {   /* the planets in front of her */
+        uint32_t ph = t * (1500000u + (uint32_t)k * 700000u) + (uint32_t)k * 0x55555555u;
+        int32_t r = 40 + k * 22;
+        if (isin(ph, 1000) >= 0) disc(cx + icos(ph, r), cy + isin(ph, r / 3 + 2), 4 - k / 2, PC[k]);
+    }
+    /* the words */
+    if (t < I_T2) { l1 = "IN THE BEGINNING"; t1 = 200; l2 = "THE UNIVERSE WAS SILENT"; t2 = 1100; }
+    else if (t < I_T3) { l1 = "THEN CAME"; t1 = I_T2 + 100u; l2 = ""; }
+    else if (t < I_T3 + 2100u) { l1 = "SHE GREW."; t1 = I_T3; l2 = "AND GREW."; t2 = I_T3 + 1000u; }
+    else if (t < I_T4) { l1 = "ONE BIG ASS CAT."; t1 = I_T3 + 2100u; }
+    else if (t < I_T5) { l1 = "SHE ATE THE PLANETS"; t1 = I_T4 + 100u; l2 = "AND MADE THEIR ORBITS SING"; t2 = I_T4 + 900u; }
+    else { l1 = "NOW HER SONG RINGS"; t1 = I_T5 + 100u; l2 = "THROUGH THE MULTIVERSES"; t2 = I_T5 + 900u; }
+    cv_rect(0, 180, 240, 60, C_BG);
+    cv_rect(0, 180, 240, 1, C_FDIM);
+    typed(l1, t1, t, line[0]);
+    typed(l2, t2, t, line[1]);
+    if (t >= I_T2 && t < I_T3) {                /* her name, big, letter by letter */
+        char nm[12];
+        typed("ASTRALICA", I_T2 + 700u, t + 200u, nm);
+        txc(120, 186, &FONT_S, line[0], C_GREY, C_BG);
+        txc(120, 204, &FONT_L, nm, C_LIME, C_BG);
+    } else {
+        txc(120, 190, &FONT_S, line[0], C_TXT, C_BG);
+        txc(120, 210, &FONT_S, line[1], t >= I_T5 ? C_LIME : C_GREY, C_BG);
+    }
+    (void)half;
+}
+static int intro(void)                          /* 0: it ran to the end; 1: skipped */
+{
+    static const uint16_t EAT[3] = {5300, 6100, 6900};
+    uint32_t t0 = fm1_ms, cue = 0, rel, f, skipped = 0;
+    int32_t sun = 36;                            /* C2 */
+    fm1_input_edges(&rel);
+    lcd_fill(0, 0, 240, 240, C_BG);
+    orb_note_on(&eng, 1, sun * 256, 104);        /* the silent universe: a drone, C2 and G2 */
+    orb_note_on(&eng, 2, (sun + 7) * 256 + 5, 92);
+    for (f = 0; f < 2000u; f++) {
+        uint32_t t = fm1_ms - t0, t1 = fm1_ms, h;
+        if (t >= I_END) break;
+        if (fm1_input_edges(&rel) || fm1_in.notes) { skipped = 1; break; }
+        /* the score */
+        if (cue == 0 && t >= I_T2) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 0), 127, 120); cue++; }
+        if (cue == 1 && t >= I_T2 + 1100u) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 4), 120, 110); cue++; }
+        if (cue >= 2 && cue < 5 && t >= EAT[cue - 2u] - 700u) {   /* a planet eaten: its chirp lands as it goes in */
+            static const int8_t DG[3] = {0, 4, 8};
+            orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, DG[cue - 2u]), 127, 100);
+            cue++;
+        }
+        if (t >= 6000u && t < I_T4) sys.macro[MAC_HORIZON] = (uint8_t)orb_clamp((int32_t)(t - 6000u) * 62 / 2200, 0, 62);
+        if (cue == 5 && t >= I_T4) { sys.macro[MAC_HORIZON] = 0; orb_play(&eng, 1); cue++; }
+        if (cue == 6 && t >= I_T5 - 200u) { orb_note_off(&eng, 1); orb_note_off(&eng, 2); cue++; }
+        if (cue == 7 && t >= I_T5) { orb_play(&eng, 0); sys.snd[0] = SND_MEOW; cue++; }
+        if (cue == 8 && t >= I_T5 + 200u) { orb_note_on(&eng, 3, 79 * 256, 110); cue++; }   /* meow: mi- */
+        if (cue == 9 && t >= I_T5 + 270u) { orb_glide(&eng, 3, 83 * 256); cue++; }           /* -AA- */
+        if (cue == 10 && t >= I_T5 + 530u) { orb_glide(&eng, 3, 76 * 256); cue++; }          /* -ow */
+        if (cue == 11 && t >= I_T5 + 760u) { orb_note_off(&eng, 3); cue++; }
+        if (cue == 12 && t >= I_T5 + 1700u) { orb_note_on(&eng, 4, 83 * 256, 70); cue++; }  /* from a far universe */
+        if (cue == 13 && t >= I_T5 + 1760u) { orb_glide(&eng, 4, 86 * 256); cue++; }
+        if (cue == 14 && t >= I_T5 + 1960u) { orb_glide(&eng, 4, 79 * 256); cue++; }
+        if (cue == 15 && t >= I_T5 + 2120u) { orb_note_off(&eng, 4); cue++; }
+        for (h = 0; h < 2u; h++) {              /* the picture, in two strips */
+            cv_begin(240, h ? 96u : 144u, C_BG);
+            cv_oy = h ? -144 : 0;
+            intro_scene(t, h);
+            cv_oy = 0;
+            cv_blit(0, h ? 144u : 0u);
+        }
+        do platform_poll(); while (fm1_ms - t1 < 40u);   /* 25 frames a second */
+    }
+    orb_play(&eng, 0);
+    orb_all_off(&eng);
+    sys.macro[MAC_HORIZON] = 0;
+    return (int)skipped;
+}
+
 /* ---- MIDI in (the main loop, and app_idle while the screen draws) */
 static uint32_t idle_ok, clk_n, clk_t0, clk_bpm, clk_run, clk_last;
 static void midi_in(void)
@@ -1511,9 +1701,17 @@ static void app_main(void)
     uint32_t r, laps[ORB_NRING] = {0}, mrng = 0x1234567u, t_hint = 0, peak_t = 0;
     if (settings_load(&set, sizeof set) || (int8_t)set.oct < -3 || (int8_t)set.oct > 3 || set.ch > 16u || set.sysi >= NSYS)
         set.oct = 0, set.ch = 0, set.sysi = 0;
-    orb_system(0, &sys);
+    if (set.intro_off > 1u) set.intro_off = 0;
+    orb_intro_system(&sys);
     orb_init(&eng, &sys, &orb_mem);
+#ifdef DINGHY_HOST
+    if (getenv("ORB_INTRO")) intro();          /* (the host's scripts are timed from the splash: the story on ask) */
+#else
+    if (!set.intro_off) intro();               /* the legend of Astralica; then the system to play */
+#endif
+    orb_system(0, &sys);
     if (set.sysi) system_load(set.sysi);
+    sysi = set.sysi;
     set_dirty = 0;
     splash();
     lcd_fill(0, 0, 240, 240, C_BG);

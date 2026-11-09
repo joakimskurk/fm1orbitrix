@@ -163,7 +163,7 @@ typedef struct {
     uint8_t type, id, vel, part;
     int32_t pitch;
 } orb_ev_t;
-enum { EV_NONE, EV_ON, EV_OFF, EV_ALLOFF, EV_PLAY, EV_STOP };
+enum { EV_NONE, EV_ON, EV_OFF, EV_ALLOFF, EV_PLAY, EV_STOP, EV_PART, EV_GLIDE };
 #define ORB_NEV 64u
 
 typedef struct {
@@ -325,6 +325,18 @@ static void orb_mutate(orb_ring_t *r, uint32_t amt, uint32_t var, uint32_t *rng)
 }
 
 /* ---- events (main loop -> the interrupt) */
+static void orb_push_part(orb_t *o, uint8_t type, uint8_t id, uint8_t vel, int32_t pitch, uint8_t part)
+{
+    uint32_t w = o->evw;
+    if (w - o->evr >= ORB_NEV) return;      /* full: dropped */
+    o->evq[w % ORB_NEV].part = part;
+    o->evq[w % ORB_NEV].type = type;
+    o->evq[w % ORB_NEV].id = id;
+    o->evq[w % ORB_NEV].vel = vel;
+    o->evq[w % ORB_NEV].pitch = pitch;
+    __asm__ volatile("" ::: "memory");
+    o->evw = w + 1u;
+}
 static void orb_push(orb_t *o, uint8_t type, uint8_t id, uint8_t vel, int32_t pitch)
 {
     uint32_t w = o->evw;
@@ -339,6 +351,13 @@ static void orb_push(orb_t *o, uint8_t type, uint8_t id, uint8_t vel, int32_t pi
 static void orb_note_on(orb_t *o, uint8_t id, int32_t pitch, uint8_t vel) { orb_push(o, EV_ON, id, vel, pitch); }
 static void orb_note_off(orb_t *o, uint8_t id) { orb_push(o, EV_OFF, id, 0, 0); }
 static void orb_all_off(orb_t *o) { orb_push(o, EV_ALLOFF, 0, 0, 0); }
+/* a ring's sound played directly (part 1..4: A..D, on its own voice), for gate_10ms x 10 ms */
+static void orb_part_on(orb_t *o, uint8_t part, int32_t pitch, uint8_t vel, uint8_t gate_10ms)
+{
+    orb_push_part(o, EV_PART, gate_10ms, vel, pitch, part);
+}
+/* a held key's note glides to another pitch, by gravity's spring (fast at GRAVITY <= 50, swooping above) */
+static void orb_glide(orb_t *o, uint8_t id, int32_t pitch) { orb_push(o, EV_GLIDE, id, 0, pitch); }
 static void orb_play(orb_t *o, int on) { orb_push(o, on ? EV_PLAY : EV_STOP, 0, 0, 0); }
 
 /* ---- voices */
@@ -1133,6 +1152,20 @@ static void orb_events(orb_t *o)
             break;
         case EV_ALLOFF:
             for (k = 0; k < ORB_NV; k++) orb_release(&o->v[k]);
+            break;
+        case EV_PART:
+            if (e->part >= ORB_A && e->part <= ORB_D) {
+                orb_trigger(o, e->part - 1u, e->part, e->pitch, (int32_t)e->vel * 258, (int32_t)e->id * 441, INT32_MIN);
+                o->rs[e->part - 1u].flash++;
+            }
+            break;
+        case EV_GLIDE:                      /* the target moves; the spring carries the pitch there from where it is */
+            for (k = ORB_NV - ORB_NKV; k < ORB_NV; k++)
+                if (o->v[k].on && o->v[k].id == e->id) {
+                    int32_t nt = e->pitch + (int32_t)o->sys->snd[ORB_KEYS].oct * 3072;
+                    o->v[k].poff = orb_clamp(o->v[k].poff + (o->v[k].target - nt) * 256, -3072 * 256, 3072 * 256);
+                    o->v[k].target = nt;
+                }
             break;
         case EV_PLAY:
             orb_restart(o);
