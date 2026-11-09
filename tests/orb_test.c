@@ -167,15 +167,46 @@ static void test_orrery(void)
     CHECK(O.rs[0].flash >= 15 && O.rs[0].flash <= 17, "A fired %u, want 16", O.rs[0].flash);
     CHECK(O.rs[1].flash >= 15 && O.rs[1].flash <= 17, "B NOT A fired %u, want 16", O.rs[1].flash);
 
-    /* MUTATE keeps the hit count */
+    /* MUTATE plays a variation of the pattern each lap, drawn afresh: the pattern as written never changes, a lap plays
+     * as many hits as it has, nothing past the ring's end, and a degree a step at most 1 + VAR/25 from where it was */
     {
-        uint32_t k, i, h0 = 0, h1 = 0, rng = 7;
+        static orb_sys_t W;
+        uint32_t b, i, r, laps[ORB_NRING] = {0}, varied = 0, seen = 0;
         orb_system(4, &S);
-        for (i = 0; i < S.ring[1].len; i++) h0 += S.ring[1].on[i] != 0;
-        for (k = 0; k < 500u; k++) orb_mutate(&S.ring[1], 99, 99, &rng);
-        for (i = 0; i < S.ring[1].len; i++) h1 += S.ring[1].on[i] != 0;
-        for (i = S.ring[1].len; i < ORB_NSTEP; i++) CHECK(!S.ring[1].on[i], "MUTATE wrote past the ring's end");
-        CHECK(h0 == h1, "MUTATE changed the hits from %u to %u", h0, h1);
+        S.mutate = 99; S.var = 99;
+        S.ring[1].dg[S.ring[1].len - 1u] = 21; S.ring[1].on[S.ring[1].len - 1u] = 2;   /* (a degree past MUTATE's old -7..14) */
+        W = S;
+        orb_init(&O, &S, &MEM);
+        orb_play(&O, 1);
+        for (b = 0; b < (uint32_t)(40.0 * 44100 / 256); b++) {
+            memset(out, 0, sizeof out);
+            orb_render(&O, out, 256);
+            for (r = 0; r < ORB_NRING; r++) {
+                const orb_ring_t *g = &S.ring[r];
+                uint32_t h0 = 0, h1 = 0;
+                int32_t d;
+                if (O.rs[r].laps == laps[r]) continue;
+                laps[r] = O.rs[r].laps;
+                seen++;
+                for (i = 0; i < ORB_NSTEP; i++) {
+                    uint32_t on = orb_step_on(&O, r, i, &d);
+                    if (i >= g->len) { CHECK(!on, "MUTATE played past ring %u's end (step %u)", r, i); continue; }
+                    h0 += g->on[i] != 0;
+                    h1 += on != 0;
+                    if (on && g->on[i] && on == g->on[i] && d != g->dg[i])
+                        CHECK(d - g->dg[i] <= 4 && g->dg[i] - d <= 4, "MUTATE moved a degree %d -> %d", g->dg[i], d);
+                    if (O.rs[r].vm[i >> 5] >> (i & 31u) & 1u) varied++;
+                }
+                CHECK(h0 == h1, "MUTATE: ring %u's lap plays %u hits, %u written", r, h1, h0);
+            }
+        }
+        CHECK(!memcmp(&W, &S, sizeof S), "MUTATE wrote into the pattern");
+        printf("mutate: %u laps, %u steps varied, the patterns as written\n", seen, varied);
+        CHECK(seen > 20u && varied > seen, "MUTATE did not vary (%u laps, %u steps)", seen, varied);
+        orb_pattern_edited(&O, ORB_NRING);
+        memset(out, 0, sizeof out);
+        orb_render(&O, out, 256);
+        for (r = 0; r < ORB_NRING; r++) CHECK(!O.rs[r].vm[0] && !O.rs[r].vm[1], "an edit kept ring %u's variation", r);
     }
 }
 
@@ -211,7 +242,7 @@ static void test_systems(void)
     for (i = 0; i < ORB_NSYSTEM; i++) {
         double sum = 0, sq = 0;
         int32_t peak = 0;
-        uint32_t n = 0, laps[4] = {0}, rng = 99, r;
+        uint32_t n = 0;
         orb_system(i, &S);
         orb_init(&O, &S, &MEM);
         orb_play(&O, 1);
@@ -231,8 +262,6 @@ static void test_systems(void)
                 sq += (double)out[k] * out[k];
                 n++;
             }
-            for (r = 0; r < 4u; r++)
-                if (O.rs[r].laps != laps[r]) { laps[r] = O.rs[r].laps; orb_mutate(&S.ring[r], S.mutate, S.var, &rng); }
         }
         printf("system %-12s peak %5.1f dBFS  rms %5.1f dBFS  dc %+.5f\n", S.name, 20 * log10((peak + 1) / 32768.0),
                10 * log10(sq / n / (32768.0 * 32768.0) + 1e-15), sum / n / 32768.0);

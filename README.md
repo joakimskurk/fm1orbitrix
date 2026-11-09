@@ -120,8 +120,9 @@ more voices are for the keys.
 | **LOGIC** | FREE, AND x, NOT x, XOR x against another ring's current step, or CONJ: only together with another ring. NOT makes interlocking parts. |
 | **Conjunctions** | When rings fire on the same tick, those hits are accented and the CONJ modulation source flares. The long cycle's downbeats show up by themselves. |
 
-SWING, **MUTATE** (at each lap, hits move and degrees step to a neighbour), **HUM** (humanised timing and velocity)
-and **VAR** apply to all four rings.
+SWING, **MUTATE** (each lap plays a variation of the pattern: some hits move a step, some degrees go to a neighbour;
+drawn afresh each lap from the pattern as you wrote it, which never changes: the orrery shows the varied steps hollow),
+**HUM** (humanised timing and velocity) and **VAR** apply to all four rings.
 
 <p align="center">
   <img src="docs/readme/screen_ring.png" width="240" alt="RING: one ring big, each hit as far out as its degree is high">

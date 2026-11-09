@@ -76,7 +76,8 @@ Four rings, A–D. Each ring:
 **Conjunctions:** when two or more rings fire on the same tick, the hits are accented, and the CONJ modulation source
 flares. The long cycle's downbeats (where the orbits meet) are heard as accents by themselves.
 
-Global: tempo, SWING, **MUTATE** (at each lap, steps move and degrees step to their neighbours), **HUM** (timing and
+Global: tempo, SWING, **MUTATE** (each lap a variation of the pattern as written: steps move and degrees step to their
+neighbours, drawn afresh each lap; the pattern itself is never written), **HUM** (timing and
 velocity humanised), **VAR** (degree variation on new hits).
 
 Each ring plays its own sound (one voice each: a ring is monophonic, so conjunctions are chords across rings). The

@@ -145,8 +145,11 @@ typedef struct {
 
 typedef struct {
     uint32_t base, next;                    /* the step's unswung tick, the tick it fires on */
-    uint32_t k, pos, spin, laps;            /* steps so far, position, SPIRAL's turn, laps (the main loop mutates on them) */
+    uint32_t k, pos, spin, laps;            /* steps so far, position, SPIRAL's turn, laps */
     uint8_t cur, lit, fired, rsv;           /* the step now, whether it is a hit, whether it fired */
+    uint32_t vm[2];                         /* MUTATE: the steps this lap plays otherwise than written (a bit a step) */
+    uint8_t von[ORB_NSTEP];                 /* ... and what they play instead (the pattern itself is never written) */
+    int8_t vdg[ORB_NSTEP];
     uint32_t rat_next, rat_dt, rat_left;    /* FRACT's ratchets */
     int32_t rat_pitch, rat_vel;
     volatile uint32_t flash;                /* counts fires (the screen) */
@@ -165,7 +168,7 @@ typedef struct {
     uint8_t type, id, vel, part;
     int32_t pitch;
 } orb_ev_t;
-enum { EV_NONE, EV_ON, EV_OFF, EV_ALLOFF, EV_PLAY, EV_STOP, EV_PART, EV_GLIDE };
+enum { EV_NONE, EV_ON, EV_OFF, EV_ALLOFF, EV_PLAY, EV_STOP, EV_PART, EV_GLIDE, EV_PAT };
 #define ORB_NEV 64u
 
 typedef struct {
@@ -179,7 +182,7 @@ typedef struct {
     uint32_t T, Tf;                         /* the clock: ticks, and the fraction (Q16). It always runs (LFOs, the pad);
                                                PLAY restarts it, and only then do the rings step */
     uint32_t rnd_k;                         /* the base step RND last took a value on */
-    uint32_t rng, ages;
+    uint32_t rng, ages, vrng;               /* (vrng: MUTATE's own, so its draws leave the rest's alone) */
     uint32_t lph[2], orbph;                 /* LFO and orbit pad phases */
     int32_t lval[2], lsh[2], lsh0[2];       /* LFO values Q15; S&H and DRIFT's targets */
     int32_t src[ORB_NSRC];                  /* the modulation sources now, Q15 */
@@ -307,25 +310,6 @@ static void orb_euclid(orb_ring_t *r)       /* HITS spread evenly over LEN, turn
     }
 }
 
-/* MUTATE: at a ring's lap, some of its hits move one step and some degrees go to a neighbour. amt 0..99 */
-static void orb_mutate(orb_ring_t *r, uint32_t amt, uint32_t var, uint32_t *rng)
-{
-    uint32_t len = r->len < 1u ? 1u : r->len > ORB_NSTEP ? ORB_NSTEP : r->len, n, k;
-    if (!amt) return;
-    n = 1u + amt * len / 400u;              /* how many changes: 1 .. a quarter of the ring */
-    for (k = 0; k < n && k < 16u; k++) {
-        uint32_t x = orb_xs(rng), i = x % len;
-        if ((x >> 8) % 100u >= amt) continue;
-        if (r->on[i] && ((x >> 16) & 1u)) { /* a hit moves to a free neighbour */
-            uint32_t j = ((x >> 17) & 1u) ? (i + 1u) % len : (i + len - 1u) % len;
-            if (!r->on[j]) { r->on[j] = r->on[i]; r->dg[j] = r->dg[i]; r->on[i] = 0; }
-        } else if (r->on[i]) {              /* a degree steps, within +-(1 + var/25) of where it is */
-            int32_t span = 1 + (int32_t)var / 25, d = r->dg[i] + (int32_t)((x >> 18) % (uint32_t)(2 * span + 1)) - span;
-            r->dg[i] = (int8_t)orb_clamp(d, -7, 14);
-        }
-    }
-}
-
 /* ---- events (main loop -> the interrupt) */
 static void orb_push_part(orb_t *o, uint8_t type, uint8_t id, uint8_t vel, int32_t pitch, uint8_t part)
 {
@@ -351,6 +335,9 @@ static void orb_push(orb_t *o, uint8_t type, uint8_t id, uint8_t vel, int32_t pi
     o->evw = w + 1u;
 }
 static void orb_note_on(orb_t *o, uint8_t id, int32_t pitch, uint8_t vel) { orb_push(o, EV_ON, id, vel, pitch); }
+/* a ring's pattern was written (a step, its degree, LEN HITS ROT, a system): MUTATE's variation of it goes, the lap plays
+ * it as written. r: 0..3, or ORB_NRING for all */
+static void orb_pattern_edited(orb_t *o, uint32_t r) { orb_push(o, EV_PAT, (uint8_t)r, 0, 0); }
 static void orb_note_off(orb_t *o, uint8_t id) { orb_push(o, EV_OFF, id, 0, 0); }
 static void orb_all_off(orb_t *o) { orb_push(o, EV_ALLOFF, 0, 0, 0); }
 /* a ring's sound played directly (part 1..4: A..D, on its own voice), for gate_10ms x 10 ms */
@@ -699,6 +686,51 @@ static void orb_voice_render(orb_voice_t *v, int32_t *bd, int32_t *bs, const int
 
 /* ---- the orrery */
 static uint32_t orb_step_ticks(const orb_ring_t *r) { return ORB_RATIO_TICKS[r->ratio % ORB_NRATIO]; }
+
+/* a step as this lap plays it: 0 rest, 1 hit, 2 accent; *dg its degree. The pattern as written, but where MUTATE varies it */
+static uint32_t orb_step_on(const orb_t *o, uint32_t r, uint32_t i, int32_t *dg)
+{
+    const orb_rstate_t *R = &o->rs[r];
+    const orb_ring_t *g = &o->sys->ring[r];
+    i &= ORB_NSTEP - 1u;
+    if (R->vm[i >> 5] >> (i & 31u) & 1u) { if (dg) *dg = R->vdg[i]; return R->von[i]; }
+    if (dg) *dg = g->dg[i];
+    return g->on[i];
+}
+
+/* MUTATE, at a ring's lap: the next lap's variation of the pattern, drawn afresh from the pattern as written (so it never
+ * drifts away from it, and the pattern itself is never written). Some hits move to a free neighbour, some degrees go up
+ * or down by 1 + VAR/25. MUTATE (+ CHAOS / 2) 0..99: how many (1 .. a quarter of the ring) and how likely each */
+static void orb_vary(orb_t *o, uint32_t r)
+{
+    orb_rstate_t *R = &o->rs[r];
+    const orb_sys_t *sy = o->sys;
+    const orb_ring_t *g = &sy->ring[r];
+    uint32_t len = g->len < 1u ? 1u : g->len > ORB_NSTEP ? ORB_NSTEP : g->len, amt, n, k;
+    int32_t span = 1 + (int32_t)sy->var / 25;
+    R->vm[0] = R->vm[1] = 0;
+    amt = (uint32_t)sy->mutate + sy->macro[MAC_CHAOS] / 2u;
+    if (amt > 99u) amt = 99u;
+    if (!amt) return;
+    n = 1u + amt * len / 400u;
+    for (k = 0; k < 16u; k++) {             /* (16 draws at most, whatever the ring) */
+        uint32_t x = orb_xs(&o->vrng), i = x % len, j;
+        if (k >= n || (x >> 8) % 100u >= amt || !g->on[i] || (R->vm[i >> 5] >> (i & 31u) & 1u)) continue;
+        if ((x >> 16) & 1u) {               /* the hit moves to a free neighbour */
+            j = ((x >> 17) & 1u) ? (i + 1u) % len : (i + len - 1u) % len;
+            if (g->on[j] || (R->vm[j >> 5] >> (j & 31u) & 1u)) continue;
+            R->von[i] = 0;
+            R->von[j] = g->on[i];
+            R->vdg[j] = g->dg[i];
+            R->vm[i >> 5] |= 1u << (i & 31u);
+            R->vm[j >> 5] |= 1u << (j & 31u);
+        } else {                            /* its degree steps */
+            R->von[i] = g->on[i];
+            R->vdg[i] = (int8_t)orb_clamp(g->dg[i] + (int32_t)((x >> 18) % (uint32_t)(2 * span + 1)) - span, -14, 21);
+            R->vm[i >> 5] |= 1u << (i & 31u);
+        }
+    }
+}
 static uint32_t orb_gate_frames(const orb_sys_t *s, uint32_t ticks, uint32_t gate)   /* ticks * gate% -> frames */
 {
     uint32_t bpm = s->bpm < 40u ? 40u : s->bpm;
@@ -751,9 +783,9 @@ static void orb_clock(orb_t *o)
         default: idx = R->pos; break;
         }
         R->cur = (uint8_t)idx;
-        R->lit = g->on[idx] != 0;
+        R->lit = orb_step_on(o, r, idx, 0) != 0;
         R->k++;
-        if (++R->pos >= len) { R->pos = 0; R->laps++; R->spin = (R->spin + 1u) % len; }
+        if (++R->pos >= len) { R->pos = 0; R->laps++; R->spin = (R->spin + 1u) % len; orb_vary(o, r); }
         R->base += orb_step_ticks(g);
         R->next = R->base;
         if (sw && (R->k & 1u)) R->next += orb_step_ticks(g) * (uint32_t)sw / 200u;   /* odd steps later */
@@ -764,7 +796,7 @@ static void orb_clock(orb_t *o)
         orb_rstate_t *R = &o->rs[r];
         orb_ring_t *g = &sy->ring[r];
         uint32_t t = g->ltgt % ORB_NRING, q, conj = 0, fire, prob;
-        int32_t vel, pitch, deg;
+        int32_t vel, pitch, deg, dg;
         if (!(stepping >> r & 1u)) continue;
         for (q = 0; q < ORB_NRING; q++)
             if (q != r && (stepping >> q & 1u) && o->rs[q].lit && tick[q] == tick[r] && !sy->ring[q].mute) conj++;
@@ -781,11 +813,11 @@ static void orb_clock(orb_t *o)
         if (!fire || g->mute) continue;
         R->fired = 1;
         /* velocity: a hit 0.7, an accent 1.0, each other ring in the conjunction +0.15; HUM */
-        vel = g->on[R->cur] == 2u ? 32767 : 22937;
+        vel = orb_step_on(o, r, R->cur, &dg) == 2u ? 32767 : 22937;
         vel += (int32_t)conj * 4915;
         if (sy->hum) vel -= (int32_t)(orb_xs(&o->rng) % 6000u) * sy->hum / 99;
         vel = orb_clamp(vel, 3000, 32767);
-        deg = g->deg + (g->on[R->cur] ? g->dg[R->cur] : 0);
+        deg = g->deg + dg;
         pitch = (36 + (int32_t)(sy->sun % 12u)) * 256 + orb_degree(sy, deg);
         orb_ring_fire(o, r, pitch, vel);
         if (conj) nconj++;
@@ -811,6 +843,7 @@ static void orb_restart(orb_t *o)          /* the clock from the top: every ring
     for (r = 0; r < ORB_NRING; r++) {
         orb_rstate_t *R = &o->rs[r];
         R->base = 0; R->next = 0; R->k = 0; R->pos = 0; R->spin = 0; R->rat_left = 0; R->lit = 0;
+        R->vm[0] = R->vm[1] = 0;            /* (the first lap as written) */
         R->last_p = INT32_MIN;
     }
 }
@@ -1191,6 +1224,9 @@ static void orb_events(orb_t *o)
             orb_restart(o);
             o->playing = 1;
             break;
+        case EV_PAT:
+            for (k = 0; k < ORB_NRING; k++) if (e->id >= ORB_NRING || e->id == k) o->rs[k].vm[0] = o->rs[k].vm[1] = 0;
+            break;
         case EV_STOP:
             o->playing = 0;
             for (k = 0; k < ORB_NRING; k++) orb_release(&o->v[k]);
@@ -1249,6 +1285,7 @@ static void orb_init(orb_t *o, orb_sys_t *sys, orb_mem_t *mem)
     o->sys = sys;
     o->mem = mem;
     o->rng = 0x2545F491u;
+    o->vrng = 0x1234567u;
     orb_restart(o);
 }
 

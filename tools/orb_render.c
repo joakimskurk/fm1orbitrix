@@ -8,8 +8,7 @@
  *   orb_render sweep WHAT OUT.wav                one held note, WHAT (ecc sling ang moon dust pixel prec) 0 -> 99
  *   orb_render macro N M OUT.wav                 system N playing, macro M (0..4) 0 -> 99 -> 0 over 24 s
  *   orb_render bench                             the worst case: 8 voices, everything on; ns and x86 instructions a frame
- * Each prints the render's peak, RMS and DC. The main loop's part (the rings' mutation at their laps) is done here as
- * orbitrix.c does it. */
+ * Each prints the render's peak, RMS and DC. (MUTATE is the engine's own, at each ring's lap.) */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +27,6 @@ static orb_sys_t S;
 static orb_mem_t MEM;
 static int16_t *wav;
 static uint32_t wav_n, wav_cap;
-static uint32_t laps_seen[ORB_NRING], mrng = 12345u;
 
 static void emit(const int32_t *b, uint32_t n)
 {
@@ -39,17 +37,6 @@ static void emit(const int32_t *b, uint32_t n)
         wav[2u * wav_n + i] = (int16_t)(v > 32767 ? 32767 : v < -32767 ? -32767 : v);
     }
     wav_n += n;
-}
-
-static void main_loop_part(void)            /* as orbitrix.c: mutation at each ring's lap */
-{
-    uint32_t r;
-    for (r = 0; r < ORB_NRING; r++)
-        if (O.rs[r].laps != laps_seen[r]) {
-            uint32_t amt = S.mutate + S.macro[MAC_CHAOS] / 2u;
-            laps_seen[r] = O.rs[r].laps;
-            orb_mutate(&S.ring[r], amt > 99u ? 99u : amt, S.var, &mrng);
-        }
 }
 
 static void run_ms(uint32_t ms)
@@ -64,7 +51,6 @@ static void run_ms(uint32_t ms)
             memset(blk, 0, sizeof blk);
             orb_render(&O, blk, 256);
             emit(blk, 256);
-            main_loop_part();
         }
     }
 }
@@ -102,7 +88,6 @@ static void reset(uint32_t sys)
         if (so < 4u) S.snd[0].level = 0;
     }
     orb_init(&O, &S, &MEM);
-    memset(laps_seen, 0, sizeof laps_seen);
 }
 
 /* the keys: a progression of just chords on the sun (SOLAR), held two bars each */

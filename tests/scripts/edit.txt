@@ -1,28 +1,28 @@
 # ORBITRIX: the controls. RING's steps on the white keys, a step's degree, SEL + a key (the sun), SEL + SEQ (mute),
 # REC, SAVE twice (U1), PRESETS to U1 and back (tests/run_host.sh tests/scripts/edit.txt)
-1700 btn 11
-1800 keys 0x1
-1900 keys 0
-2000 keys 0x4
-2050 enc 2 3
-2100 keys 0
-2300 shot
-2400 btndown 3
-2500 keys 0x80
-2600 keys 0
-2700 btn 11
-2800 btnup 3
-2900 shot
-3000 btn 12
-3100 btn 13
-3200 keys 0x10
-3300 keys 0
-3600 btn 13
-3700 btn 9
-3800 btn 9
-4200 shot
-4400 enc 6 -1
-5200 shot
-5400 enc 6 1
-6400 shot
-6500 end
+2000 btn 11
+2100 keys 0x1
+2200 keys 0
+2300 keys 0x4
+2350 enc 2 3
+2400 keys 0
+2600 shot
+2700 btndown 3
+2800 keys 0x80
+2900 keys 0
+3000 btn 11
+3100 btnup 3
+3200 shot
+3300 btn 12
+3400 btn 13
+3500 keys 0x10
+3600 keys 0
+3900 btn 13
+4000 btn 9
+4100 btn 9
+4500 shot
+4700 enc 6 -1
+5500 shot
+5700 enc 6 1
+6700 shot
+6800 end

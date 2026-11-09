@@ -47,7 +47,7 @@ restarts it and only then do the rings step.
 Each ring has one voice (four voices), and the keys have four. That makes eight, never more: the CPU never meets a
 ninth.
 
-## D5 — MUTATE in the main loop (2026-11-09)
+## D5 — MUTATE in the main loop (2026-11-09; replaced by D14)
 
 The interrupt counts each ring's laps; the main loop mutates the pattern when a lap count changes (one writer for the
 pattern: the main loop). A hit moves to a free neighbour or a degree steps; the number of hits stays (tested).
@@ -154,3 +154,27 @@ the sound is the time base, as the audio interrupt is on the FM-1.
 - The page: Astralica at the top, the FM-1 to play, the legend's film, the thirteen systems with their spectra, how
   it works, the installer (SLOOP's protocol, as the other pages carry it). Tried in headless Chromium: Start, the
   legend plays, PLAY skips it, PLAY runs the orrery, a key lights, PRESETS turns the system; no errors.
+
+## D14 — MUTATE varies the pattern, it never writes it (2026-11-09)
+
+The user: "mange av parameterne resetter seg ved endt sekvens" (many of the parameters reset at the end of the
+sequence). Traced on the host, every change to the system pass by pass, while it played, stopped and started again: no
+knob's value changes by itself; the one thing that writes the system at the end of a lap was MUTATE (D5). It rewrote
+the ring's steps and degrees there, on top of its own last changes, so what was programmed (steps tapped in, a step's
+degree, REC) wandered off lap by lap, into what was saved too, and a degree set outside −7..14 was pulled back inside.
+
+Decided: MUTATE plays a variation of the pattern, and never writes it. At each ring's lap the engine draws the next
+lap's variation afresh from the pattern as written (as many changes as before: 1 to a quarter of the ring; a hit to a
+free neighbour, a degree by up to 1 + VAR/25, within the degrees' whole −14..21), into the ring's state, not the system.
+The pattern is what is seen and edited on RING, and saved; the orrery shows what the lap plays, MUTATE's steps hollow. A
+lap after PLAY, and the rest of a lap after an edit to that ring (a step, its degree, LEN HITS ROT, REC, a system),
+play the pattern as written. MUTATE 0 is the pattern exactly, every lap. The draws run in the interrupt at the lap (16
+at most, a few hundred instructions a lap) with their own random state, so the rest's draws are left as they were.
+
+Tested: 76 laps at MUTATE 99 (`tests/orb_test.c`): every lap plays as many hits as are written, nothing past the end, a
+degree at most 1 + VAR/25 away, and the system byte for byte as it was. On the host and the page: steps tapped in, a
+degree, 15 to 25 s of playing, STOP and PLAY: the pattern as it was. (`tests/scripts/edit.txt` began in the splash
+since D12's skip: it is 0.3 s later now, and edits the RING page again.)
+
+What still comes back at a lap by design: a modulation from STEP (a ramp over ring A's lap, TRAPPIST's ANG) and a
+synced SAW LFO (GW150914's HORIZON) fall back to their start there.

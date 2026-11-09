@@ -325,6 +325,7 @@ static void pd_set(const pd_t *d, int32_t v)
         if (r->hits > r->len) r->hits = r->len;
         if (r->rot >= r->len) r->rot = (uint8_t)(r->len - 1u);
         orb_euclid(r);
+        orb_pattern_edited(&eng, (uint32_t)(r - sys.ring));
     }
 }
 static void pd_text(const pd_t *d, char *s)
@@ -398,6 +399,7 @@ static void system_load(uint32_t i)
         orb_system(i, &tmp);
     orb_all_off(&eng);
     sys = tmp;
+    orb_pattern_edited(&eng, ORB_NRING);
     sysi = i;
     set.sysi = (uint8_t)i;
     set_touch();
@@ -525,9 +527,11 @@ static void draw_orrery(void)
         for (i = 0; i < len; i++) {
             uint32_t ph = 0xC0000000u + (uint32_t)(((uint64_t)i << 32) / len);
             int32_t x = cx + icos(ph, rad), y = cy + isin(ph, rad);
-            if (g->on[i]) {
-                uint16_t cc = g->mute ? dim565(c, 5) : (g->on[i] == 2u ? mix565(c, C_TXT, 8) : c);
+            uint32_t on = orb_step_on(&eng, r, i, 0);   /* (as this lap plays it: MUTATE's changes hollow) */
+            if (on) {
+                uint16_t cc = g->mute ? dim565(c, 5) : (on == 2u ? mix565(c, C_TXT, 8) : c);
                 cv_rect(x - 2, y - 2, 4, 4, cc);
+                if (eng.rs[r].vm[i >> 5] >> (i & 31u) & 1u) cv_rect(x - 1, y - 1, 2, 2, C_BG);
             } else
                 cv_pset(x, y, dim565(c, 6));
         }
@@ -1350,7 +1354,7 @@ static void intro_scene(uint32_t t)
             if (t > I_T5) c = dim565(c, (uint32_t)orb_clamp(15 - (int32_t)(t - I_T5) / 80, 0, 15));
             for (q = 0; q < len; q++) {
                 uint32_t ph = (uint32_t)(((uint64_t)q << 32) / len) + t * 200000u * (r + 1u);
-                int lit = sys.ring[r].on[q] && eng.playing && eng.rs[r].cur == q;
+                int lit = orb_step_on(&eng, r, q, 0) && eng.playing && eng.rs[r].cur == q;
                 cv_rect(cx + icos(ph, rx) - 1, cy + 4 + isin(ph, ryy) - 1, lit ? 4 : 2, lit ? 4 : 2, lit ? C_TXT : c);
             }
         }
@@ -1563,6 +1567,7 @@ static void rec_key(uint32_t note)
         g->dg[at] = (int8_t)orb_clamp(deg, -14, 21);
         if (!eng.playing) rec_pos = (at + 1u) % len;
     }
+    orb_pattern_edited(&eng, r);
     main_dirty = 1;
 }
 
@@ -1603,6 +1608,7 @@ static void handle_keys(void)
                 orb_ring_t *g = &sys.ring[ring_focus()];
                 if (!held_used && held_step < g->len) {   /* a tap: rest -> hit -> accent -> rest */
                     g->on[held_step] = (uint8_t)((g->on[held_step] + 1u) % 3u);
+                    orb_pattern_edited(&eng, ring_focus());
                     main_dirty = 1;
                 }
                 held_step = 0xFFu;
@@ -1628,6 +1634,7 @@ static void handle_encoders(void)
             if (held_step < ORB_NSTEP) {
                 g->dg[held_step] = (int8_t)orb_clamp(g->dg[held_step] + e, -14, 21);
                 if (!g->on[held_step]) g->on[held_step] = 1;
+                orb_pattern_edited(&eng, ring_focus());
                 held_used = 1;
                 {
                     char s[24], *p = put_s(s, "STEP DEG ");
@@ -1796,7 +1803,7 @@ static void boot_finish(void)                   /* the system to play, once the 
 {
     orb_all_off(&eng);
     if (set.sysi) system_load(set.sysi);
-    else orb_system(0, &sys);
+    else { orb_system(0, &sys); orb_pattern_edited(&eng, ORB_NRING); }
     sysi = set.sysi;
     set_dirty = 0;
     lcd_fill(0, 0, 240, 240, C_BG);
@@ -1816,21 +1823,13 @@ static void boot_pass(void)                     /* the story, then the splash (P
 }
 static void app_pass(void)                      /* one pass of the main loop */
 {
-    static uint32_t laps[ORB_NRING], mrng = 0x1234567u, t_hint, peak_t;
-    uint32_t r;
+    static uint32_t t_hint, peak_t;
     platform_poll();
     handle_buttons();
     handle_encoders();
     handle_keys();
     midi_in();
     if (clk_run && fm1_ms - clk_last > 2000u) clk_run = 0;
-    for (r = 0; r < ORB_NRING; r++)         /* MUTATE: at each ring's lap */
-        if (eng.rs[r].laps != laps[r]) {
-            uint32_t amt = sys.mutate + sys.macro[MAC_CHAOS] / 2u;
-            laps[r] = eng.rs[r].laps;
-            orb_mutate(&sys.ring[r], amt > 99u ? 99u : amt, sys.var, &mrng);
-            if (amt) main_dirty = 1;
-        }
     if (sys_pending != 0xFFu && fm1_ms - sys_pend_t > 450u) {   /* PRESETS: loaded once it rests */
         system_load(sys_pending);
         sys_pending = 0xFFu;
