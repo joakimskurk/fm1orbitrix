@@ -122,14 +122,14 @@ jobs:
             echo "::notice title=GitHub Pages is off::Settings -> Pages -> Build and deployment -> Source: GitHub Actions, then run the build again"
             echo "on=0" >> "$GITHUB_OUTPUT"
           fi
-      - name: ffmpeg, numpy and Pillow (the audio, the spectra, the film); clang and lld (ORBITRIX for the browser)
+      - name: ffmpeg, numpy and Pillow (the audio, the spectra, the legend); clang and lld (ORBITRIX for the browser)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg python3-numpy python3-pil clang lld
-      - name: The systems (the engine on the host) and the legend's film
+      - name: The systems (the engine on the host) and the legend (an animation on a transparent night, its sound)
         run: |
           ORB_ASAN=0 sh tests/run_orb.sh
-          APP_VER="dev-${GITHUB_SHA::7}" sh tools/make_film.sh
+          python3 tools/make_legend.py
       - name: ORBITRIX to play on the page (the firmware's own code, WebAssembly)
         run: APP_VER="dev-${GITHUB_SHA::7}" sh web/app/build.sh
       - name: The site

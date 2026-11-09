@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 joakimskurk
 """ORBITRIX's site (GitHub Pages, https://joakimskurk.github.io/fm1orbitrix/): its page, ORBITRIX to play in the
-browser, the legend's film, the systems to hear, the installer.
+browser, the legend, the systems to hear, the installer.
 
   index.html                  web/index.html with fm1pkg.js and fm1ota.js (SLOOP's, unchanged) and the metadata
                               inlined: the installer (Web MIDI, Chrome or Edge), the demos
@@ -10,14 +10,15 @@ browser, the legend's film, the systems to hear, the installer.
                               web/app/web_host.c), worklet.js (the audio thread), play.js (the FM-1 drawn)
   firmware/orbitrix-VER.fwsc  the package the page installs (its SHA-256 in the page: a damaged download is never
                               offered)
-  film/astralica.mp4          the legend of Astralica (tools/make_film.sh)
+  film/legend.webp, .m4a      the legend of Astralica: an animation on a transparent night, and its sound
+                              (tools/make_legend.py: the firmware's legend, filmed on the host)
   audio/                      the fifteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
                               one's spectrum as a picture (WebP), low to high
   screens/                    the cat, the icon, the link preview, the pages' screens, the legend's poster
   .nojekyll                   (served as it is)
 
   sh tests/run_orb.sh          (first: the tour)
-  sh tools/make_film.sh        (the film)
+  python3 tools/make_legend.py (the legend)
   sh web/app/build.sh          (ORBITRIX for the browser)
   python3 web/make_site.py build/orbitrix.fwsc VERSION OUT_DIR
 
@@ -43,7 +44,7 @@ BLOCKS, BLK, KEEP = 20, 0x30, 0x2F
 APP = {"build/web/orbitrix.wasm": "orbitrix.wasm", "web/app/worklet.js": "worklet.js", "web/app/play.js": "play.js"}
 SCREENS = {"orbit": "screen_orbit", "keys": "screen_keys", "orrery": "screen_orrery", "horizon": "screen_horizon",
            "steps": "screen_steps", "sound": "screen_sound"}
-FILM = "build/film/astralica.mp4"
+LEGEND = ["build/film/legend.webp", "build/film/legend.m4a", "build/film/legend.png"]   # tools/make_legend.py
 DEMOS = [   # build/audio/tour/NN_name.wav, in the systems' order
     ("KITTEN", "A beat to start from, on the grid: a kick, a clap, hats, a purring bass. Yours to change."),
     ("MILKY WAY", "A lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick, a purring bass; the keys mew."),
@@ -134,9 +135,9 @@ def main(pkg, version, out):
         raise SystemExit(f"{pkg}: identity {product!r} is not ORBITRIX's (FM-1_967..)")
     if b"FELUCCA-LOADER-1" not in raw:
         raise SystemExit(f"{pkg}: no update loader in it: the installer could not write it")
-    for src in list(APP) + [FILM]:
+    for src in list(APP) + LEGEND:
         if not (ROOT / src).exists():
-            raise SystemExit(f"{src}: missing (web/app/build.sh, tools/make_film.sh)")
+            raise SystemExit(f"{src}: missing (web/app/build.sh, tools/make_legend.py)")
     tour = sorted((ROOT / "build" / "audio" / "tour").glob("[0-9][0-9]_*.wav"))
     if len(tour) != len(DEMOS):
         raise SystemExit(f"build/audio/tour: {len(tour)} renders, {len(DEMOS)} wanted (tests/run_orb.sh renders them)")
@@ -148,9 +149,9 @@ def main(pkg, version, out):
     shutil.copy(pkg, out / "firmware" / name)
     for src, dst in APP.items():
         shutil.copy(ROOT / src, out / "app" / dst)
-    shutil.copy(ROOT / FILM, out / "film" / "astralica.mp4")
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", "7.7", "-i", str(ROOT / FILM), "-frames:v", "1",
-                    str(out / "screens" / "legend.png")], check=True)
+    for src in LEGEND[:2]:
+        shutil.copy(ROOT / src, out / "film" / Path(src).name)
+    shutil.copy(ROOT / LEGEND[2], out / "screens" / "legend.png")
     shutil.copy(ROOT / "assets" / "cat.png", out / "screens" / "cat.png")
     shutil.copy(ROOT / "assets" / "logo.png", out / "screens" / "icon.png")
     for dst, src in SCREENS.items():
@@ -177,7 +178,7 @@ def main(pkg, version, out):
     (out / ".nojekyll").write_text("")
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
     print(f"site: {out}: index.html ({len(html)} B), firmware/{name} ({len(raw)} B, {product}), {len(demos)} demos, "
-          f"ORBITRIX to play ({(out / 'app' / 'orbitrix.wasm').stat().st_size // 1024} KB), the film, "
+          f"ORBITRIX to play ({(out / 'app' / 'orbitrix.wasm').stat().st_size // 1024} KB), the legend, "
           f"{size // 1024} KB in all")
 
 

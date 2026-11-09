@@ -114,7 +114,9 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 
 /* ---- the legend, the systems, how it works */
 .legend { display: grid; grid-template-columns: minmax(0, 360px) 1fr; gap: 22px; align-items: center; }
-.legend video { width: 100%; border-radius: 8px; border: 2px solid var(--frame); background: #000; image-rendering: pixelated; }
+.legend-anim { position: relative; }
+.legend-anim img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.legend-sound { margin-top: 8px; }
 .legend blockquote { margin: 0 0 12px; font: 700 15px/1.8 var(--px); color: var(--txt); }
 .legend blockquote em { color: var(--lime); font-style: normal; }
 @media (max-width: 760px) { .legend { grid-template-columns: 1fr; } }
@@ -178,8 +180,8 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 </header>
 
 <h2 id="play">Play it here</h2>
-<p>This is the firmware itself, the same C as on the FM-1, running on a web FM-1. Press Start. First comes the
-  legend of Astralica (<b>PLAY</b> skips it); then <b>KITTEN</b> is waiting, a beat to start from: press <b>PLAY</b>.
+<p>This is the firmware itself, the same C as on the FM-1, running on a web FM-1. Press Start. After the splash
+  (<b>PLAY</b> skips it) <b>KITTEN</b> is waiting, a beat to start from: press <b>PLAY</b>.
   <b>SEQ</b> opens its steps on the keys, <b>EDIT</b> its sounds by name, and <b>PRESETS</b> turns to MILKY WAY, a
   lullaby, and the thirteen systems of the sky. Astralica is the sun: she bobs to it, sings along when you play, and
   naps when you stop.</p>
@@ -240,15 +242,21 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 
 <h2 id="legend">The legend of Astralica</h2>
 <div class="legend">
-  <video src="film/astralica.mp4" poster="screens/legend.png" controls playsinline preload="none" width="360" height="360"></video>
+  <div class="legend-anim">
+    <img id="legend-img" src="film/legend.webp" width="240" height="240"
+      alt="The legend: the silent universe, four planets; Astralica comes and grows, one big ass cat, and eats them; her tummy glows; plop, plop, plop, plop: four little cosmic swirls become kittens that fly to their rings; the ORBITRIX sings; her meow rings through the multiverses">
+    <button class="b legend-sound" id="legend-sound" type="button" aria-pressed="false">♪ From the start, with its sound</button>
+    <audio id="legend-audio" src="film/legend.m4a" preload="none"></audio>
+  </div>
   <div>
     <blockquote>In the beginning the universe was silent. Then came <em>Astralica</em>. She grew, and grew: one big ass
       cat. She ate all the planets, and in her tummy they changed; and when she pooped them out, they formed the
       <em>ORBITRIX</em>. Now her song rings through the multiverses.</blockquote>
-    <p class="small">ORBITRIX tells it at power-on, in about seventeen seconds, scored by its own engine: a drone, a
-      chirp as each planet falls in, her tummy glowing and gurgling, then plop, plop, plop, plop: four little cosmic
-      swirls become the kittens that fly out to their rings, and each ring sings as its kitten arrives; last her meow,
-      echoing from universe to universe. <b>PLAY</b> skips it; KEYS → SEL → INTRO turns it off.</p>
+    <p class="small">Seventeen seconds, drawn and scored by the firmware itself (its own screen and engine, filmed on a
+      computer): a drone, a chirp as each planet falls in, her tummy glowing and gurgling, then plop, plop, plop, plop:
+      four little cosmic swirls become the kittens that fly out to their rings, and each ring sings as its kitten
+      arrives; last her meow, echoing from universe to universe. The kittens are the planets that go round her on the
+      FM-1.</p>
   </div>
 </div>
 
@@ -310,6 +318,21 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 </div>
 
 <script src="app/play.js" defer></script>
+<script>
+/* the legend: it loops, silent; the button plays it from the start with its sound (the animation restarted with it) */
+(() => {
+  const img = document.getElementById("legend-img"), btn = document.getElementById("legend-sound");
+  const audio = document.getElementById("legend-audio"), src = img.getAttribute("src");
+  const set = (on) => { btn.setAttribute("aria-pressed", String(on)); btn.textContent = on ? "■ Stop the sound" : "♪ From the start, with its sound"; };
+  btn.addEventListener("click", () => {
+    if (!audio.paused) { audio.pause(); set(false); return; }
+    img.src = src + "?t=" + Date.now();          /* (a fresh load: it starts at its first frame) */
+    audio.currentTime = 0;
+    audio.play().then(() => set(true), () => set(false));
+  });
+  audio.addEventListener("ended", () => set(false));
+})();
+</script>
 <script type="module">
 /*LIB*/
 const $ = (id) => document.getElementById(id);

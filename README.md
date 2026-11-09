@@ -40,8 +40,8 @@ The voice is a planet on an ellipse, and what you hear is where it is.
 
 ## A groove in a minute
 
-1. Switch on. The legend plays; **PLAY** skips it. **KITTEN** is waiting: a kick, a clap, hats, a purring bass, on the
-   grid. Press **PLAY**.
+1. Switch on. After the splash (**PLAY** skips it) **KITTEN** is waiting: a kick, a clap, hats, a purring bass, on
+   the grid. Press **PLAY**.
 2. Press **SEQ**: **STEPS**. The white keys are the steps of a track: tap one, rest → hit → accent → rest. The black
    keys do the rest, and the screen draws each one over its key:
 
@@ -78,12 +78,13 @@ In the beginning the universe was silent. Then came **Astralica**, a black cat i
 round her. She grew, and grew: one big ass cat. She ate all the planets, and in her tummy they changed; and when she
 pooped them out, they formed the ORBITRIX. Now her song rings through the multiverses.
 
-ORBITRIX tells it at power-on, in about seventeen seconds, scored by its own engine: a drone, a chirp as each of the
-four planets falls in, the universe sliding into her horizon; her tummy glowing and gurgling as they turn in it; then
-plop, plop, plop, plop: four little cosmic swirls, each becoming a kitten that flies out to its ring, and each ring
-starts to sing as its kitten arrives. Last her meow, echoing from universe to universe. The kittens are the planets
-that go round her on HOME.
-**Press PLAY to skip it** (the splash too, straight to the instrument); KEYS → SEL → INTRO turns it off.
+It is told on [the page](https://joakimskurk.github.io/fm1orbitrix/#legend), as an animation on a transparent night,
+seventeen seconds, drawn and scored by the firmware itself (its own screen and engine, filmed on the host by
+`tools/make_legend.py`): a drone, a chirp as each of the four planets falls in, the universe sliding into her
+horizon; her tummy glowing and gurgling as they turn in it; then plop, plop, plop, plop: four little cosmic swirls,
+each becoming a kitten that flies out to its ring, and each ring starts to sing as its kitten arrives. Last her meow,
+echoing from universe to universe. The kittens are the planets that go round her on HOME. The FM-1 itself starts
+with the splash and goes straight to the instrument.
 
 <p align="center">
   <img src="docs/readme/intro_strip.png" width="880" alt="The legend: Astralica arrives; one big ass cat; in her tummy the planets change; plop; they form the ORBITRIX; her song rings through the multiverses">
@@ -270,7 +271,7 @@ Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
 sh web/app/build.sh                                  # -> build/web/orbitrix.wasm (clang and lld)
-python3 web/make_site.py build/orbitrix.fwsc dev build/site    # after tests/run_orb.sh and tools/make_film.sh
+python3 web/make_site.py build/orbitrix.fwsc dev build/site    # after tests/run_orb.sh and tools/make_legend.py
 ```
 
 Departures from Dinghy's own files: `platform.c` includes `web/app/web_host.c` instead of `tests/host.c` when
@@ -286,6 +287,7 @@ firmware/src/orb_systems.h  the sound library (30 sounds by name) and the fiftee
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)
+tools/make_legend.py        the legend for the page: an animation on a transparent night (WebP) and its sound
 tools/make_film.sh          a film of the firmware on the host (the legend by default) -> build/film/astralica.mp4
 web/                        the page: index.html, make_site.py, app/ (the web FM-1, the audio thread, the panel)
 tools/orb_render.c          the engine to WAV; tools/orb_look.py the spectrograms

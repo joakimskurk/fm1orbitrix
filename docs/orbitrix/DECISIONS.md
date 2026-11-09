@@ -275,3 +275,18 @@ orbitrix." Decided: two scenes in place of "she ate the planets and made their o
 The kittens are the ones that go round her on HOME (D16): the story says where they came from. Measured: the legend
 has no click (`tools/orb_look.py`), its scenes −2.4 to −6 dBFS peak; the film (`tools/make_film.sh`) and the README's
 strip (`tests/scripts/legend.txt`) are remade.
+
+## D18 — The legend is the page's (2026-11-09)
+
+The user: "I don't think we should have this as the splash, but as an animation on the git page", with a transparent
+background. Decided:
+
+- **The FM-1 starts with the splash** and goes to the instrument (PLAY skips the splash, as before). The legend's code
+  is compiled on the host only (`ORB_LEGEND`), so it costs the FM-1 nothing (and the page's FM-1 27 KB less); the
+  INTRO setting went with it (the settings' version is 4: an older one is read as new).
+- **The page shows it** as an animation: `tools/make_legend.py` builds the host firmware, plays the legend
+  (ORB_INTRO=1) and takes its 430 frames at 25 a second, makes the night transparent (the colour everywhere at the
+  start: the stars, Astralica, the kittens and the words stay), and writes a lossless looping WebP (306 KB, 240 x 240,
+  scaled pixel for pixel by the page), a still, and its sound (AAC). PRESS PLAY TO SKIP went (it was the FM-1's), and
+  the line over the words. It loops silent; "From the start, with its sound" restarts it with its sound.
+- CI makes it in place of the film (`make_film.sh` stays, for films of the host).

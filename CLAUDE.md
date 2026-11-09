@@ -12,8 +12,10 @@
   (KITTEN made into a groove: STEPS' black keys, IDEA, UNDO, SOUND, REC), and look at the screens;
   `tools/readme_screens.sh` remakes the README's. Then `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
   the FM-1 last), `tests/run_tests.sh`.
-- The legend of Astralica (the intro, `intro()` in orbitrix.c, its system `orb_intro_system`): on the host only with
-  `ORB_INTRO=1`; `tools/make_film.sh` makes it a film with its sound (`build/film/astralica.mp4`).
+- The legend of Astralica (`intro_*()` in orbitrix.c, its system `orb_intro_system`) is the page's, not the FM-1's: it
+  is compiled on the host only (`ORB_LEGEND`), plays with `ORB_INTRO=1`, and `tools/make_legend.py` films it for the
+  page as an animation on a transparent night with its sound (`build/film/legend.webp`, `.m4a`); `tools/make_film.sh`
+  makes an mp4 of it. The FM-1 and the page's FM-1 start with the splash.
 - Hear it and see it: the user listens to `build/audio/`. What can be measured, measure it (`tools/orb_look.py`:
   spectrogram, centroid, energy above 16 kHz, the largest jump between frames, clicks: keep the legend and the
   systems at none but a ring's own re-attacks).

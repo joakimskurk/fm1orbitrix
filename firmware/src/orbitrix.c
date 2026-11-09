@@ -18,6 +18,10 @@
  *   MIDI      notes play the focus (and REC writes them), CC 1 is MODW, channel pressure AFT; clock and START / STOP drive the orrery */
 static void app_idle(void);
 #define LCD_IDLE app_idle
+#if defined(DINGHY_HOST) && !defined(DINGHY_WEB)
+#define ORB_LEGEND 1                            /* the legend of Astralica: rendered on the host for the page (ORB_INTRO=1,
+                                                 * tools/make_legend.py), not on the FM-1 */
+#endif
 #ifndef APP_NAME
 #define APP_NAME "ORBITRIX"
 #endif
@@ -191,8 +195,8 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-#define SET_VER 3u                              /* (3: KITTEN and MILKY WAY first, the library) */
-static struct { uint8_t oct, ch, sysi, intro_off, ver; } set = {0, 0, 0, 0, SET_VER};   /* intro_off: 1 = no story at power-on */
+#define SET_VER 4u                              /* (4: KITTEN and MILKY WAY first, the library, no legend at power-on) */
+static struct { uint8_t oct, ch, sysi, ver; } set = {0, 0, 0, SET_VER};
 static uint32_t set_dirty, set_t;
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
 
@@ -221,7 +225,7 @@ static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME"
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_INTRO, F_LIB };
+       F_INSP, F_GRAIN, F_SEMI, F_LIB };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -298,7 +302,7 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
     [PG_KEYS] = {{"MODE", W_SYS, F_KMODE, SO(keymode), 0, 1}, {"TUNING", W_SYS, F_TUNING, SO(tuning), 0, ORB_NTUNING - 1},
                  {"SUN", W_SYS, F_NOTE, SO(sun), 0, 11}, {"OCT", W_SET, F_OCT, 0, -3, 3},
                  {"GRAVITY", W_SYS, F_PCT, SO(macro[MAC_GRAVITY]), 0, 99}, {"MIDI CH", W_SET, F_CH, 1, 0, 16},
-                 {"INTRO", W_SET, F_INTRO, 3, 0, 1}, P_NONE, P_BPM},
+                 P_NONE, P_NONE, P_BPM},
 };
 static uint32_t page = PG_ORRERY, focus = ORB_KEYS, slot;   /* focus: 0 KEYS, 1..4 A..D: what the pages edit and the keys play */
 static uint32_t ring_focus(void) { return focus ? focus - 1u : 0u; }
@@ -412,7 +416,6 @@ static void pd_text(const pd_t *d, char *s)
     case F_INSP: if (v) put_s(put_i(s, -(v * 48 / 99), 0), "st"); else put_s(s, "OFF"); break;
     case F_SEMI: put_s(put_i(s, v, 1), "st"); break;
     case F_GRAIN: put_s(put_u(s, (256u + (uint32_t)v * 39u) * 10u / 441u), "ms"); break;
-    case F_INTRO: put_s(s, v ? "OFF" : "ON"); break;
     case F_LIB: put_s(s, v > 0 && v < (int32_t)ORB_NLIB ? ORB_LIB[v].name : "OWN"); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
@@ -1518,8 +1521,7 @@ static int splash_pass(void)                    /* a pass (a millisecond on the 
     return 1;
 }
 
-/* ---- the legend of Astralica: a story at power-on (any key or button skips it; KEYS: INTRO OFF), scored by the
- * engine itself (orb_intro_system). The screen is drawn whole each frame, as two canvases (240 x 144, then 96) */
+/* ---- Astralica drawn at any size (HOME, the splash, the legend) */
 static void cat_draw_q8(int32_t ax, int32_t ay, uint32_t s, uint32_t acx, uint32_t acy, int blink, uint32_t look)
 {   /* Astralica at s / 256 pixels a cell, the cell (acx, acy) / 2 at screen (ax, ay); look: 1 her eyes glow */
     uint32_t i, j;
@@ -1551,6 +1553,9 @@ static void cat_draw_small(int32_t cx, int32_t cy, uint32_t s)   /* under a pixe
             if (k) cv_pset(cx - w / 2 + x, cy - h / 2 + y, CAT_PAL[k]);
         }
 }
+#ifdef ORB_LEGEND
+/* ---- the legend of Astralica, for the page (tools/make_legend.py films it on the host: a transparent animation and its
+ * sound), scored by the engine itself (orb_intro_system). The screen is drawn whole each frame, as two canvases */
 static uint32_t typed(const char *s, uint32_t t0, uint32_t t, char *out)   /* typewriter: a letter each 34 ms */
 {
     uint32_t n = t < t0 ? 0u : (t - t0) / 34u, k;
@@ -1766,7 +1771,6 @@ static void intro_scene(uint32_t t)
     else if (t < I_T5) { l1 = "AND WHEN SHE POOPED THEM OUT"; t1 = I_T45 + 100u; l2 = "THEY FORMED THE ORBITRIX"; t2 = I_PLOP[2]; }
     else { l1 = "NOW HER SONG RINGS"; t1 = I_T5 + 100u; l2 = "THROUGH THE MULTIVERSES"; t2 = I_T5 + 900u; }
     cv_rect(0, 180, 240, 60, C_BG);
-    cv_rect(0, 180, 240, 1, C_FDIM);
     typed(l1, t1, t, line[0]);
     typed(l2, t2, t, line[1]);
     if (t >= I_T2 && t < I_T3) {                /* her name, big, letter by letter */
@@ -1778,22 +1782,13 @@ static void intro_scene(uint32_t t)
         txc(120, 190, &FONT_S, line[0], C_TXT, C_BG);
         txc(120, 210, &FONT_S, line[1], t >= I_T45 ? C_LIME : C_GREY, C_BG);
     }
-    /* PRESS PLAY TO SKIP, at the top, after the first second */
-    if (t > 1000u) {
-        uint32_t b = (t / 60u) % 24u;
-        uint16_t c = b < 12u ? dim565(C_GREY, 6u + b) : dim565(C_GREY, 29u - b);
-        int32_t q, x0 = 120 - 76;
-        pill(x0 - 4, 2, 160, 18, C_BG);
-        for (q = 0; q < 5; q++) cv_rect(x0 + q, 6 + q, 1, 10 - 2 * q, c);   /* a play triangle */
-        tx(x0 + 12, 3, &FONT_S, "PRESS PLAY TO SKIP", c, C_BG);
-    }
 }
-static struct { uint32_t t0, cue, last, skipped; } itr;
+static struct { uint32_t t0, cue, last; } itr;
 static void intro_begin(void)
 {
     uint32_t rel;
     int32_t sun = 36;                            /* C2 */
-    itr.t0 = fm1_ms; itr.cue = 0; itr.last = fm1_ms - 1000u; itr.skipped = 0;
+    itr.t0 = fm1_ms; itr.cue = 0; itr.last = fm1_ms - 1000u;
     fm1_input_edges(&rel);
     lcd_fill(0, 0, 240, 240, C_BG);
     orb_note_on(&eng, 1, sun * 256, 104);        /* the silent universe: a drone, C2 and G2 */
@@ -1801,20 +1796,18 @@ static void intro_begin(void)
 }
 static void intro_end(void)
 {
-    fm1_led_key(BTN_PLAY, 0);
     orb_play(&eng, 0);
     orb_all_off(&eng);
     sys.macro[MAC_HORIZON] = 0;                 /* (its mix glides out: no click) */
 }
-static int intro_pass(void)                     /* a pass; 0: over (itr.skipped: PLAY skipped it) */
+static int intro_pass(void)                     /* a pass; 0: over */
 {
     uint32_t rel, cue = itr.cue, t, h;
     int32_t sun = 36;
     platform_poll();
     t = fm1_ms - itr.t0;
     if (t >= I_END) return 0;
-    if (fm1_input_edges(&rel) & (1u << BTN_PLAY)) { itr.skipped = 1; return 0; }
-    fm1_led_key(BTN_PLAY, (t / 300u) & 1u);      /* PLAY blinks: press it to skip */
+    fm1_input_edges(&rel);
     {
         /* the score */
         if (cue == 0 && t >= I_T2) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 0), 127, 120); cue++; }
@@ -1871,6 +1864,7 @@ static int intro_pass(void)                     /* a pass; 0: over (itr.skipped:
     }
     return 1;
 }
+#endif
 
 /* ---- MIDI in (the main loop, and app_idle while the screen draws) */
 static uint32_t idle_ok, clk_n, clk_t0, clk_bpm, clk_run, clk_last;
@@ -2329,22 +2323,19 @@ static void leds(void)
     }
 }
 
-static uint32_t boot_phase, story;              /* 1 the story, 2 the splash, 3 playing; story: 1 ran, 2 PLAY skipped it */
+static uint32_t boot_phase;                     /* 1 the legend (the host, for the page), 2 the splash, 3 playing */
 static void app_start(void)
 {
     if (settings_load(&set, sizeof set) || set.ver != SET_VER || (int8_t)set.oct < -3 || (int8_t)set.oct > 3 || set.ch > 16u ||
         set.sysi >= NSYS)
-        set.oct = 0, set.ch = 0, set.sysi = 0, set.intro_off = 0, set.ver = SET_VER;
-    if (set.intro_off > 1u) set.intro_off = 0;
-    orb_intro_system(&sys);
+        set.oct = 0, set.ch = 0, set.sysi = 0, set.ver = SET_VER;
+    orb_system(0, &sys);                        /* (the splash is silent; boot_finish loads the system to play) */
     orb_init(&eng, &sys, &orb_mem);
-#if defined(DINGHY_HOST) && !defined(DINGHY_WEB)
-    story = getenv("ORB_INTRO") != 0;          /* (the host's scripts are timed from the splash: the story on ask) */
-#else
-    story = !set.intro_off;                    /* the legend of Astralica, unless KEYS: INTRO OFF */
+#ifdef ORB_LEGEND
+    if (getenv("ORB_INTRO")) { orb_intro_system(&sys); intro_begin(); boot_phase = 1; return; }
 #endif
-    if (story) { intro_begin(); boot_phase = 1; }
-    else { splash_begin(0); boot_phase = 2; }
+    splash_begin(0);
+    boot_phase = 2;
 }
 static void boot_finish(void)                   /* the system to play, once the story's tails have gone */
 {
@@ -2356,17 +2347,18 @@ static void boot_finish(void)                   /* the system to play, once the 
     lcd_fill(0, 0, 240, 240, C_BG);
     boot_phase = 3;
 }
-static void boot_pass(void)                     /* the story, then the splash (PLAY skips both) */
+static void boot_pass(void)                     /* the splash (PLAY skips it); on the host, the legend before it */
 {
+#ifdef ORB_LEGEND
     if (boot_phase == 1) {
         if (intro_pass()) return;
         intro_end();
-        story = 1u + itr.skipped;
-        if (itr.skipped) boot_finish();
-        else { splash_begin(1); boot_phase = 2; }
-    } else if (boot_phase == 2) {
-        if (!splash_pass()) boot_finish();
+        splash_begin(1);
+        boot_phase = 2;
+        return;
     }
+#endif
+    if (!splash_pass()) boot_finish();
 }
 static void app_pass(void)                      /* one pass of the main loop */
 {
