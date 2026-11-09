@@ -17,23 +17,23 @@ static const orb_snd_t SND_HAT = {.ecc = 10, .dust = 99, .color = 90, .a = 0, .d
     .level = 58, .pan = 58, .spr = 60, .send = 10, .gate = 20, .oct = 2};
 static const orb_snd_t SND_BASS = {.ecc = 52, .sling = 38, .ang = 10, .spr = 10, .prec = 0, .a = 2, .d = 52, .s = 55,
     .r = 30, .eamt = 30, .ea = 0, .ed = 46, .vsens = 40, .level = 84, .pan = 50, .send = 6, .gate = 55, .oct = 0,
-    .flags = SF_LEGATO};
+    .flags = SF_LEGATO, .tide = 30};
 static const orb_snd_t SND_GLASS = {.ecc = 16, .moon = 38, .mratio = 2, .ang = 60, .spr = 70, .prec = 18, .a = 1, .d = 60,
-    .s = 15, .r = 60, .eamt = 25, .ea = 0, .ed = 50, .vsens = 50, .level = 64, .pan = 50, .send = 55, .gate = 50, .oct = 2};
+    .s = 15, .r = 60, .eamt = 25, .ea = 0, .ed = 50, .vsens = 50, .level = 64, .pan = 50, .send = 55, .gate = 50, .oct = 2, .tide = 50};
 static const orb_snd_t SND_PLUCK = {.ecc = 40, .sling = 22, .ang = 30, .spr = 45, .prec = 10, .a = 0, .d = 56, .s = 10,
-    .r = 52, .eamt = 40, .ea = 0, .ed = 44, .vsens = 50, .level = 72, .pan = 50, .send = 40, .gate = 50, .oct = 1};
+    .r = 52, .eamt = 40, .ea = 0, .ed = 44, .vsens = 50, .level = 72, .pan = 50, .send = 40, .gate = 50, .oct = 1, .tide = 50};
 static const orb_snd_t SND_BELL = {.ecc = 18, .moon = 58, .mratio = 13, .ang = 45, .spr = 75, .prec = 14, .a = 0, .d = 66,
-    .s = 0, .r = 66, .eamt = 40, .ea = 0, .ed = 56, .vsens = 50, .level = 60, .pan = 50, .send = 62, .gate = 50, .oct = 2};
+    .s = 0, .r = 66, .eamt = 40, .ea = 0, .ed = 56, .vsens = 50, .level = 60, .pan = 50, .send = 62, .gate = 50, .oct = 2, .tide = 55};
 static const orb_snd_t SND_PAD = {.ecc = 30, .sling = 10, .moon = 22, .mratio = 1, .ang = 50, .spr = 82, .prec = 30,
     .a = 60, .d = 70, .s = 70, .r = 74, .eamt = 22, .ea = 62, .ed = 72, .vsens = 30, .level = 66, .pan = 50, .send = 70,
-    .gate = 95, .oct = 1};
+    .gate = 95, .oct = 1, .tide = 50};
 static const orb_snd_t SND_PIXEL = {.ecc = 58, .sling = 30, .pixel = 66, .ang = 20, .spr = 40, .a = 0, .d = 38, .s = 0,
-    .r = 32, .eamt = 20, .ea = 0, .ed = 30, .vsens = 50, .level = 60, .pan = 50, .send = 25, .gate = 40, .oct = 2};
+    .r = 32, .eamt = 20, .ea = 0, .ed = 30, .vsens = 50, .level = 60, .pan = 50, .send = 25, .gate = 40, .oct = 2, .tide = 40};
 static const orb_snd_t SND_LEAD = {.ecc = 44, .sling = 26, .ang = 40, .spr = 50, .prec = 8, .a = 4, .d = 56, .s = 62,
-    .r = 50, .eamt = 24, .ea = 0, .ed = 50, .vsens = 50, .level = 74, .pan = 50, .send = 42, .gate = 80, .oct = 0};
+    .r = 50, .eamt = 24, .ea = 0, .ed = 50, .vsens = 50, .level = 74, .pan = 50, .send = 42, .gate = 80, .oct = 0, .tide = 45};
 static const orb_snd_t SND_FLUTE = {.ecc = 8, .sling = 0, .ang = 70, .spr = 40, .prec = 6, .dust = 14, .color = 30,
     .a = 22, .d = 60, .s = 80, .r = 52, .eamt = 12, .ea = 30, .ed = 60, .vsens = 40, .level = 70, .pan = 50, .send = 50,
-    .gate = 90, .oct = 0};
+    .gate = 90, .oct = 0, .tide = 40};
 
 static uint8_t orb_ratio_idx(uint32_t p, uint32_t q)
 {
@@ -90,6 +90,7 @@ static void orb_sys_clear(orb_sys_t *s, const char *name)
     s->ox = 50; s->oy = 50; s->orad = 20; s->orate = 4;
     s->lrate[0] = 30; s->lrate[1] = 12; s->lshape[1] = LS_DRIFT;
     s->macro[MAC_GRAVITY] = 40;
+    s->hgrain = 50; s->hretro = 0; s->hshift = -12;
 }
 
 static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8_t amt)
@@ -97,9 +98,9 @@ static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8
     s->mod[k].src = src; s->mod[k].dst = dst; s->mod[k].amt = amt;
 }
 
-#define ORB_NSYSTEM 10u
+#define ORB_NSYSTEM 13u
 static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"HARMONICES", "GALILEAN", "TRAPPIST", "KIRKWOOD",
-    "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION"};
+    "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION", "GW150914", "ALPHA CEN", "SGR A*"};
 
 static void orb_system(uint32_t i, orb_sys_t *s)
 {
@@ -125,6 +126,7 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         orb_mod_set(s, 0, SRC_ORBX, DST_ECC, 30);
         orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 40);
         orb_mod_set(s, 2, SRC_CONJ, DST_MOON, 35);
+        orb_mod_set(s, 3, SRC_CONJ, DST_TIDE, 30);          /* where the orbits meet, they tug at each other */
         break;
     }
     case 1: {   /* GALILEAN: Io, Europa, Ganymede's 1:2:4: four on the floor, a bass in 8ths, a pad, hats that avoid the kick */
@@ -214,6 +216,8 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         orb_mod_set(s, 1, SRC_ORBY, DST_SPR, 40);
         orb_mod_set(s, 2, SRC_RND, DST_MOON, 25);
         orb_mod_set(s, 3, SRC_LFO1, DST_ANG, 30);
+        orb_mod_set(s, 4, SRC_CONJ, DST_TIDE, 60);
+        s->snd[2].tide = 70; s->snd[3].tide = 70; s->snd[4].tide = 80;
         break;
     }
     case 5: {   /* PULSAR: drums. An infall kick, a dust snare, pixel hats that keep out of the kick's way, a bass */
@@ -225,7 +229,7 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         s->tuning = 0; s->sun = 9; s->bpm = 128; s->swing = 24; s->hum = 12;
         s->snd[0] = SND_PIXEL; s->snd[0].oct = 1;
         s->snd[1] = SND_KICK;
-        s->snd[2] = SND_SNARE;
+        s->snd[2] = SND_SNARE; s->snd[2].beam = 55; s->snd[2].mratio = 4;
         s->snd[3] = SND_HAT; s->snd[3].pixel = 35;
         s->snd[4] = SND_BASS; s->snd[4].oct = 1; s->snd[4].sling = 55; s->snd[4].gate = 40;
         orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
@@ -257,6 +261,8 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         orb_mod_set(s, 0, SRC_LFO2, DST_ECC, 40);
         orb_mod_set(s, 1, SRC_ORBX, DST_SPR, 50);
         orb_mod_set(s, 2, SRC_ORBY, DST_CUT, 30);
+        orb_mod_set(s, 3, SRC_LFO2, DST_HORIZON, 45);       /* now and then the cloud slides into the horizon */
+        s->hretro = 25; s->hgrain = 70;
         break;
     }
     case 7: {   /* ROCHE: torn apart. Bells off whole ratios, dust, CHAOS */
@@ -275,6 +281,8 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
         s->snd[0].level = 80; s->snd[1].level = 82; s->snd[2].level = 80; s->snd[3].level = 80; s->snd[4].level = 78;
         s->macro[MAC_CHAOS] = 55; s->mutate = 30; s->var = 40;
+        s->macro[MAC_TIDE] = 35;
+        { uint32_t k; for (k = 0; k < ORB_NPART; k++) s->snd[k].tide = 70; }
         s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 40; s->rmix = 60; s->rsize = 85;
         orb_mod_set(s, 0, SRC_RND, DST_ECC, 40);
         orb_mod_set(s, 1, SRC_CONJ, DST_DUST, 50);
@@ -298,6 +306,77 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         s->macro[MAC_ORBIT] = 20;
         orb_mod_set(s, 0, SRC_MODW, DST_PITCH, 6);
         orb_mod_set(s, 1, SRC_LFO1, DST_PITCH, 2);
+        break;
+    }
+    case 10: {  /* GW150914: the first merger heard. Notes chirp up from octaves below onto the overtones and ring down;
+                 * every second bar the whole falls a little way into the horizon; the orbits tug where they meet */
+        static const int8_t ma[] = {0, 0, 4}, mb[] = {4, 6, 7, 6}, mc[] = {2, 4, 6, 9, 7}, md[] = {0};
+        orb_rdef_t A = {1, 2, 8, 2, 0, 0, DIR_FWD, 0, 0, 0, ma, 3, 0x1};
+        orb_rdef_t B = {1, 1, 16, 3, 2, 8, DIR_FWD, 0, 0, 0, mb, 4, 0};
+        orb_rdef_t C = {3, 2, 24, 5, 1, 0, DIR_FWD, 0, 0, 0, mc, 5, 0};
+        orb_rdef_t D = {2, 1, 32, 7, 3, 0, DIR_FWD, LOG_NOT, 0, 85, md, 1, 0};
+        s->tuning = 1; s->sun = 9; s->bpm = 84;
+        s->snd[0] = SND_PAD; s->snd[0].insp = 25; s->snd[0].inspt = 62; s->snd[0].a = 30;
+        s->snd[1] = SND_BASS; s->snd[1].insp = 62; s->snd[1].inspt = 63; s->snd[1].d = 72; s->snd[1].s = 0; s->snd[1].r = 64;
+        s->snd[1].eamt = 60; s->snd[1].ed = 56; s->snd[1].gate = 99; s->snd[1].level = 92;
+        s->snd[2] = SND_BELL; s->snd[2].insp = 40; s->snd[2].inspt = 50; s->snd[2].level = 70;
+        s->snd[3] = SND_GLASS; s->snd[3].tide = 70; s->snd[3].level = 74;
+        s->snd[4] = SND_HAT; s->snd[4].beam = 60; s->snd[4].mratio = 2; s->snd[4].level = 50;
+        orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
+        orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+        s->mutate = 15; s->var = 20;
+        s->dtime = 8; s->dfb = 45; s->ping = 1; s->dmix = 34; s->rmix = 58; s->rsize = 85; s->rdecay = 76;
+        s->macro[MAC_TIDE] = 20;
+        s->lrate[0] = 45; s->lsync[0] = 1; s->lshape[0] = LS_SAW;   /* LFO 1: a ramp over 2 bars */
+        s->hshift = -12; s->hretro = 15; s->hgrain = 55;
+        orb_mod_set(s, 0, SRC_LFO1, DST_HORIZON, 32);
+        orb_mod_set(s, 1, SRC_CONJ, DST_TIDE, 60);
+        orb_mod_set(s, 2, SRC_ORBX, DST_ECC, 25);
+        break;
+    }
+    case 11: {  /* ALPHA CEN: a triple star. Three rings pull hard on each other (TIDE): the three-body problem, tuned */
+        static const int8_t ma[] = {0, 7, 4, 7}, mb[] = {4, 3, 5}, mc[] = {7, 10, 9, 12};
+        orb_rdef_t A = {1, 1, 16, 5, 0, 0, DIR_FWD, 0, 0, 0, ma, 4, 0x1};
+        orb_rdef_t B = {4, 3, 16, 5, 2, 0, DIR_FWD, 0, 0, 0, mb, 3, 0};
+        orb_rdef_t C = {5, 3, 20, 6, 1, 0, DIR_PING, 0, 0, 90, mc, 4, 0};
+        orb_rdef_t D = {1, 4, 4, 1, 0, -12, DIR_FWD, 0, 0, 0, 0, 0, 0};
+        s->tuning = 0; s->sun = 2; s->bpm = 108;
+        s->snd[0] = SND_LEAD; s->snd[0].tide = 60;
+        s->snd[1] = SND_PLUCK; s->snd[1].tide = 90; s->snd[1].oct = 0; s->snd[1].level = 80;
+        s->snd[2] = SND_GLASS; s->snd[2].tide = 90; s->snd[2].level = 78;
+        s->snd[3] = SND_BELL; s->snd[3].tide = 90; s->snd[3].mratio = 2; s->snd[3].level = 70;
+        s->snd[4] = SND_PAD; s->snd[4].tide = 99; s->snd[4].oct = 0; s->snd[4].level = 70; s->snd[4].gate = 99;
+        orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
+        orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+        s->macro[MAC_TIDE] = 50; s->macro[MAC_CHAOS] = 20; s->mutate = 25; s->var = 30;
+        s->dtime = 6; s->dfb = 40; s->ping = 1; s->dmix = 30; s->rmix = 48;
+        orb_mod_set(s, 0, SRC_LFO2, DST_TIDE, 50);
+        orb_mod_set(s, 1, SRC_CONJ, DST_ECC, 35);
+        break;
+    }
+    case 12: {  /* SGR A*: the black hole at the centre. Deep, slow, UTONAL; the pad's point dips into the horizon and the
+                 * sound slides in, redshifted, stretched, some of it backwards */
+        static const int8_t ma[] = {0, -1, 0, -3}, mb[] = {4, 5, 7}, mc[] = {2, 4}, md[] = {7, 9, 11, 8};
+        orb_rdef_t A = {1, 2, 7, 3, 0, 0, DIR_FWD, 0, 0, 0, ma, 4, 0x1};
+        orb_rdef_t B = {2, 3, 9, 4, 1, 0, DIR_FWD, 0, 0, 0, mb, 3, 0};
+        orb_rdef_t C = {1, 3, 5, 2, 0, 0, DIR_FWD, 0, 0, 0, mc, 2, 0};
+        orb_rdef_t D = {3, 4, 11, 5, 2, 0, DIR_SPIRAL, 0, 0, 80, md, 4, 0};
+        s->tuning = 2; s->sun = 6; s->bpm = 70;
+        s->snd[0] = SND_PAD; s->snd[0].oct = 0;
+        s->snd[1] = SND_BASS; s->snd[1].insp = 30; s->snd[1].inspt = 72; s->snd[1].d = 74; s->snd[1].s = 40; s->snd[1].gate = 90;
+        s->snd[2] = SND_BELL; s->snd[2].mratio = 12; s->snd[2].a = 20;
+        s->snd[3] = SND_PAD; s->snd[3].level = 60; s->snd[3].moon = 45; s->snd[3].mratio = 11;
+        s->snd[4] = SND_GLASS; s->snd[4].dust = 35; s->snd[4].color = 85; s->snd[4].beam = 50; s->snd[4].level = 56;
+        orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
+        orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+        s->mutate = 18; s->var = 20;
+        s->macro[MAC_GRAVITY] = 75; s->macro[MAC_ORBIT] = 30;
+        s->dtime = 10; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 70; s->rsize = 96; s->rdecay = 88; s->rdamp = 60;
+        s->ox = 50; s->oy = 40; s->orad = 40; s->orate = 1;          /* the pad's point: round once in 8 bars */
+        s->hshift = -24; s->hretro = 40; s->hgrain = 70;
+        orb_mod_set(s, 0, SRC_ORBY, DST_HORIZON, -60);            /* the point low: deep in */
+        orb_mod_set(s, 1, SRC_LFO2, DST_ECC, 35);
+        orb_mod_set(s, 2, SRC_ORBX, DST_SPR, 40);
         break;
     }
     default: {  /* ACCRETION: GRAVITY high: every note falls into tune, the rings glide */

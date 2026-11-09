@@ -5,16 +5,17 @@
   harmonically beautiful. The look is the user's two ORBITRIX drawings: deep indigo, violet frames with cut corners, a
   lime title pill, the ring colours cyan, magenta, yellow, violet (A–D), lime for KEYS, pixel stars.
 - The code: `firmware/src/orb_engine.h` (the engine, no platform, shared with the host tools), `orb_systems.h` (the
-  ten systems), `orbitrix.c` (the app). The laws live in `tools/gen_tables.py`: change them there and rerun it,
-  never edit `orb_tables.h`.
+  thirteen systems), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
+  The laws live in `tools/gen_tables.py`: change them there and rerun it, never edit `orb_tables.h`.
 - After every engine change: `tests/run_orb.sh` (tests, the same under ASan/UBSan, renders, spectrograms, bench). After
-  an app change: `tests/run_host.sh tests/scripts/pages.txt` and `edit.txt`, and look at the screens. Then
-  `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
+  an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt` and `splash.txt`, and look at
+  the screens. Then `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
   the FM-1 last), `tests/run_tests.sh`.
 - Hear it and see it: the user listens to `build/audio/`. What can be measured, measure it (`tools/orb_look.py`:
   spectrogram, centroid, energy above 16 kHz, the largest jump between frames).
 - The budget (docs/RULES.md): the audio ISR under half of its 5.8 ms. The voice loop on the chip is ~110
-  instructions a frame plain, ~245 with SLING, MOON, DUST, PIXEL and the send; the FX ~500 a frame. Count with
+  instructions a frame plain, ~292 with SLING, MOON, DUST, PIXEL, TIDE, BEAM and the send; the FX ~700 a frame with
+  the filter, NEBULA and HORIZON on. Over 80 % the interrupt sheds the quietest voice (`orb_shed`). Count with
   callgrind on the host (`-Os`) or on the chip's own code (JieLi clang `-Os -c`, objdump). The app shows `CPU nn%` on
   the hint line.
 - Audio code: no float, no 64-bit division, no flash access in `orb_render`, no loop whose length a parameter sets,

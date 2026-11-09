@@ -1,0 +1,5 @@
+# ORBITRIX: the splash, frame by frame (tests/run_host.sh tests/scripts/splash.txt)
+400 shot
+1000 shot
+1500 shot
+1900 end

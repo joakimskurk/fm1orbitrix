@@ -41,11 +41,11 @@ static int render_voice(float *outL, int n, int32_t pitch)
     int i = 0, k;
     orb_voice_t *v = &O.v[4];
     orb_trigger(&O, 4, ORB_KEYS, pitch, 32767, -1, INT32_MIN);
-    for (k = 0; k < 64; k++) { memset(blk, 0, sizeof blk); orb_voice_tick(&O, v); orb_voice_render(v, blk, blk); }
+    for (k = 0; k < 64; k++) { memset(blk, 0, sizeof blk); orb_voice_tick(&O, v); orb_voice_render(v, blk, blk, 0, O.own[4], 0); }
     while (i < n) {
         memset(O.busd, 0, sizeof O.busd);
         orb_voice_tick(&O, v);
-        orb_voice_render(v, O.busd, O.buss);
+        orb_voice_render(v, O.busd, O.buss, 0, O.own[4], 0);
         for (k = 0; k < (int)ORB_SUB && i < n; k++, i++) outL[i] = O.busd[2 * k] / 32768.0f;
     }
     return n;
@@ -220,7 +220,8 @@ static void test_systems(void)
             memset(out, 0, sizeof out);
             if (b == 200u) for (k = 0; k < 4u; k++) orb_note_on(&O, (uint8_t)(k + 1), orb_key_pitch(&S, 48u + S.sun + 4u * k, 0, 0), 100);
             if (b == 3000u) for (k = 0; k < 4u; k++) orb_note_off(&O, (uint8_t)(k + 1));
-            if (b == 3500u) { S.macro[MAC_CHAOS] = 99; S.macro[MAC_FRACT] = 99; S.macro[MAC_SPECTRAL] = 99; S.macro[MAC_ORBIT] = 99; S.macro[MAC_GRAVITY] = 99; }
+            if (b == 3500u) { uint32_t q; for (q = 0; q < ORB_NMACRO; q++) S.macro[q] = 99; S.hretro = 50; S.hshift = 24; }
+            if (b == 3700u) for (k = 0; k < ORB_NPART; k++) { S.snd[k].tide = 99; S.snd[k].beam = 99; S.snd[k].insp = 99; }
             if (b == 4000u) { S.cut = 50; S.res = 99; S.drive = 99; S.dfb = 99; S.rdecay = 99; }
             orb_render(&O, out, 256);
             for (k = 0; k < 512u; k++) {
@@ -241,12 +242,62 @@ static void test_systems(void)
     }
 }
 
+static void test_inspiral(void)
+{
+    /* the chirp starts 2 octaves under (insp 50: 24 semitones) and lands on the note at its time; then it holds */
+    orb_voice_t *v = &O.v[4];
+    int32_t p = 57 * 256, k, first = 0, mid = 0;
+    uint32_t inc_target = orb_inc(p);
+    orb_system(0, &S);
+    orb_init(&O, &S, &MEM);
+    plain(&S.snd[0]);
+    S.snd[0].insp = 50;
+    S.snd[0].inspt = 50;                    /* 147 ms: ~203 ticks */
+    S.macro[MAC_GRAVITY] = 0;
+    orb_trigger(&O, 4, ORB_KEYS, p, 32767, -1, INT32_MIN);
+    for (k = 0; k < 400; k++) {
+        orb_voice_tick(&O, v);
+        if (k == 0) first = (int32_t)v->inc;
+        if (k == 100) mid = (int32_t)v->inc;
+    }
+    printf("inspiral: start %.2f, half-way %.2f, end %.3f of the note's frequency\n", (double)first / inc_target,
+           (double)mid / inc_target, (double)v->inc / inc_target);
+    CHECK(fabs((double)first / inc_target - 0.25) < 0.02, "the chirp does not start 2 octaves under");
+    CHECK((double)mid / inc_target < 0.6, "the chirp rises too early (a chirp is slow, then quick)");
+    CHECK(fabs((double)v->inc / inc_target - 1.0) < 0.002, "the chirp does not land on the note");
+    CHECK(v->estage != 0 || v->eenv == 0, "the merge did not start the eccentricity's flash");
+}
+
+static void test_horizon(void)
+{
+    /* a held chord, then HORIZON all the way: still sound (frozen), in range, a twelfth down */
+    static int32_t out[512];
+    uint32_t b, k;
+    double sq = 0;
+    int32_t peak = 0;
+    orb_system(6, &S);
+    orb_init(&O, &S, &MEM);
+    for (k = 0; k < 3u; k++) orb_note_on(&O, (uint8_t)(k + 1), orb_key_pitch(&S, 60u + 4u * k, 0, 0), 100);
+    S.hshift = -19; S.hretro = 30; S.hgrain = 40;
+    for (b = 0; b < (uint32_t)(6.0 * 44100 / 256); b++) {
+        memset(out, 0, sizeof out);
+        if (b == 300u) { S.macro[MAC_HORIZON] = 99; for (k = 0; k < 3u; k++) orb_note_off(&O, (uint8_t)(k + 1)); S.rmix = 0; S.dmix = 0; }
+        orb_render(&O, out, 256);
+        if (b > 700u) for (k = 0; k < 512u; k++) { int32_t a = out[k] < 0 ? -out[k] : out[k]; if (a > peak) peak = a; sq += (double)out[k] * out[k]; }
+    }
+    printf("horizon: frozen, after the notes ended: rms %.1f dBFS, peak %.1f dBFS\n", 10 * log10(sq / ((6.0 * 44100 / 256 - 701) * 512) / 1073741824.0 + 1e-15), 20 * log10((peak + 1) / 32768.0));
+    CHECK(sq > 0 && peak > 300, "HORIZON at full depth holds nothing");
+    CHECK(peak <= 32767, "HORIZON over full scale");
+}
+
 int main(void)
 {
     test_orbit();
     test_pitch();
     test_orrery();
     test_alias();
+    test_inspiral();
+    test_horizon();
     test_systems();
     if (fails) { printf("orb_test: %d FAILED\n", fails); return 1; }
     printf("orb_test: all passed\n");

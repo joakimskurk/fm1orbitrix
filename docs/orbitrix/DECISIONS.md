@@ -64,3 +64,35 @@ or in fm1-emu.
 
 `FM-1_967XY` (967 was free in the Firmware Hub's catalogue on 2026-11-09), 96700 a dev build; the store magic
 `ORBX`; the SMK-37 owner tag `ORBTRX`; the update loader's screen says ORBITRIX in lime (#C6FF1A).
+
+## D8 — Even more unorthodox, at times (2026-11-09)
+
+The user, after v0.1: 75 % happy; the sound should be more unorthodox at times. Decided: four phenomena from the same
+sky, mostly used at moments (modulated), so the instrument stays beautiful at rest:
+
+- **TIDE** (FM between the voices): its sidebands stay on the sun's harmonic series because the rings are its ratios.
+  A block (32 frames) late, from the voices' mono sum less each one's own share; the phase product is in uint32 (a
+  phase wraps: no overflow to fear, and the index can grow into chaos when turned far up).
+- **INSPIRAL**: a merger's chirp, one table (`ORB_CHIRP`, the 2-octave shape) scaled to any depth; it lands exactly
+  (tested: 1.000 of the note), and the merge starts the eccentricity envelope.
+- **BEAM**: AM by a narrow pulse at the moon's phase.
+- **HORIZON**: granular redshift, stretch, freeze and RETRO on the mix, after SPACE and before the filter map.
+  Triangle grains staggered by half (they sum to one; Hann cost 29 instructions more a grain); its R is the wet 151
+  frames later (a second read a grain cost more).
+
+Three systems show them: GW150914, ALPHA CEN, SGR A*. HARMONICES, SPIRAL DRIFT, ROCHE, PULSAR and NEBULA got a touch
+each (CONJ → TIDE, BEAM on the snare, LFO 2 → HORIZON ...).
+
+## D9 — The budget, again (2026-11-09)
+
+With D8 the absolute worst case is ~60 % of the chip (counted, not measured). Rather than take features away, the
+interrupt measures itself and sheds the quietest voice (a ~10 ms fade) when a callback takes over 80 % of its time.
+Typical systems stay well under half.
+
+## D10 — The cat in the splash (2026-11-09)
+
+The user's drawing: a black cat as a planet in a violet coat with a yellow ring, stars round it. It was given in the
+chat only, so `tools/gen_splash.py` redraws it on the drawing's own grid (~24 px a cell of 1254), from shapes measured
+off it; given as `assets/cat_source.png`, the picture itself is sampled instead. On the splash it is 3x, with
+plus-stars twinkling as in the drawing, three planets going round it (behind it on the far side), a glint along the
+ring, a shooting star and a blink.

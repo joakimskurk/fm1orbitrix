@@ -204,7 +204,8 @@ int main(int argc, char **argv)
         run_ms(1500);
         write_wav(argv[4]);
     } else if (argc >= 2 && !strcmp(argv[1], "bench")) {
-        /* the worst case: every voice sounding with moon, sling, dust and pixel, the filter, delay and NEBULA on */
+        /* the worst case: every voice sounding with moon, sling, dust, pixel, TIDE and BEAM; the filter, delay, NEBULA
+         * and HORIZON on */
         uint32_t k, blocks = getenv("ORB_BLOCKS") ? (uint32_t)atoi(getenv("ORB_BLOCKS")) : 2000u;
         int32_t blk[512];
         clock_t t0;
@@ -213,9 +214,10 @@ int main(int argc, char **argv)
         for (k = 0; k < ORB_NPART; k++) {
             orb_snd_t *s = &S.snd[k];
             s->moon = 50; s->sling = 50; s->dust = 30; s->pixel = 10; s->a = 0; s->s = 99; s->d = 60; s->gate = 99;
-            s->send = 60;
+            s->send = 60; s->tide = 99; s->beam = 50;
         }
         S.cut = 60; S.res = 50; S.drive = 30;
+        S.macro[MAC_TIDE] = 99; S.macro[MAC_HORIZON] = 60; S.hretro = 30;
         orb_play(&O, 1);
         for (k = 0; k < 4u; k++) orb_note_on(&O, (uint8_t)(k + 1u), orb_key_pitch(&S, 50u + 4u * k, 0, 0), 100);
         for (k = 0; k < 200u; k++) { memset(blk, 0, sizeof blk); orb_render(&O, blk, 256); }

@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/readme/screen_splash.png" width="240" alt="The splash: a ringed planet, ORBITRIX">
+  <img src="docs/readme/screen_splash.png" width="240" alt="The splash: the cat-planet in its yellow ring, stars twinkling, planets going round">
   <img src="docs/readme/screen_orrery.png" width="240" alt="ORRERY: four rings of steps around the sun, the planets on them, the rings' ratios at the right">
   <img src="docs/readme/screen_orbit.png" width="240" alt="ORBIT: the voice's eccentric orbit, the left and right views through it, the live wave">
 </p>
@@ -49,6 +49,24 @@ The voice is a planet on an ellipse, and what you hear is where it is.
 Each sound also has an amplitude envelope, an eccentricity envelope (the orbit stretching and relaxing, as FM's index
 envelope), velocity, pan and a send to SPACE. A per-note cap, measured from the spectra, keeps the aliases above
 20 kHz (60 dB down), and the tests check it.
+
+## The strange part: tide, inspiral, beam, horizon
+
+Most of the time ORBITRIX is in tune with itself. These four push it somewhere stranger, and most systems use them
+only at moments: where the orbits meet, at the end of a long ramp, when the pad's point dips.
+
+| | |
+| --- | --- |
+| **TIDE** | The planets pull on each other: the voices' sum, a block late, modulates each one's phase (FM between the voices). The rings stand on ratios of one sun, so the sidebands land on that sun's harmonic series: alien, metallic, and still consonant. Turned far up it becomes the three-body problem. Each sound sets how hard it is pulled; the TIDE macro and the TIDE destination set how strong the pull is (CONJ → TIDE: they tug where they meet). |
+| **INSPIRAL** | A binary's chirp: the note starts up to four octaves under and rises along a merger's law (frequency as (t_c − t)^−3/8, slow, then all at once), growing as it rises, and lands exactly on the note. At the merge the eccentricity envelope flashes: the ring-down. |
+| **BEAM** | A pulsar: the planet's light sweeps past in narrow pulses at the moon's ratio (amplitude modulation at audio rate). |
+| **HORIZON** | The sound falls into a black hole. A memory of the mix and two grains about a source point that slows to a standstill. It is redshifted (SHIFT, down to two octaves at full depth; blueshift too), stretched, frozen when deep, and RETRO plays a share of the grains backwards. It is a macro and a destination: LFO 1's ramp, or the pad's point dipping, take the music in now and then. |
+
+<p align="center">
+  <img src="docs/readme/screen_cosmos.png" width="240" alt="COSMOS: the tide between the sounding planets, the chirp, the beam">
+  <img src="docs/readme/screen_horizon.png" width="240" alt="HORIZON: the black hole, its ring reddened by the depth, the redshift meter">
+  <img src="docs/readme/screen_splash.png" width="240" alt="The splash">
+</p>
 
 ## Harmony: gravity
 
@@ -94,14 +112,14 @@ and **VAR** apply to all four rings.
 
 ## Movement and FX
 
-- **Macros:** CHAOS (the orbits wobble and the moons drift off whole ratios), SPECTRAL (brighter), GRAVITY, FRACT
-  (pixels, and hits splitting into 2–4 ratchets), ORBIT (wider, turning faster). At 0 each one leaves the system as
-  programmed.
+- **Macros:** CHAOS (the orbits wobble and the moons drift off whole ratios), SPECTRAL (brighter), GRAVITY, ORBIT
+  (wider, turning faster), and on the second row FRACT (pixels, and hits splitting into 2–4 ratchets), TIDE, HORIZON
+  and MUTATE. At 0 each one leaves the system as programmed.
 - **ORBIT PAD:** a point circling (X, Y) at a radius, once in its period (1/8 to 16 bars, on the orrery's clock). Its
   X and Y are modulation sources.
 - **Modulation:** two LFOs (sine, triangle, saw, square, S&H, drift; free or on the clock) and an 8-slot matrix from
   LFO1 LFO2 ORB-X ORB-Y RND STEP CONJ VEL MODW AFT onto ECC SLING ANG SPR MOON DUST PIXEL PITCH CUT RES MODE SEND FDBK
-  RAD PREC LEVEL PROB.
+  RAD PREC LEVEL PROB TIDE HORIZON BEAM.
 - **FILTER MAP:** a stereo state-variable filter on the master, its mode morphing LP → BP → HP, with drive. While it
   is open it costs nothing.
 - **SPACE:** a stereo delay in beat fractions (ping-pong, tone) into **NEBULA**, a four-line feedback delay network
@@ -113,7 +131,7 @@ and **VAR** apply to all four rings.
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Ten systems
+## Thirteen systems
 
 Named after real resonances in the sky.
 
@@ -129,6 +147,9 @@ Named after real resonances in the sky.
 | **ROCHE** | 5:4 4:3 7:5 3:2 | torn apart: bells off whole ratios, dust, CHAOS |
 | **LAGRANGE** | 1:1 1:2 3:2 2:1 | HARMONIC keys over a calm orbit |
 | **ACCRETION** | 1:2 1:1 3:4 3:2 | GRAVITY high: every note falls into tune, the rings glide |
+| **GW150914** | 1:2 1:1 3:2 2:1 | the first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon |
+| **ALPHA CEN** | 1:1 4:3 5:3 1:4 | a triple star: the rings pull hard on each other (TIDE), the three-body problem, tuned |
+| **SGR A*** | 1:2 2:3 1:3 3:4 | the black hole at the centre: deep, UTONAL; when the pad's point dips, everything slides in, redshifted and partly backwards |
 
 There are also eight places of your own, U1–U8.
 
@@ -139,11 +160,11 @@ tempo. Then come the picture, the hint line (ALGORITHM's value, the load) and K1
 
 | Control | What it does |
 | --- | --- |
-| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their rotation) → MACROS |
+| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their rotation) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) |
 | **SEQ** | RING (the focused ring) → TIME (tempo, swing, mutate, the lanes) |
-| **EDIT** | ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) |
+| **EDIT** | ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE · ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN) · ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: KEYS, A, B, C, D |
@@ -171,7 +192,7 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the ten systems with a progression on the keys, `build/look/` their spectrograms.
+`build/audio/tour/` holds the thirteen systems with a progression on the keys, `build/look/` their spectrograms.
 
 Hold **OCT−** while switching on for the USB rescue. Any firmware in the
 [FM-1 Firmware Hub](https://thefirmwarehub.com) can be installed over ORBITRIX, and back. Installing firmware is at
@@ -182,9 +203,10 @@ your own risk.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the ten systems
+firmware/src/orb_systems.h  the thirteen systems
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
-tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings: the tables
+tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
+tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)
 tools/orb_render.c          the engine to WAV; tools/orb_look.py the spectrograms
 tests/orb_test.c            the engine's tests
 ```
@@ -193,4 +215,5 @@ tests/orb_test.c            the engine's tests
 
 GPL-3.0-only, as Dinghy, Felucca and SLOOP. Details, credits and third-party parts are in [LICENSING.md](LICENSING.md).
 The platform is Dinghy 0.5 (zvenson), on Felucca (Leo Kuroshita, Hügelton Instruments) and SLOOP (isod89), with the
-SMK-37 layer by M. Geisler (genkigenki). ORBITRIX itself (the engine, the app, the systems, the docs) is by joakimskurk.
+SMK-37 layer by M. Geisler (genkigenki). ORBITRIX itself (the engine, the app, the systems, the docs, the cat) is by
+joakimskurk.

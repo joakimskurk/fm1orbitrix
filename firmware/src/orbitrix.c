@@ -23,6 +23,7 @@ static void app_idle(void);
 #define CV_MAX (240u * 144u)                    /* the main picture in one canvas (69 KB of the pool) */
 #include "platform.c"
 #include "orb_systems.h"
+#include "orb_splash.h"
 #if BOARD_SMK37
 #include "smk_wheel.h"
 #endif
@@ -37,13 +38,17 @@ static orb_sys_t sys;
 static orb_mem_t orb_mem __attribute__((section(".pool")));
 static volatile uint32_t cpu_t, cpu_max;        /* the render's time (ticks) a callback: the latest, the worst */
 
+static volatile uint32_t shed_n;              /* voices shed so far (the hint line says so) */
 static void app_audio(int32_t *out, uint32_t n)
 {
+    static uint32_t calm;
     uint32_t t0 = fm1_ticks(), dt;
     orb_render(&eng, out, n);
     dt = fm1_ticks() - t0;
     cpu_t = dt;
     if (dt > cpu_max) cpu_max = dt;
+    if (calm) calm--;                           /* over 80 % of the 5.8 ms: the quietest voice goes, one each 50 ms at most */
+    else if (dt > 5805u * FM1_TICKS_PER_US * 4u / 5u) { orb_shed(&eng); shed_n++; calm = 8; }
 }
 
 /* ---- the look (the drawings: deep indigo, violet frames, lime, the ring colours) */
@@ -186,13 +191,14 @@ static uint32_t set_dirty, set_t;
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
 
 /* ---- the pages and their values */
-enum { PG_ORRERY, PG_MACRO, PG_RING, PG_TIME, PG_ORBIT, PG_BODY, PG_ENV, PG_MOD, PG_LFO, PG_FILTER, PG_SPACE, PG_PAD,
-       PG_KEYS, NPAGE };
-static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "RING", "TIME", "ORBIT", "BODY", "ENV", "MOD", "LFO",
-                                             "FILTER MAP", "SPACE", "ORBIT PAD", "KEYS"};
+enum { PG_ORRERY, PG_MACRO, PG_RING, PG_TIME, PG_ORBIT, PG_BODY, PG_COSMOS, PG_ENV, PG_MOD, PG_LFO, PG_FILTER, PG_SPACE,
+       PG_HORIZON, PG_PAD, PG_KEYS, NPAGE };
+static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "RING", "TIME", "ORBIT", "BODY", "COSMOS", "ENV", "MOD",
+                                             "LFO", "FILTER MAP", "SPACE", "HORIZON", "ORBIT PAD", "KEYS"};
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_NONE };
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
-       F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT };
+       F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
+       F_INSP, F_GRAIN, F_SEMI };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -212,8 +218,8 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                    {"ROT C", W_RC, F_NUM, RO(rot), 0, 63}, {"ROT D", W_RD, F_NUM, RO(rot), 0, 63}, P_BPM},
     [PG_MACRO] = {{"CHAOS", W_SYS, F_PCT, SO(macro[MAC_CHAOS]), 0, 99}, {"SPECTR", W_SYS, F_PCT, SO(macro[MAC_SPECTRAL]), 0, 99},
                   {"GRAVITY", W_SYS, F_PCT, SO(macro[MAC_GRAVITY]), 0, 99}, {"ORBIT", W_SYS, F_PCT, SO(macro[MAC_ORBIT]), 0, 99},
-                  {"FRACT", W_SYS, F_PCT, SO(macro[MAC_FRACT]), 0, 99}, {"MUTATE", W_SYS, F_PCT, SO(mutate), 0, 99},
-                  {"HUM", W_SYS, F_PCT, SO(hum), 0, 99}, {"VAR", W_SYS, F_PCT, SO(var), 0, 99}, P_BPM},
+                  {"FRACT", W_SYS, F_PCT, SO(macro[MAC_FRACT]), 0, 99}, {"TIDE", W_SYS, F_PCT, SO(macro[MAC_TIDE]), 0, 99},
+                  {"HORIZON", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"MUTATE", W_SYS, F_PCT, SO(mutate), 0, 99}, P_BPM},
     [PG_RING] = {{"RATIO", W_RING, F_RATIO, RO(ratio), 0, ORB_NRATIO - 1}, {"LEN", W_RING, F_NUM, RO(len), 1, 64},
                  {"HITS", W_RING, F_NUM, RO(hits), 0, 64}, {"ROT", W_RING, F_NUM, RO(rot), 0, 63},
                  {"DEG", W_RING, F_DEG, RO(deg), -14, 21}, {"DIR", W_RING, F_DIR, RO(dir), 0, ORB_NDIR - 1},
@@ -231,6 +237,10 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                  {"LEVEL", W_SND, F_NUM, NO(level), 0, 99}, {"PAN", W_SND, F_PAN, NO(pan), 0, 99},
                  {"SEND", W_SND, F_NUM, NO(send), 0, 99}, {"OCT", W_SND, F_OCT, NO(oct), -3, 3},
                  {"TRIG", W_SND, F_TRIG, NO(flags), 0, 3}},
+    [PG_COSMOS] = {{"TIDE", W_SND, F_NUM, NO(tide), 0, 99}, {"INSPRL", W_SND, F_INSP, NO(insp), 0, 99},
+                   {"INSP T", W_SND, F_TIME, NO(inspt), 0, 99}, {"BEAM", W_SND, F_NUM, NO(beam), 0, 99},
+                   {"TIDE ALL", W_SYS, F_PCT, SO(macro[MAC_TIDE]), 0, 99}, {"RATIO", W_SND, F_MRATIO, NO(mratio), 0, ORB_NMOON - 1},
+                   P_NONE, P_NONE, P_BPM},
     [PG_ENV] = {{"ATTACK", W_SND, F_TIME, NO(a), 0, 99}, {"DECAY", W_SND, F_TIME, NO(d), 0, 99},
                 {"SUSTAIN", W_SND, F_NUM, NO(s), 0, 99}, {"RELEASE", W_SND, F_TIME, NO(r), 0, 99},
                 {"ECC AMT", W_SND, F_SIGNED, NO(eamt), -99, 99}, {"ECC ATK", W_SND, F_TIME, NO(ea), 0, 99},
@@ -252,6 +262,9 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                   {"TONE", W_SYS, F_NUM, SO(dtone), 0, 99}, {"DECAY", W_SYS, F_NUM, SO(rdecay), 0, 99},
                   {"DAMP", W_SYS, F_NUM, SO(rdamp), 0, 99}, {"ECHO", W_SYS, F_NUM, SO(dmix), 0, 99},
                   {"PING", W_SYS, F_ONOFF, SO(ping), 0, 1}},
+    [PG_HORIZON] = {{"DEPTH", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"SHIFT", W_SYS, F_SEMI, SO(hshift), -24, 24},
+                    {"RETRO", W_SYS, F_PCT, SO(hretro), 0, 99}, {"GRAIN", W_SYS, F_GRAIN, SO(hgrain), 0, 99},
+                    P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
     [PG_PAD] = {{"X", W_SYS, F_NUM, SO(ox), 0, 99}, {"Y", W_SYS, F_NUM, SO(oy), 0, 99},
                 {"RAD", W_SYS, F_NUM, SO(orad), 0, 50}, {"PERIOD", W_SYS, F_SYNC, SO(orate), 0, ORB_NSYNC - 1},
                 P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
@@ -352,6 +365,9 @@ static void pd_text(const pd_t *d, char *s)
     case F_TRIG: put_s(s, v == 0 ? "FREE" : v == 1 ? "PHASE" : v == 2 ? "LEGATO" : "BOTH"); break;
     case F_CH: if (v) put_u(s, (uint32_t)v); else put_s(s, "OMNI"); break;
     case F_SLOT: put_u(s, (uint32_t)v + 1u); break;
+    case F_INSP: if (v) put_s(put_i(s, -(v * 48 / 99), 0), "st"); else put_s(s, "OFF"); break;
+    case F_SEMI: put_s(put_i(s, v, 1), "st"); break;
+    case F_GRAIN: put_s(put_u(s, (256u + (uint32_t)v * 39u) * 10u / 441u), "ms"); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
 }
@@ -558,45 +574,71 @@ static void arc(int32_t cx, int32_t cy, int32_t r, uint32_t fill, uint16_t c, ui
         cv_pset(x, y, cc); cv_pset(x, y + 1, cc); cv_pset(x + 1, y, cc);
     }
 }
-static void draw_macros(void)
+static void macro_icon(uint32_t id, int32_t cx, int32_t cy, uint16_t c)
 {
-    uint32_t m;
-    static const uint8_t ORDER[5] = {MAC_CHAOS, MAC_SPECTRAL, MAC_GRAVITY, MAC_FRACT, MAC_ORBIT};
-    static const uint16_t MC[5] = {C_VIO, C_MAG, C_YEL, C_CYAN, C_LIME};
+    uint32_t t = fm1_ms, k, ph;
+    switch (id) {
+    case MAC_CHAOS:
+        for (k = 0; k < 40u; k++) { ph = k * 0x0D000000u + t * 400000u; cv_pset(cx + icos(ph, (int32_t)k / 4), cy + isin(ph, (int32_t)k / 4), k & 1u ? c : C_TXT); }
+        break;
+    case MAC_SPECTRAL:
+        for (k = 0; k < 5u; k++) { int32_t h = k == 2u ? 14 : k & 1u ? 10 : 6; cv_rect(cx - 9 + (int32_t)k * 4, cy + 7 - h, 3, h, k == 2u ? C_TXT : c); }
+        break;
+    case MAC_GRAVITY:                           /* three orbits round a nucleus */
+        for (k = 0; k < 3u; k++)
+            for (ph = 0; ph < 48u; ph++) {
+                uint32_t a = (ph << 26) + (ph << 24), rot = k * 0x55555555u;
+                int32_t ex = icos(a, 10), ey = isin(a, 4);
+                cv_pset(cx + ((ex * orb_cos(rot) - ey * orb_sin(rot)) >> 15), cy + ((ex * orb_sin(rot) + ey * orb_cos(rot)) >> 15), c);
+            }
+        disc(cx, cy, 2, C_TXT);
+        break;
+    case MAC_FRACT:
+        for (k = 0; k < 4u; k++) cv_rect(cx - 9 + (int32_t)k * 5, cy + 5 - (int32_t)k * 4, 5, 4, k & 1u ? c : C_TXT);
+        break;
+    case MAC_TIDE:                              /* two bodies pulling: a wave between them */
+        disc(cx - 8, cy, 3, C_TXT);
+        disc(cx + 8, cy, 3, c);
+        for (k = 0; k < 12u; k++) cv_pset(cx - 5 + (int32_t)k, cy + isin(k * 0x20000000u + t * 3000000u, 3), c);
+        break;
+    case MAC_HORIZON:                           /* a black hole and its ring */
+        for (ph = 0; ph < 64u; ph++) cv_pset(cx + icos(ph << 26, 11), cy + isin(ph << 26, 3), ph & 1u ? c : C_YEL);
+        disc(cx, cy, 5, C_INK);
+        circle(cx, cy, 6, c, 0);
+        break;
+    case MAC_ORBIT:
+        circle(cx, cy, 4, C_TXT, 0);
+        for (ph = 0; ph < 48u; ph++) cv_pset(cx + icos((ph << 26) + (ph << 24), 11), cy + isin((ph << 26) + (ph << 24), 4), c);
+        break;
+    default:                                    /* MUTATE: a strand */
+        for (k = 0; k < 16u; k++) {
+            int32_t x = cx - 8 + (int32_t)k, y = isin(k * 0x10000000u + t * 2000000u, 4);
+            cv_pset(x, cy + y, c);
+            cv_pset(x, cy - y, C_TXT);
+        }
+        break;
+    }
+}
+static void draw_macros(void)                   /* two rows of four, as the knobs: K1..K4 on top, SEL K1..K4 below */
+{
+    static const uint8_t ID[8] = {MAC_CHAOS, MAC_SPECTRAL, MAC_GRAVITY, MAC_ORBIT, MAC_FRACT, MAC_TIDE, MAC_HORIZON, 99};
+    static const uint16_t MC[8] = {C_VIO, C_MAG, C_YEL, C_LIME, C_CYAN, C_CYAN, C_MAG, C_VIO};
+    static const char *const SHORT[8] = {"CHAOS", "SPECT", "GRAV", "ORBIT", "FRACT", "TIDE", "HORIZ", "MUTAT"};
+    uint32_t m, lay = isel();
     cv_begin(240, 144, C_BG);
-    stars(240, 144, 31, 30);
-    for (m = 0; m < 5u; m++) {
-        uint32_t id = ORDER[m], v = sys.macro[id], t = fm1_ms;
-        int32_t x = 2 + (int32_t)m * 47, cx = x + 22, w = 44;
+    stars(240, 144, 31, 26);
+    for (m = 0; m < 8u; m++) {
+        uint32_t v = ID[m] == 99u ? sys.mutate : sys.macro[ID[m]];
+        int32_t x = 1 + (int32_t)(m % 4u) * 60, y = 2 + (int32_t)(m / 4u) * 71, cx = x + 29, w = 58;
         uint16_t c = MC[m];
         char s[8];
-        frame(x, 4, w, 136, C_FRAME);
-        switch (id) {                           /* the icons */
-        case MAC_CHAOS: { uint32_t k; for (k = 0; k < 40u; k++) { uint32_t ph = k * 0x0D000000u + t * 400000u; int32_t rr = (int32_t)k / 3; cv_pset(cx + icos(ph, rr), 30 + isin(ph, rr), k & 1u ? c : C_TXT); } break; }
-        case MAC_SPECTRAL: { int32_t k; for (k = 0; k < 5; k++) cv_rect(cx - 10 + k * 5, 38 - (k == 2 ? 18 : k & 1 ? 13 : 8), 3, k == 2 ? 18 : k & 1 ? 13 : 8, k == 2 ? C_TXT : c); break; }
-        case MAC_GRAVITY: {                     /* three orbits round a nucleus */
-            uint32_t k, ph;
-            for (k = 0; k < 3u; k++)
-                for (ph = 0; ph < 64u; ph++) {
-                    uint32_t a = ph << 26, rot = k * 0x55555555u;
-                    int32_t ex = icos(a, 13), ey = isin(a, 5);
-                    cv_pset(cx + ((ex * orb_cos(rot) - ey * orb_sin(rot)) >> 15), 30 + ((ex * orb_sin(rot) + ey * orb_cos(rot)) >> 15), c);
-                }
-            disc(cx, 30, 3, C_TXT);
-            break;
-        }
-        case MAC_FRACT: { int32_t k; for (k = 0; k < 5; k++) cv_rect(cx - 12 + k * 5, 40 - k * 4, 5, 4, k & 1 ? c : C_TXT); break; }
-        default: { circle(cx, 30, 6, C_TXT, 0); { uint32_t ph; for (ph = 0; ph < 64u; ph++) { uint32_t a = ph << 26; cv_pset(cx + icos(a, 15), 30 + isin(a, 5), c); } } break; }
-        }
-        arc(cx, 76, 15, v * 1024u / 99u, c, C_FDIM);
-        disc(cx + icos(0x60000000u + v * (0xC0000000u / 99u), 11), 76 + isin(0x60000000u + v * (0xC0000000u / 99u), 11), 1, C_TXT);
+        frame(x, y, w, 69, (m / 4u) == lay ? C_FRAME : C_FDIM);
+        arc(cx, y + 22, 17, v * 1024u / 99u, c, C_FDIM);
+        macro_icon(ID[m], cx, y + 22, c);
         put_s(put_u(s, v), "%");
-        txc(cx, 98, &FONT_S, s, C_TXT, C_BG);
-        pill(x + 1, 118, w - 2, 18, c);
-        {
-            static const char *const SHORT[ORB_NMACRO] = {"CHAOS", "SPECT", "GRAV", "FRACT", "ORBIT"};
-            txc(cx, 119, &FONT_S, SHORT[id], C_INK, c);
-        }
+        txc(cx, y + 34, &FONT_S, s, C_TXT, C_BG);
+        pill(x + 3, y + 51, w - 6, 16, c);
+        txc(cx, y + 51, &FONT_S, SHORT[m], C_INK, c);
     }
     cv_blit(0, 24);
 }
@@ -962,6 +1004,118 @@ static void draw_keys_page(void)
     cv_blit(0, 24);
 }
 
+/* COSMOS: the tide between the sounding planets, the focused sound's chirp and beam */
+static int32_t part_level(uint32_t p)          /* 0..32767: how loud a part sounds now */
+{
+    uint32_t v;
+    int32_t m = 0;
+    if (p) return eng.v[p - 1u].a;
+    for (v = ORB_NV - ORB_NKV; v < ORB_NV; v++) if (eng.v[v].a > m) m = eng.v[v].a;
+    return m;
+}
+static void draw_cosmos(void)
+{
+    const orb_snd_t *s = &sys.snd[focus];
+    int32_t cx = 64, cy = 72, px[5], py[5], lv[5], k, q;
+    cv_begin(240, 144, C_BG);
+    stars(240, 144, 13, 26);
+    frame(2, 2, 126, 140, C_FDIM);
+    tx(8, 4, &FONT_S, "TIDE", C_CYAN, C_BG);
+    for (k = 0; k < 5; k++) {                   /* the five sounds round the sun */
+        uint32_t ph = 0xC0000000u + (uint32_t)k * 0x33333333u + fm1_ms * 60000u;
+        px[k] = cx + icos(ph, 44);
+        py[k] = cy + 6 + isin(ph, 44);
+        lv[k] = part_level((uint32_t)k);
+    }
+    for (k = 0; k < 5; k++)                     /* a line where two sound and one is pulled */
+        for (q = k + 1; q < 5; q++) {
+            int32_t pull = (sys.macro[MAC_TIDE] + (eng.md[DST_TIDE] > 0 ? eng.md[DST_TIDE] / 331 : 0)) *
+                           (sys.snd[k].tide + sys.snd[q].tide) / 2, b = lv[k] < lv[q] ? lv[k] : lv[q];
+            int32_t t = (pull / 600) * (b > 4000 ? 15 : b / 267) / 15;
+            if (t > 0) cv_line(px[k], py[k], px[q], py[q], dim565(mix565(RINGC[k], RINGC[q], 8), (uint32_t)orb_clamp(t + 3, 3, 15)));
+        }
+    disc(cx, cy + 6, 6, C_YEL);
+    for (k = 0; k < 5; k++) {
+        int32_t r = 3 + lv[k] / 4000;
+        disc(px[k], py[k], r, RINGC[k]);
+        if ((uint32_t)k == focus) circle(px[k], py[k], r + 3, C_TXT, 0);
+    }
+    /* the chirp: pitch against time, from the drop up onto the note, then the ring-down */
+    frame(132, 2, 106, 76, C_FDIM);
+    tx(138, 4, &FONT_S, "INSPIRAL", C_MAG, C_BG);
+    {
+        int32_t i, lx = 0, ly = 0, drop = s->insp * 48 / 99;
+        for (i = 0; i <= 64; i++) {
+            int32_t x = 138 + i * 70 / 64, y = 66 - (drop ? ((32767 - ORB_CHIRP[i]) * 40 >> 15) * drop / 48 + (48 - drop) * 40 / 48 : 40);
+            if (i) cv_line(lx, ly, x, y, s->insp ? C_MAG : C_FDIM);
+            lx = x; ly = y;
+        }
+        cv_rect(lx, ly, 24, 1, C_TXT);
+        disc(lx, ly, 2, C_TXT);
+    }
+    /* the beam: pulses at the moon's ratio, narrower the deeper */
+    frame(132, 82, 106, 60, C_FDIM);
+    tx(138, 84, &FONT_S, "BEAM", C_YEL, C_BG);
+    for (k = 0; k < 96; k++) {
+        uint32_t ph = (uint32_t)k * 0x08000000u * (ORB_MRATIO[s->mratio % ORB_NMOON] >> 7) / 2u + fm1_ms * 900000u;
+        int32_t q2 = (orb_cos(ph) + 32768) >> 1, g;
+        q2 = (q2 * q2) >> 15; q2 = (q2 * q2) >> 15;
+        g = 32767 - (((32767 - q2) * orb_lin(s->beam)) >> 15);
+        cv_rect(136 + k, 134 - (g * 30 >> 15), 1, (g * 30 >> 15) + 1, dim565(C_YEL, 6u + (uint32_t)(g >> 12)));
+    }
+    cv_blit(0, 24);
+}
+
+/* HORIZON: the black hole, its ring reddening with the depth, grains falling in (backwards ones flying out) */
+static void draw_horizon(void)
+{
+    int32_t cx = 86, cy = 72, d = eng.h_level, k;
+    uint16_t ring = d < 33 ? mix565(C_YEL, C_MAG, (uint32_t)(d * 15 / 33)) : mix565(C_MAG, RGB(255, 40, 40), (uint32_t)orb_clamp((d - 33) * 15 / 66, 0, 15));
+    char s[16];
+    cv_begin(240, 144, C_BG);
+    stars(240, 144, 21, 40);
+    for (k = 0; k < 160; k++) {                 /* the accretion disc, behind */
+        uint32_t ph = (uint32_t)k * 0x01999999u + fm1_ms * 300000u;
+        int32_t x = cx + icos(ph, 72 - (k & 3) * 6), y = cy + isin(ph, 14 - (k & 3));
+        if (isin(ph, 14) < 0) cv_pset(x, y, dim565(k & 1 ? C_LIME : C_YEL, 9));
+    }
+    disc(cx, cy, 30, dim565(ring, 5));
+    disc(cx, cy, 26, C_INK);
+    circle(cx, cy, 27, ring, 0);
+    circle(cx, cy, 28, dim565(ring, 10), 0);
+    for (k = 0; k < 160; k++) {                 /* the disc in front */
+        uint32_t ph = (uint32_t)k * 0x01999999u + fm1_ms * 300000u;
+        int32_t x = cx + icos(ph, 72 - (k & 3) * 6), y = cy + isin(ph, 14 - (k & 3));
+        if (isin(ph, 14) >= 0) cv_pset(x, y, k & 1 ? C_LIME : C_YEL);
+    }
+    for (k = 0; k < d / 3; k++) {               /* the grains: spiralling in, RETRO's share out */
+        uint32_t h = (uint32_t)k * 2654435761u, life = (fm1_ms / 4u + (h >> 20)) % 256u;
+        int retro = (h >> 8) % 100u < sys.hretro;
+        int32_t r = retro ? 28 + (int32_t)life / 4 : 92 - (int32_t)life / 4;
+        uint32_t ph = (h & 0xFFFFFFu) << 8;
+        ph += (uint32_t)(retro ? -1 : 1) * life * 0x00C00000u;
+        if (r > 27) cv_pset(cx + icos(ph, r), cy + isin(ph, r / 2), retro ? C_MAG : C_CYAN);
+    }
+    if (!d) txc(cx, cy - 8, &FONT_S, "OPEN", C_DIMT, C_INK);
+    /* the redshift meter */
+    frame(176, 2, 62, 140, C_FDIM);
+    tx(182, 4, &FONT_S, "SHIFT", C_GREY, C_BG);
+    for (k = 0; k < 100; k++) {
+        int32_t st = 24 - k * 48 / 99;
+        uint16_t c = st >= 0 ? mix565(C_TXT, C_CYAN, (uint32_t)(st * 15 / 24)) : mix565(C_TXT, RGB(255, 40, 40), (uint32_t)(-st * 15 / 24));
+        cv_rect(196, 24 + k, 14, 1, dim565(c, 9));
+    }
+    {
+        int32_t now = sys.hshift * d / 99, y = 24 + (24 - now) * 99 / 48;
+        cv_rect(190, y - 1, 26, 3, C_TXT);
+        put_s(put_i(s, now, 1), "st");
+        txc(207, 126, &FONT_S, s, C_TXT, C_BG);
+    }
+    put_s(put_u(s, (uint32_t)d), "%");
+    tx(8, 4, &FONT_S, s, ring, C_BG);
+    cv_blit(0, 24);
+}
+
 static void draw_main(void)
 {
     switch (page) {
@@ -970,6 +1124,8 @@ static void draw_main(void)
     case PG_RING: draw_ring(); break;
     case PG_TIME: draw_time(); break;
     case PG_ORBIT: case PG_BODY: draw_orbit(); break;
+    case PG_COSMOS: draw_cosmos(); break;
+    case PG_HORIZON: draw_horizon(); break;
     case PG_ENV: draw_env(); break;
     case PG_MOD: draw_mod(); break;
     case PG_LFO: draw_lfo(); break;
@@ -982,38 +1138,75 @@ static void draw_main(void)
 static int page_animated(void)
 {
     return page == PG_ORRERY || page == PG_MACRO || page == PG_RING || page == PG_TIME || page == PG_ORBIT ||
-           page == PG_BODY || page == PG_MOD || page == PG_LFO || page == PG_PAD;
+           page == PG_BODY || page == PG_MOD || page == PG_LFO || page == PG_PAD || page == PG_COSMOS ||
+           page == PG_HORIZON;
 }
 
+/* the splash: the cat-planet (tools/gen_splash.py, 3x), stars twinkling round it as in the drawing, planets going
+ * round it (behind it on the far side), a glint running along its ring, a blink */
+static void plus_star(int32_t x, int32_t y, uint32_t t, uint32_t seed)
+{
+    uint32_t b = (t / 90u + seed) % 12u, arm = b < 2u ? 6u : b < 6u ? 4u : 3u;
+    uint16_t c = b < 2u ? C_TXT : RGB(176, 77, 255);
+    cv_rect(x - (int32_t)arm, y - 1, 2 * (int32_t)arm + 1, 3, dim565(c, b < 6u ? 15u : 10u));
+    cv_rect(x - 1, y - (int32_t)arm, 3, 2 * (int32_t)arm + 1, dim565(c, b < 6u ? 15u : 10u));
+    cv_rect(x - 1, y - 1, 3, 3, C_TXT);
+}
+static void cat_draw(int32_t ox, int32_t oy, uint32_t t)
+{
+    uint32_t i, j, blink = (t > 950u && t < 1080u) || (t > 1180u && t < 1260u);
+    int32_t glint = (int32_t)((t * 60u / 1000u) % (CAT_W + 16u)) - 8;   /* the cell the glint is on */
+    for (j = 0; j < CAT_H; j++)
+        for (i = 0; i < CAT_W; i++) {
+            uint32_t k = CAT[j][i];
+            uint16_t c;
+            if (!k) continue;
+            c = CAT_PAL[k];
+            if (k == CAT_EYE && blink) c = j + 1u < CAT_H && CAT[j + 1u][i] == CAT_EYE ? CAT_PAL[CAT_FACE] : CAT_PAL[CAT_WHITE];
+            if (k == CAT_YELLOW && j > CAT_H / 2u) {                    /* the ring's front: the glint */
+                int32_t d = (int32_t)i - glint;
+                if (d >= -1 && d <= 1) c = mix565(c, C_TXT, d ? 8u : 13u);
+            }
+            cv_rect(ox + (int32_t)i * 3, oy + (int32_t)j * 3, 3, 3, c);
+        }
+}
 static void splash(void)
 {
+    static const int16_t PS[6][2] = {{24, 26}, {214, 44}, {18, 112}, {222, 122}, {60, 8}, {184, 136}};
+    static const int16_t DOT[6][2] = {{200, 14}, {12, 66}, {70, 136}, {166, 10}, {230, 90}, {40, 100}};
+    static const uint16_t PC[3] = {C_CYAN, C_MAG, C_LIME};
     uint32_t t0 = fm1_ms, f;
+    int32_t ox = (240 - (int32_t)CAT_W * 3) / 2, oy = 30;
     lcd_fill(0, 0, 240, 240, C_BG);
-    for (f = 0; fm1_ms - t0 < 1600u && f < 400u; f++) {
-        uint32_t t = fm1_ms - t0, k, t1 = fm1_ms;
+    for (f = 0; fm1_ms - t0 < 1900u && f < 400u; f++) {
+        uint32_t t = fm1_ms - t0, k, t1 = fm1_ms, pass;
         cv_begin(240, 144, C_BG);
-        stars(240, 144, 1, 60);
-        disc(120, 56, 22, C_VIO);
-        disc(114, 50, 8, mix565(C_VIO, C_TXT, 6));
-        for (k = 0; k < 128u; k++) {            /* the ring, tilted, in front below and behind above */
-            uint32_t ph = k << 25;
-            int32_t x = 120 + icos(ph, 40), y = 56 + isin(ph, 9) - icos(ph, 4);
-            if (isin(ph, 9) > 0 || (x - 120) * (x - 120) + (y - 56) * (y - 56) > 22 * 22)
-                cv_rect(x, y, 2, 2, k & 1u ? C_YEL : C_MAG);
+        stars(240, 144, 1, 50);
+        for (k = 0; k < 6u; k++) cv_rect(DOT[k][0], DOT[k][1], 3, 3, ((t / 140u + k) % 5u) ? C_TXT : dim565(C_TXT, 6));
+        for (k = 0; k < 6u; k++) plus_star(PS[k][0], PS[k][1], t, k * 5u);
+        for (pass = 0; pass < 2u; pass++) {    /* planets: behind the cat, then the cat, then in front */
+            if (pass == 1u) cat_draw(ox, oy, t);
+            for (k = 0; k < 3u; k++) {
+                uint32_t ph = t * (2600000u + k * 900000u) + k * 0x55555555u;
+                int32_t x = 120 + icos(ph, 112 - (int32_t)k * 14), y = oy + 50 + isin(ph, 22 + (int32_t)k * 6) - icos(ph, 8);
+                int front = isin(ph, 22) > 0;
+                if ((uint32_t)front != pass) continue;
+                disc(x, y, 4 - (int32_t)k, PC[k]);
+                cv_pset(x - 1, y - 1, mix565(PC[k], C_TXT, 10));
+            }
         }
-        {
-            uint32_t ph = t * 4000000u;
-            disc(120 + icos(ph, 56), 56 + isin(ph, 14), 3, C_CYAN);
+        if (t > 300u && t < 900u) {             /* a shooting star */
+            int32_t sx = 236 - (int32_t)(t - 300u) * 2 / 5, sy = 6 + (int32_t)(t - 300u) / 12, q;
+            for (q = 0; q < 14; q++) cv_pset(sx + q, sy - q / 3, dim565(C_TXT, (uint32_t)(15 - q)));
         }
-        txc(120, 92, &FONT_L, "ORBITRIX", C_LIME, C_BG);
-        cv_rect(64, 126, 112, 2, C_MAG);
-        cv_blit(0, 30);
-        if (f == 0u) {
-            cv_begin(240, 40, C_BG);
-            txc(120, 2, &FONT_S, "AN ORBITAL GROOVE ENGINE", C_GREY, C_BG);
-            txc(120, 22, &FONT_S, "v" APP_VER, C_DIMT, C_BG);
-            cv_blit(0, 184);
-        }
+        cv_blit(0, 0);
+        cv_begin(240, 96, C_BG);
+        stars(240, 96, 2, 22);
+        txc(120, 4, &FONT_L, "ORBITRIX", C_LIME, C_BG);
+        cv_rect(64, 38, 112, 2, C_MAG);
+        txc(120, 48, &FONT_S, "AN ORBITAL GROOVE ENGINE", C_GREY, C_BG);
+        txc(120, 68, &FONT_S, "v" APP_VER, C_DIMT, C_BG);
+        cv_blit(0, 144);
         do platform_poll(); while (fm1_ms - t1 < 30u);   /* ~30 frames a second */
     }
 }
@@ -1071,12 +1264,13 @@ static int32_t white_index(uint32_t k)
 }
 static uint32_t held_step = 0xFFu, held_used;
 
-static void goto_page(uint32_t a, uint32_t b)   /* a button with two pages: the first, then between them */
+static void goto_page3(uint32_t a, uint32_t b, uint32_t c)   /* a button's pages: the first, then on round them */
 {
-    page = page == a ? b : page == b ? a : a;
+    page = page == a ? b : page == b ? c : a;
     main_dirty = knobs_dirty = hint_dirty = 1;
     drawn_bar = ~0u;
 }
+static void goto_page(uint32_t a, uint32_t b) { goto_page3(a, b, a); }
 
 /* REC: a key played into the focused ring, at its step (playing) or the next (stopped) */
 static uint32_t rec_pos;
@@ -1221,7 +1415,7 @@ static void handle_buttons(void)
 {
     uint32_t rel, b = fm1_input_edges(&rel);
     static uint32_t sel_was;
-    if (isel() != sel_was) { sel_was = isel(); knobs_dirty = 1; }
+    if (isel() != sel_was) { sel_was = isel(); knobs_dirty = 1; main_dirty = 1; }
     if (rel & (1u << BTN_SEL)) knobs_dirty = 1;
     if (!b) return;
     if (save_mode && !(b & (1u << BTN_SAVE)) && !(b & (1u << BTN_SEL))) { save_mode = 0; say("NOT SAVED"); drawn_bar = ~0u; }
@@ -1237,10 +1431,10 @@ static void handle_buttons(void)
             if (!focus) focus = ORB_A;
         }
     }
-    if (b & (1u << BTN_EDIT)) goto_page(PG_ORBIT, PG_BODY);
+    if (b & (1u << BTN_EDIT)) goto_page3(PG_ORBIT, PG_BODY, PG_COSMOS);
     if (b & (1u << BTN_ENV)) goto_page(PG_ENV, PG_ENV);
     if (b & (1u << BTN_LFO)) goto_page(PG_MOD, PG_LFO);
-    if (b & (1u << BTN_FX)) goto_page(PG_FILTER, PG_SPACE);
+    if (b & (1u << BTN_FX)) goto_page3(PG_FILTER, PG_SPACE, PG_HORIZON);
     if (b & (1u << BTN_GLO)) goto_page(PG_PAD, PG_PAD);
     if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
     if (b & (1u << BTN_PLAY)) { orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
@@ -1279,10 +1473,10 @@ static void leds(void)
     int32_t oct = (int8_t)set.oct;
     fm1_led_key(BTN_HOME, page == PG_ORRERY || page == PG_MACRO);
     fm1_led_key(BTN_SEQ, page == PG_RING || page == PG_TIME);
-    fm1_led_key(BTN_EDIT, page == PG_ORBIT || page == PG_BODY);
+    fm1_led_key(BTN_EDIT, page == PG_ORBIT || page == PG_BODY || page == PG_COSMOS);
     fm1_led_key(BTN_ENV, page == PG_ENV);
     fm1_led_key(BTN_LFO, page == PG_MOD || page == PG_LFO);
-    fm1_led_key(BTN_FX, page == PG_FILTER || page == PG_SPACE);
+    fm1_led_key(BTN_FX, page == PG_FILTER || page == PG_SPACE || page == PG_HORIZON);
     fm1_led_key(BTN_GLO, page == PG_PAD);
     fm1_led_key(BTN_ARP, page == PG_KEYS);
     fm1_led_key(BTN_PLAY, eng.playing ? (eng.T % (4u * ORB_TPS)) < ORB_TPS * 3u : 0);

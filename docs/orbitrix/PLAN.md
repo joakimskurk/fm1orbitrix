@@ -36,6 +36,15 @@ stretching and relaxing), velocity, pan, a send to SPACE.
 Aliasing: per note, a table (`ECAP`, from the measured spectra) caps the eccentricity so its harmonics stay under
 24 kHz (aliases land above 20 kHz). PIXEL is exempt: that is its sound.
 
+## 2b. The strange part (v0.2, the user: "even more unorthodox at times")
+
+| What | How | When it happens |
+| --- | --- | --- |
+| **TIDE** | the voices' mono sum of the last sub-block (32 frames), less each voice's own share, on each voice's phase: FM between the planets. Per sound: how hard it is pulled; the macro and DST_TIDE: how strong | the rings are ratios of one sun, so the sidebands are its harmonics; CONJ → TIDE makes it flare where orbits meet |
+| **INSPIRAL** | from up to 4 octaves under, the pitch rises by a binary's chirp (f ~ (t_c − t)^−3/8, `ORB_CHIRP`) onto the note, the level growing from 1/3; at the merge the eccentricity envelope starts (the ring-down) | each hit of a sound that has it |
+| **BEAM** | AM by a narrow pulse ((1 + cos)/2 to the 4th) at the moon's phase | per sound |
+| **HORIZON** | a mono memory of the mix (0.74 s), frozen past ~82 % depth; a source point slowing to a standstill; two triangle grains staggered by half about it at the shifted rate (SHIFT ±24 semitones at full depth), RETRO's share backwards; R the wet 151 frames later | a macro and DST_HORIZON: an LFO's ramp or the pad's point take the music in now and then |
+
 ## 3. Harmony: gravity
 
 Everything is tuned to the **sun** (a pitch class; the rings stand on it).
@@ -75,10 +84,10 @@ keys play the KEYS sound on four voices. Eight voices in all, always: the CPU ne
 
 ## 5. Movement
 
-- **Macros** (0 = the system as programmed): **CHAOS** (the orbits wobble: eccentricity and angle random walks, the
+- **Macros** (0 = the system as programmed), in two rows as the knobs: **CHAOS** (the orbits wobble: eccentricity and angle random walks, the
   moons drift off whole ratios, rings mutate more), **SPECTRAL** (brighter: eccentricity, moon, the filter), **GRAVITY**
   (§3), **FRACT** (pixel grid and ratchets: hits split into 2–4), **ORBIT** (the pad's radius and speed, precession,
-  spread).
+  spread); on the second row FRACT, **TIDE**, **HORIZON** and MUTATE.
 - **ORBIT pad**: a point circling (X, Y) at radius RAD, at RATE (on the beat). Its X and Y are modulation sources.
 - **Two LFOs** (sine, triangle, saw, square, S&H), free or locked to the orrery's clock.
 - **Mod matrix**, 8 slots: LFO1 LFO2 ORB-X ORB-Y RND STEP CONJ VEL MODW onto ECC ANG SPR MOON DUST PIXEL PITCH CUT RES
@@ -101,10 +110,10 @@ pixel stars. Top bar: the page, the system, the tempo and the sun. The bottom: K
 | --- | --- | --- |
 | HOME | ORRERY → MACROS | hits A–D (rotation A–D) · CHAOS SPECTRAL GRAVITY ORBIT (FRACT on ALGORITHM) |
 | SEQ | RING → TIME | RATIO LEN HITS ROT (DEG DIR PROB LOGIC) · BPM SWING MUTATE HUM (VAR, GATE …) |
-| EDIT | ORBIT → BODY | ECC ANG SPR PREC (MOON RATIO DUST PIXEL) · FALL FALL-T COLOR LEVEL (PAN OCT SEND PHASE) |
+| EDIT | ORBIT → BODY → COSMOS | ECC SLING ANG SPR (PREC MOON RATIO DUST) · FALL FALL-T COLOR PIXEL (LEVEL PAN SEND OCT) · TIDE INSPIRAL INSP-T BEAM |
 | ENV | ENV | A D S R (ECC AMT, ECC A, ECC D, VEL) |
 | LFO | MOD → LFO | SRC DST AMT (SELECT: the slot) · RATE SHAPE for LFO 1 and 2 |
-| FX | FILTER MAP → SPACE | CUT RES MODE DRIVE · TIME FDBK SIZE MIX (TONE DECAY PING SEND) |
+| FX | FILTER MAP → SPACE → HORIZON | CUT RES MODE DRIVE · TIME FDBK SIZE MIX (TONE DECAY DAMP ECHO) · DEPTH SHIFT RETRO GRAIN |
 | GLO | ORBIT PAD | X Y RAD RATE |
 | ARP | KEYS | MODE TUNING SUN OCT |
 
@@ -113,6 +122,12 @@ the orrery; REC writes the keys into the focused ring; SAVE stores the system (8
 white keys are the steps (OCT± the page of 16); a held step key and K1 set its degree.
 
 ## 8. Budget and rules
+
+v0.2, counted on the chip's code (JieLi clang -Os): the voice loop 292 instructions a frame with everything on (TIDE and
+BEAM added ~47), ~110 plain; the FX loop ~700 a frame with the filter, NEBULA (half rate) and HORIZON all on. The
+absolute worst case (8 voices, everything) is ~60 % of the chip; typical systems well under half. The interrupt
+measures itself: over 80 % of the 5.8 ms, the quietest voice fades out (`orb_shed`, at most one each 50 ms).
+
 
 The audio ISR: 256 frames in 5.8 ms; target under half. Eight sub-blocks of 32 frames: events, the clock, the
 modulation and the envelopes at 1378 Hz; per sample only phases, table reads, multiplies and adds.
@@ -139,6 +154,9 @@ Named after real resonances in the sky:
 | ROCHE | 5:4 4:3 7:5 3:2 | CHAOS: bells off whole ratios, tearing |
 | LAGRANGE | 1:1 1:2 3:2 2:1 | HARMONIC keys over a calm orbit |
 | ACCRETION | 1:2 1:1 3:4 3:2 | GRAVITY high: everything falls into tune |
+| GW150914 | 1:2 1:1 3:2 2:1 | merger chirps and ring-downs; every second bar a little way into the horizon |
+| ALPHA CEN | 1:1 4:3 5:3 1:4 | a triple star: TIDE high, the three-body problem tuned |
+| SGR A* | 1:2 2:3 1:3 3:4 | the pad's point dips and the music slides into the horizon |
 
 ## 10. Order of work
 
