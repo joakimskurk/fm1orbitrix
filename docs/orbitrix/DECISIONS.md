@@ -254,3 +254,24 @@ getting harder to read; the cat's world, not stickers on the instrument.
 
 Measured: the engine unchanged (the tests' figures as before, the bench within its noise); MILKY WAY peaks −1.5 dBFS,
 RMS −22; its one click finding is a note's onset inside the loud mix (−49 dBFS, no track alone has it).
+
+## D17 — The legend, continued: her tummy, and the ORBITRIX (2026-11-09)
+
+The user: "She ate all the planets and transformed them in her tummy, and when she pooped them out, they formed the
+orbitrix." Decided: two scenes in place of "she ate the planets and made their orbits sing", the words the user's:
+
+- **Four planets** now (the tracks' colours, cyan magenta yellow violet), eaten at 5.2, 5.9, 6.6 and 7.3 s, each with
+  its chirp (1/1, 3/2, the octave, 7/4).
+- **"SHE ATE ALL THE PLANETS / IN HER TUMMY THEY CHANGED"** (8.2 s): she zooms back out as before; her tummy glows (a
+  dithered rainbow), the four turn in it and become twinkles, she wobbles with rumbles either side, her eyes content
+  (^ ^); her tummy gurgles: four bubbles (BLOOP) on A, low.
+- **"AND WHEN SHE POOPED THEM OUT / THEY FORMED THE ORBITRIX"** (10.2 s): plop, plop, plop, plop, 0.4 s apart: a
+  little cosmic swirl comes out under her in each track's colour (eyes, a shine, a blush; she gives a push), plop! and
+  a puff of stardust, and it turns into a kitten that hops out to its ring. Each ring grows from its kitten as it
+  arrives, and sings: the orrery starts with the first, B C D join as theirs arrive. The plops are BOOP on A, each its
+  ring's degree (the 4:5:6:7). "THE ORBITRIX" in lime.
+- Then the multiverses as before. 17.2 s in all (was 14.4); PLAY skips it, as ever.
+
+The kittens are the ones that go round her on HOME (D16): the story says where they came from. Measured: the legend
+has no click (`tools/orb_look.py`), its scenes −2.4 to −6 dBFS peak; the film (`tools/make_film.sh`) and the README's
+strip (`tests/scripts/legend.txt`) are remade.

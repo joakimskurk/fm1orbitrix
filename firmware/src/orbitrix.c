@@ -1559,11 +1559,14 @@ static uint32_t typed(const char *s, uint32_t t0, uint32_t t, char *out)   /* ty
     return k;
 }
 #define I_T2 2600u                              /* then came Astralica */
-#define I_T3 4800u                              /* she grew */
-#define I_T4 8200u                              /* the orbits sing */
-#define I_T5 10800u                             /* the multiverses */
-#define I_END 14400u
-static const uint16_t I_EAT[3] = {5300, 6100, 6900};
+#define I_T3 4800u                              /* she grew (and ate the planets) */
+#define I_T4 8200u                              /* in her tummy they changed */
+#define I_T45 10200u                            /* she pooped them out: they formed the ORBITRIX */
+#define I_T5 13600u                             /* the multiverses */
+#define I_END 17200u
+static const uint16_t I_EAT[4] = {5200, 5900, 6600, 7300};
+static const uint16_t I_PLOP[4] = {10500, 10900, 11300, 11700};   /* each comes out; at its ring I_FLY later */
+#define I_FLY 800u
 static uint32_t i_grow(uint32_t u)              /* her size as she grows: x2 each 1.1 s from 1 (Q8) */
 {
     uint32_t oct = u / 1100u, fr = (u % 1100u) * 256u / 1100u;
@@ -1588,8 +1591,8 @@ static void i_cat(uint32_t t, uint32_t *s, uint32_t *acy)   /* how big she is an
 }
 static int i_planet(uint32_t t, int32_t k, int32_t *x, int32_t *y, int *front)   /* 0: gone (eaten) */
 {
-    uint32_t ph = t * (1500000u + (uint32_t)k * 700000u) + (uint32_t)k * 0x55555555u;
-    int32_t r = 40 + k * 22;
+    uint32_t ph = t * (1500000u + (uint32_t)k * 700000u) + (uint32_t)k * 0x40000000u;
+    int32_t r = 40 + k * 20;
     if (t >= I_T3) {
         if (t >= I_EAT[k]) return 0;
         r = r * (int32_t)(I_EAT[k] - t) / (int32_t)(I_EAT[k] - I_T3);
@@ -1599,9 +1602,44 @@ static int i_planet(uint32_t t, int32_t k, int32_t *x, int32_t *y, int *front)  
     *front = isin(ph, 1000) >= 0;
     return 1;
 }
+static void i_poop(int32_t x, int32_t y, uint16_t c)   /* a little cosmic swirl, as it comes out, its eyes open */
+{
+    uint16_t d = mix565(c, C_INK, 6), hi = mix565(c, C_TXT, 7);
+    pill(x - 8, y + 3, 17, 5, c);
+    pill(x - 6, y - 1, 13, 5, c);
+    pill(x - 4, y - 5, 9, 5, c);
+    cv_rect(x - 1, y - 7, 3, 2, c); cv_rect(x + 1, y - 9, 2, 2, c); cv_pset(x + 3, y - 9, c);   /* its tip, curled */
+    cv_rect(x - 6, y + 3, 13, 1, d);
+    cv_rect(x - 4, y - 1, 9, 1, d);
+    cv_rect(x - 5, y + 4, 3, 1, hi); cv_rect(x - 3, y, 2, 1, hi); cv_rect(x - 2, y - 4, 2, 1, hi);   /* its shine */
+    cv_rect(x - 4, y + 1, 3, 3, C_TXT); cv_rect(x + 2, y + 1, 3, 3, C_TXT);   /* eyes */
+    cv_rect(x - 3, y + 2, 2, 2, C_INK); cv_rect(x + 3, y + 2, 2, 2, C_INK);
+    cv_pset(x - 6, y + 5, mix565(C_MAG, c, 6)); cv_pset(x + 6, y + 5, mix565(C_MAG, c, 6));   /* blush */
+}
+static void i_ring_at(uint32_t t, uint32_t k, int32_t grow, int32_t *x, int32_t *y)   /* ring k's first step, now */
+{
+    uint32_t ph = t * 200000u * (k + 1u);
+    *x = 120 + icos(ph, (60 + (int32_t)k * 16) * grow / 100);
+    *y = 96 + isin(ph, (16 + (int32_t)k * 6) * grow / 100);
+}
+static void i_kitten(uint32_t t, uint32_t k, int32_t *x, int32_t *y)   /* a kitten out of her: flying to its ring, on it */
+{
+    uint32_t age = t - I_PLOP[k];
+    int32_t tx0 = 120, ty0 = 92 + 34 + 4, rx, ry;
+    i_ring_at(t, k, 100, &rx, &ry);
+    if (age < 300u) { *x = tx0; *y = ty0 - 4 + (int32_t)age / 30; return; }   /* (a swirl, still) */
+    if (age < I_FLY) {
+        int32_t u = (int32_t)(age - 300u) * 256 / (int32_t)(I_FLY - 300u);
+        u = u * (512 - u) / 256;                /* eased out */
+        *x = tx0 + (rx - tx0) * u / 256;
+        *y = ty0 + 6 + (ry - ty0 - 6) * u / 256 - (u * (256 - u) >> 11);   /* (a little hop) */
+        return;
+    }
+    *x = rx; *y = ry;
+}
 static void intro_scene(uint32_t t)
 {
-    static const uint16_t PC[3] = {C_CYAN, C_MAG, C_LIME};
+    static const uint16_t PC[4] = {C_CYAN, C_MAG, C_YEL, C_VIO};
     static const int16_t BUB[6][2] = {{36, 34}, {204, 30}, {22, 120}, {218, 112}, {78, 150}, {164, 152}};
     int32_t cx = 120, cy = 92, k, px, py;
     uint32_t s, acy, pass;
@@ -1623,14 +1661,15 @@ static void intro_scene(uint32_t t)
     }
     /* the dim star she comes from */
     if (t < I_T2 + 400u) disc(cx, cy, 3 + (t > I_T2 ? (int32_t)(t - I_T2) / 40 : 0), t > I_T2 ? C_TXT : dim565(C_YEL, 9));
-    /* the orbits that sing: four rings from hers, their steps lit as the orrery plays */
-    if (t >= I_T4 + 300u && t < I_T5 + 1200u) {
+    /* the ORBITRIX: each ring grows from its kitten as it arrives, its steps lit as the orrery plays */
+    if (t >= I_PLOP[0] + I_FLY && t < I_T5 + 1200u) {
         uint32_t r;
-        int32_t grow = orb_clamp((int32_t)(t - I_T4 - 300u) / 6, 0, 100);
         for (r = 0; r < 4u; r++) {
+            int32_t grow = t < I_PLOP[r] + I_FLY ? 0 : orb_clamp((int32_t)(t - I_PLOP[r] - I_FLY) / 4, 0, 100);
             int32_t rx = (60 + (int32_t)r * 16) * grow / 100, ryy = (16 + (int32_t)r * 6) * grow / 100;
             uint32_t q, len = sys.ring[r].len ? sys.ring[r].len : 1u;
             uint16_t c = RINGC[r + 1u];
+            if (!grow) continue;
             if (t > I_T5) c = dim565(c, (uint32_t)orb_clamp(15 - (int32_t)(t - I_T5) / 80, 0, 15));
             for (q = 0; q < len; q++) {
                 uint32_t ph = (uint32_t)(((uint64_t)q << 32) / len) + t * 200000u * (r + 1u);
@@ -1656,9 +1695,55 @@ static void intro_scene(uint32_t t)
     }
     /* the planets behind her, her, the planets in front and the flash of one eaten */
     for (pass = 0; pass < 2u; pass++) {
-        if (pass == 1u && s) cat_draw_q8(cx, cy, s, 48u, acy, (t > I_T2 + 1500u && t < I_T2 + 1620u) ||
-                                         (t > I_T5 + 2400u && t < I_T5 + 2520u), t >= I_T4 && t < I_T5);
-        for (k = 0; k < 3; k++) {
+        int32_t wob = t >= I_T4 + 700u && t < I_T45 ? (((t / 70u) & 1u) ? 1 : -1) : 0, push = 0;
+        int blink = (t > I_T2 + 1500u && t < I_T2 + 1620u) || (t > I_T5 + 2400u && t < I_T5 + 2520u);
+        for (k = 0; k < 4; k++) if (t >= I_PLOP[k] && t < I_PLOP[k] + 140u) push = 1;
+        if (t >= I_T4 + 700u && t < I_T5) blink = 2;   /* (her tummy at work, then the plops: content) */
+        if (pass == 1u && s) cat_draw_q8(cx + wob, cy + push, s, 48u, acy, blink, t >= I_T45 + 2200u && t < I_T5);
+        if (pass == 1u && t >= I_T4 + 500u && t < I_T45 + 100u) {   /* her tummy: a glow, the planets turning in it */
+            int32_t gx = cx + wob, gy = cy + 13, dx, dy, gr = 10, q;
+            uint32_t u = t - I_T4 - 500u;
+            if (u < 300u) gr = (int32_t)u / 30;
+            for (dy = -gr; dy <= gr; dy++)
+                for (dx = -gr; dx <= gr; dx++)
+                    if (dx * dx + dy * dy <= gr * gr && ((dx + dy + (int32_t)(t / 60u)) & 1))
+                        cv_pset(gx + dx, gy + dy, RINGC[1u + (uint32_t)((dx * dx + dy * dy) / 12 + (int32_t)(t / 90u)) % 4u]);
+            for (q = 0; q < 4; q++) {
+                uint32_t ph = t * 9000000u + (uint32_t)q * 0x40000000u;
+                int32_t x = gx + icos(ph, 6), y = gy + isin(ph, 4);
+                if (u > 1200u) spr(SPR_SPARK, 5, 5, x - 2, y - 2, ((t >> 6) + (uint32_t)q) & 1u ? C_TXT : PC[q]);
+                else disc(x, y, 1, PC[q]);
+            }
+            for (q = -1; q <= 1; q += 2) {        /* rumble */
+                int32_t z;
+                for (z = 0; z < 6; z++) cv_pset(gx + q * (44 + z), gy - 2 + isin((uint32_t)z * 0x30000000u + t * 6000000u, 2), dim565(C_TXT, 9));
+            }
+        }
+        if (t >= I_T45) {                         /* out they come: a swirl, plop!, a kitten flying to its ring */
+            for (k = 0; k < 4; k++) {
+                uint32_t age = t - I_PLOP[k];
+                int32_t x, y;
+                if (t < I_PLOP[k] || t >= I_T5 + 1200u) continue;
+                i_kitten(t, (uint32_t)k, &x, &y);
+                if (age < 300u) {
+                    if (pass) i_poop(x, y, PC[k]);
+                } else if ((pass == 1u) == (y >= cy + 4 || age < I_FLY)) {
+                    uint16_t c = t > I_T5 ? dim565(PC[k], (uint32_t)orb_clamp(15 - (int32_t)(t - I_T5) / 80, 0, 15)) : PC[k];
+                    if (age < 420u) disc(x, y, 6 - (int32_t)(age - 300u) / 24, dim565(C_TXT, 8));   /* (it turns) */
+                    kitty(x, y, c);
+                }
+                if (pass && age < 450u) {         /* plop! and a puff of stardust */
+                    uint32_t q;
+                    tx(cx + 12, cy + 26 - (int32_t)age / 30, &FONT_S, "plop!", dim565(C_TXT, (uint32_t)orb_clamp(15 - (int32_t)age / 30, 2, 15)), C_BG);
+                    for (q = 0; q < 4u; q++) {
+                        uint32_t ph = 0x20000000u + q * 0x40000000u;
+                        int32_t rr = 6 + (int32_t)age / 25;
+                        spr(SPR_SPARK, 5, 5, cx + icos(ph, rr) - 2, cy + 36 + isin(ph, rr / 2) - 2, dim565(PC[k], (uint32_t)orb_clamp(15 - (int32_t)age / 30, 2, 15)));
+                    }
+                }
+            }
+        }
+        for (k = 0; k < 4; k++) {
             if (!i_planet(t, k, &px, &py, &front)) {
                 if (pass == 1u && t < I_EAT[k] + 160u) {   /* eaten: a flash at her heart */
                     int32_t fr = 18 - (int32_t)(t - I_EAT[k]) / 9;
@@ -1669,7 +1754,7 @@ static void intro_scene(uint32_t t)
             }
             if (s && t >= I_T2 && (uint32_t)front != pass) continue;   /* (no her: all in the first pass) */
             if ((!s || t < I_T2) && pass) continue;
-            disc(px, py, 4 - k / 2, PC[k]);
+            disc(px, py, 4 - k / 3, PC[k]);
         }
     }
     /* the words */
@@ -1677,7 +1762,8 @@ static void intro_scene(uint32_t t)
     else if (t < I_T3) { l1 = "THEN CAME"; t1 = I_T2 + 100u; l2 = ""; }
     else if (t < I_T3 + 2100u) { l1 = "SHE GREW."; t1 = I_T3; l2 = "AND GREW."; t2 = I_T3 + 1000u; }
     else if (t < I_T4) { l1 = "ONE BIG ASS CAT."; t1 = I_T3 + 2100u; }
-    else if (t < I_T5) { l1 = "SHE ATE THE PLANETS"; t1 = I_T4 + 100u; l2 = "AND MADE THEIR ORBITS SING"; t2 = I_T4 + 900u; }
+    else if (t < I_T45) { l1 = "SHE ATE ALL THE PLANETS"; t1 = I_T4 + 100u; l2 = "IN HER TUMMY THEY CHANGED"; t2 = I_T4 + 1000u; }
+    else if (t < I_T5) { l1 = "AND WHEN SHE POOPED THEM OUT"; t1 = I_T45 + 100u; l2 = "THEY FORMED THE ORBITRIX"; t2 = I_PLOP[2]; }
     else { l1 = "NOW HER SONG RINGS"; t1 = I_T5 + 100u; l2 = "THROUGH THE MULTIVERSES"; t2 = I_T5 + 900u; }
     cv_rect(0, 180, 240, 60, C_BG);
     cv_rect(0, 180, 240, 1, C_FDIM);
@@ -1690,7 +1776,7 @@ static void intro_scene(uint32_t t)
         txc(120, 204, &FONT_L, nm, C_LIME, C_BG);
     } else {
         txc(120, 190, &FONT_S, line[0], C_TXT, C_BG);
-        txc(120, 210, &FONT_S, line[1], t >= I_T5 ? C_LIME : C_GREY, C_BG);
+        txc(120, 210, &FONT_S, line[1], t >= I_T45 ? C_LIME : C_GREY, C_BG);
     }
     /* PRESS PLAY TO SKIP, at the top, after the first second */
     if (t > 1000u) {
@@ -1733,24 +1819,45 @@ static int intro_pass(void)                     /* a pass; 0: over (itr.skipped:
         /* the score */
         if (cue == 0 && t >= I_T2) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 0), 127, 120); cue++; }
         if (cue == 1 && t >= I_T2 + 1100u) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, 4), 120, 110); cue++; }
-        if (cue >= 2 && cue < 5 && t >= I_EAT[cue - 2u] - 700u) {   /* a planet eaten: its chirp lands as it goes in */
-            static const int8_t DG[3] = {0, 4, 8};
+        if (cue >= 2 && cue < 6 && t >= I_EAT[cue - 2u] - 700u) {   /* a planet eaten: its chirp lands as it goes in */
+            static const int8_t DG[4] = {0, 4, 8, 6};
             orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, DG[cue - 2u]), 127, 100);
             cue++;
         }
         if (t >= 6000u && t < I_T4) sys.macro[MAC_HORIZON] = (uint8_t)orb_clamp((int32_t)(t - 6000u) * 62 / 2200, 0, 62);
-        if (cue == 5 && t >= I_T4) { sys.macro[MAC_HORIZON] = 0; orb_play(&eng, 1); cue++; }
-        if (cue == 6 && t >= I_T4 + 1300u) { orb_note_off(&eng, 1); orb_note_off(&eng, 2); cue++; }   /* (gone before the meow) */
-        if (cue == 7 && t >= I_T5) { orb_play(&eng, 0); cue++; }
-        if (cue == 8 && t >= I_T5 + 120u) { sys.snd[0] = SND_MEOW; cue++; }
-        if (cue == 9 && t >= I_T5 + 200u) { orb_note_on(&eng, 3, 79 * 256, 110); cue++; }   /* meow: mi- */
-        if (cue == 10 && t >= I_T5 + 270u) { orb_glide(&eng, 3, 83 * 256); cue++; }          /* -AA- */
-        if (cue == 11 && t >= I_T5 + 530u) { orb_glide(&eng, 3, 76 * 256); cue++; }          /* -ow */
-        if (cue == 12 && t >= I_T5 + 760u) { orb_note_off(&eng, 3); cue++; }
-        if (cue == 13 && t >= I_T5 + 1700u) { orb_note_on(&eng, 4, 83 * 256, 70); cue++; }  /* from a far universe */
-        if (cue == 14 && t >= I_T5 + 1760u) { orb_glide(&eng, 4, 86 * 256); cue++; }
-        if (cue == 15 && t >= I_T5 + 1960u) { orb_glide(&eng, 4, 79 * 256); cue++; }
-        if (cue == 16 && t >= I_T5 + 2120u) { orb_note_off(&eng, 4); cue++; }
+        if (cue == 6 && t >= I_T4) { sys.macro[MAC_HORIZON] = 0; cue++; }
+        if (cue == 7 && t >= I_T4 + 500u) {     /* her tummy gurgles: bubbles on A (its chirp long gone) */
+            sys.snd[1] = SND_BLOOP; sys.snd[1].oct = 1; sys.snd[1].level = 84;
+            cue++;
+        }
+        if (cue >= 8 && cue < 12) {
+            static const uint16_t GT[4] = {600, 950, 1200, 1600};
+            static const int8_t GD[4] = {0, 2, 1, 4};
+            if (t >= I_T4 + GT[cue - 8u]) { orb_part_on(&eng, ORB_A, (sun - 12) * 256 + orb_degree(&sys, GD[cue - 8u]), 100, 14); cue++; }
+        }
+        if (cue == 12 && t >= I_T45) {          /* out they come: plops on A; B C D quiet till their kittens are there */
+            uint32_t r;
+            sys.snd[1] = SND_BOOP; sys.snd[1].oct = 1; sys.snd[1].level = 90;
+            for (r = 1; r < ORB_NRING; r++) sys.ring[r].mute = 1;
+            cue++;
+        }
+        if (cue >= 13 && cue < 17 && t >= I_PLOP[cue - 13u]) {   /* plop: each its ring's degree, 4:5:6:7 */
+            orb_part_on(&eng, ORB_A, sun * 256 + orb_degree(&sys, sys.ring[cue - 13u].deg), 112, 18);
+            cue++;
+        }
+        if (cue == 17 && t >= I_PLOP[0] + I_FLY) { orb_play(&eng, 1); cue++; }   /* the first is on its ring: the ORBITRIX */
+        if (cue >= 18 && cue < 21 && t >= I_PLOP[cue - 17u] + I_FLY) { sys.ring[cue - 17u].mute = 0; cue++; }   /* B, C, D sing */
+        if (cue == 21 && t >= I_T45 + 600u) { orb_note_off(&eng, 1); orb_note_off(&eng, 2); cue++; }   /* (gone before the meow) */
+        if (cue == 22 && t >= I_T5) { orb_play(&eng, 0); cue++; }
+        if (cue == 23 && t >= I_T5 + 120u) { sys.snd[0] = SND_MEOW; cue++; }
+        if (cue == 24 && t >= I_T5 + 200u) { orb_note_on(&eng, 3, 79 * 256, 110); cue++; }   /* meow: mi- */
+        if (cue == 25 && t >= I_T5 + 270u) { orb_glide(&eng, 3, 83 * 256); cue++; }          /* -AA- */
+        if (cue == 26 && t >= I_T5 + 530u) { orb_glide(&eng, 3, 76 * 256); cue++; }          /* -ow */
+        if (cue == 27 && t >= I_T5 + 760u) { orb_note_off(&eng, 3); cue++; }
+        if (cue == 28 && t >= I_T5 + 1700u) { orb_note_on(&eng, 4, 83 * 256, 70); cue++; }  /* from a far universe */
+        if (cue == 29 && t >= I_T5 + 1760u) { orb_glide(&eng, 4, 86 * 256); cue++; }
+        if (cue == 30 && t >= I_T5 + 1960u) { orb_glide(&eng, 4, 79 * 256); cue++; }
+        if (cue == 31 && t >= I_T5 + 2120u) { orb_note_off(&eng, 4); cue++; }
     }
     itr.cue = cue;
     if (fm1_ms - itr.last < 40u) return 1;     /* 25 frames a second */

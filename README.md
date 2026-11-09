@@ -75,15 +75,18 @@ round her, CHAOS is a ball of yarn, TIDE a fish, HORIZON a black hole with ears,
 ## The legend of Astralica
 
 In the beginning the universe was silent. Then came **Astralica**, a black cat in a violet coat with a yellow ring
-round her. She grew, and grew: one big ass cat. She ate the planets and made their orbits sing, and now her song
-rings through the multiverses.
+round her. She grew, and grew: one big ass cat. She ate all the planets, and in her tummy they changed; and when she
+pooped them out, they formed the ORBITRIX. Now her song rings through the multiverses.
 
-ORBITRIX tells it at power-on, in about fourteen seconds, scored by its own engine: a drone, a chirp as each planet
-falls in, the universe sliding into her horizon, the orrery's rings, and her meow, echoing from universe to universe.
+ORBITRIX tells it at power-on, in about seventeen seconds, scored by its own engine: a drone, a chirp as each of the
+four planets falls in, the universe sliding into her horizon; her tummy glowing and gurgling as they turn in it; then
+plop, plop, plop, plop: four little cosmic swirls, each becoming a kitten that flies out to its ring, and each ring
+starts to sing as its kitten arrives. Last her meow, echoing from universe to universe. The kittens are the planets
+that go round her on HOME.
 **Press PLAY to skip it** (the splash too, straight to the instrument); KEYS → SEL → INTRO turns it off.
 
 <p align="center">
-  <img src="docs/readme/intro_strip.png" width="880" alt="The legend: Astralica arrives; one big ass cat; the orbits sing; her song rings through the multiverses">
+  <img src="docs/readme/intro_strip.png" width="880" alt="The legend: Astralica arrives; one big ass cat; in her tummy the planets change; plop; they form the ORBITRIX; her song rings through the multiverses">
 </p>
 
 ## The sound: orbit synthesis

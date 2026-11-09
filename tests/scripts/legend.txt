@@ -1,0 +1,9 @@
+# ORBITRIX: the legend's moments for the README's strip (ORB_INTRO=1 tests/run_host.sh tests/scripts/legend.txt):
+# she came; one big ass cat; in her tummy; plop; they formed the ORBITRIX; her song through the multiverses
+3600 shot
+7600 shot
+10120 shot
+11550 shot
+13300 shot
+15800 shot
+16000 end
