@@ -48,7 +48,6 @@ LEGEND = ["build/film/legend.webp", "build/film/legend.m4a", "build/film/legend.
 SONGS = [   # build/audio/songs/NN_name.wav (orb_render song), arranged: a few, the page kept calm
     ("PURRSEC", "Lo-fi: its chords, then the purr, the beat, the hats; a break where the toy piano sings the chords' own notes."),
     ("LUNA NOVA", "Bossa nova: the jazz chords alone, the bass, the rim and the shaker, the paw comping; the flute in the break."),
-    ("NOM NOM", "The legend's universe: the drone, chirps falling in from octaves under, a half-time thump, plops on 4:5:6:7."),
 ]
 SPEC_W, SPEC_H, SPEC_N = 1200, 160, 8192
 SPEC_LO, SPEC_HI, SPEC_DB = 40.0, 16000.0, 75.0
