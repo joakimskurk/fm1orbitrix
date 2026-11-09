@@ -38,6 +38,10 @@ for m in 0 1 2 3 4 5 6; do                               # SPIRAL DRIFT, each ma
     build/orb/orb_render macro 6 $m build/audio/macro/macro_$m.wav
 done
 build/orb/orb_render lib build/audio/lib                # every sound SOUND can pick, a beat or a phrase each
+mkdir -p build/audio/chords                             # the background radiation's chords alone, each progression
+p=0; for n in sun tides orbit dusk comet eclipse lullaby voyage; do   # (KITTEN's: JUST on F, LEVEL 60, 20 s)
+    ORB_BGLEVEL=60 build/orb/orb_render bg 0 $p 20 build/audio/chords/$p\_$n.wav alone; p=$((p + 1))
+done
 python3 tools/orb_look.py build/audio/tour/*.wav > build/orb/look.txt
 python3 tools/orb_look.py build/audio/lib/*.wav > build/orb/look_lib.txt
 build/orb/orb_render bench

@@ -128,18 +128,17 @@ only at moments: where the orbits meet, at the end of a long ramp, when the pad'
 ## Under it all: the background radiation, the nebula, tired light
 
 The universe's oldest light, the afterglow of the Big Bang, comes from every side at the same 2.725 K, but for tiny
-fluctuations. Its map has acoustic peaks: the first sound, the plasma ringing, and the peaks are a harmonic series.
-Baryons make the odd peaks taller than the even (cosmologists weigh the universe by it), and photons diffusing damp the
-high ones (Silk damping). ORBITRIX lays it under the music, a huge pad that cannot clash with itself:
+fluctuations. ORBITRIX lays it under the music as chords: a carpet that lies behind the rings when it fits, and goes
+when it does not:
 
 | | |
 | --- | --- |
-| **BACKGROUND RADIATION** | GLO's page: an ambient pad under it all. An open chord on one harmonic series, so nothing in it can clash: the root, fifths and octaves over four octaves and a ninth (C2 G2 C3 G3 C4 D4 G4 C5 on C), each voice panned and slowly turning, from every side. **DRIFT**: each voice breathes on its own, deeper the more, and wanders a few cents, so voices come and go and the chord turns inside it. **HISS**: the static it was first heard as (Penzias and Wilson, 1965, in a radio antenna), soft and wide. **SILK** softens its highs, **TEMP** is its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** takes its lowest voices away (and what goes into the nebula). It swells in on PLAY over seconds, cooling as it comes (from an octave above, down onto its note: the first light redshifting), fades on STOP, glides when the sun moves. **GLOW** feeds it into NEBULA. The page draws its map, warm and cold, and its voices as they sound. |
+| **BACKGROUND RADIATION** | GLO's page: chords under it all. **CHORDS** picks a progression: SUN (the sun's own chord, held), TIDES (two, swaying), ORBIT, DUSK, COMET, ECLIPSE (darker, borrowed), LULLABY (over the sun in the bass), VOYAGE (eight chords). Each is written for each tuning in that tuning's own notes, so it never clashes with the rings: in JUST pure chords (add9, m7, maj7, 6, no D with A: the scale's wolf), in OTONAL pieces of the sun's harmonic series (4:5:6:7:9, 10:12:15:18, 6:7:9 …), in UTONAL of its subharmonics (the minor the sun crowns), in PENTA the five notes only. They are voiced and led once, ahead of time (tools/gen_tables.py): a bass above the rings' bass, up to seven voices over it, open (no thirds low down, no minor ninths), each chord into the next by the least movement, the notes two chords share held. **CHANGE**: a chord every 1, 2, 4 or 8 bars, on the bar. A note never glides: a voice whose note changes fades out, takes its new note in silence and swells in, the lowest first, so the chord blooms upwards. Each voice is two soft oscillators a few cents apart, one each side (**WIDTH**). **SILK** softens it, **TEMP** is its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** thins its low end (and what goes into the nebula), **GLOW** feeds it into NEBULA. It swells in on PLAY and fades on STOP; **SEL + GLO** takes it out and brings it back. The page shows the chord, its ratios, the progression and each voice as a star. |
 | **BLOOM** | NEBULA's own light back into it: its lines' feedback up towards 0.985 and a little of its wet again through the diffusers. The tail gets far longer and denser at no cost (no new lines); the two never sum past 0.995, so it is stable. The lines now run hotter, rounded once, and saturate softly, so the tail's last 20 dB are heard instead of cut. When the sun moves, the nebula clears a moment, so the old chord's tail does not clash with the new. |
 | **TIRED LIGHT** | HORIZON's second row. Zwicky's 1929 idea, long given up, that light tires on its way and reddens with distance; here it is an echo: what goes round again is read slower than it was written, so each echo comes back a just interval lower than the last (z 0.07 a semitone … z 0.50 a fifth … z 1.00 an octave) and, through the echo's tone, dimmer: redder. |
 
 <p align="center">
-  <img src="docs/readme/screen_bg.png" width="240" alt="BACKGROUND: the first light's map, warm and cold, Astralica at its middle; its acoustic peaks below">
+  <img src="docs/readme/screen_bg.png" width="240" alt="BACKGROUND: the first light's map, warm and cold, Astralica at its middle; the chord, its ratios and the progression below">
 </p>
 
 ## Harmony: gravity
@@ -213,7 +212,7 @@ The first two are to start from, a beat and a lullaby; the others are named afte
 | | Rings | |
 | --- | --- | --- |
 | **KITTEN** | 1:1 1:1 1:1 1:1 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
-| **MILKY WAY** | 1:1 1:1 3:2 1:2 | a lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the background radiation under it; the keys mew |
+| **MILKY WAY** | 1:1 1:1 3:2 1:2 | a lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the background radiation's chords under it (ORBIT); the keys mew |
 | **HARMONICES** | 1:1 5:4 3:2 7:4, 4 5 6 7 hits a bar | 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
 | **GALILEAN** | 1:1 1:2 1:4 2:1 | Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way |
 | **TRAPPIST** | 1:1 3:2 5:3 8:5 | a resonant chain of glassy plucks that mutate |
@@ -227,7 +226,7 @@ The first two are to start from, a beat and a lullaby; the others are named afte
 | **GW150914** | 1:2 1:1 3:2 2:1 | the first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon |
 | **ALPHA CEN** | 1:1 4:3 5:3 1:4 | a triple star: the rings pull hard on each other (TIDE), the three-body problem, tuned |
 | **SGR A*** | 1:2 2:3 1:3 3:4 | the black hole at the centre: deep, UTONAL; when the pad's point dips, everything slides in, redshifted and partly backwards |
-| **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation full (breathing, its hiss), the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
+| **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation's chords on the overtone series, the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
 
 There are also eight places of your own, U1–U8.
 
@@ -243,7 +242,7 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 | **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
 | **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED) · BACKGROUND (LEVEL GLOW SILK TEMP · HISS DRIFT LOW CUT BLOOM) → ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED) · BACKGROUND (LEVEL CHORDS CHANGE TEMP · SILK WIDTH LOW CUT GLOW · ALGORITHM: BLOOM) → ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: K (the keys), A, B, C, D: what the pages edit and the keys play |
@@ -252,6 +251,7 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 | **SAVE**, SAVE | store the system in U1–U8 |
 | **SEL + a key** | the sun moves there |
 | **SEL + SEQ** | the focused track muted or not |
+| **SEL + GLO** | the background radiation's chords out (they fade) and in again |
 | **OCT− OCT+** | the keys' octave; on STEPS, which 16 steps the white keys show |
 | **STEPS' keys** | white: the steps (a tap goes rest → hit → accent; hold one and turn K1 for its note); black: tracks, IDEA, mutes, CLEAR, UNDO |
 

@@ -341,3 +341,35 @@ a clarinet's), and nothing moved. Decided (the user: "bring in ideas you have"):
 - **Slower**: ~3 s in, ~3 s out. And an idea of my own: **cooling**: swelling in from silence it starts an octave up
   and comes down onto its note in ~2 s (the first light redshifting as the universe cools).
 - MILKY WAY and AFTERGLOW: less of it dry, more into the nebula, more DRIFT, a little HISS.
+
+## D21 — The background radiation as chords (2026-11-09)
+
+The user, hearing D20: "We cannot have that kind of glide, and it sounds almost like an FM, since it resonates in
+itself. I imagine a well-balanced carpet of beautiful chords that can lie behind when it fits." It did glide (the
+cooling, the sun's moves, the drift's cents), and eight sines on one harmonic series fuse into one tone whose partials
+beat and ring in the nebula: an FM's colour. Decided:
+
+- **Chords**, not a series: eight progressions (SUN, TIDES, ORBIT, DUSK, COMET, ECLIPSE, LULLABY, VOYAGE), each written
+  for each tuning in its own notes, so the rings never meet a note outside their scale: JUST pure chords (add9, m7,
+  maj7, m9, 6, the borrowed bVImaj7 and iv(add9) in ECLIPSE; never D with A or F, the scale's wolves), OTONAL pieces of
+  the sun's harmonic series, UTONAL of its subharmonics (F minor under C, D-flat, B-flat minor), PENTA its five notes
+  only (and no D with A there either), ET the JUST progressions tempered. tools/gen_tables.py checks every chord: in
+  the tuning, every interval in it of small numbers (both ways under 17), and fails the build otherwise.
+- **Voiced and led ahead of time** (gen_tables.py, not the chip): a bass about the sun (over the rings' bass, not under
+  it), up to seven voices over it, open (a fourth or more above the bass, no third under E3, no second under G4, no
+  minor ninth anywhere), the root and fifth doubled rather than the third; then each progression's cycle with the least
+  movement (Viterbi from every first voicing), a held note costing nothing. The engine reads eight pitches a chord.
+- **No glide, ever**: a voice whose note changes fades out (~0.2 s), takes the new note when it is silent and swells in
+  (~0.7 s); the lowest first, each ~20 ms after the last, so the chord blooms upwards; a note the next chord shares is
+  held. Tested: in every tuning, VOYAGE a chord a bar: a note changes only in silence, a sounding voice's steps never
+  move, a held note never dips, every chord on its bar (an eighth early, so the old notes have left as it comes).
+- **A voice**: two oscillators a few cents apart (+-4 at WIDTH 99), A left and B right as WIDTH has it; a soft saw (8
+  harmonics, 4 above ~1.3 kHz, so nothing folds over at the half rate), two poles of SILK, the low cut. No hiss, no
+  drift, no cooling. CHANGE (1, 2, 4, 8 bars) and WIDTH take HISS's and DRIFT's places; BLOOM moves to ALGORITHM.
+- **When it fits**: SEL + GLO takes it out (it fades) and brings it back, its settings kept (bg_out, saved with the
+  system). MILKY WAY: ORBIT, two bars a chord, a little more of it than before (LEVEL 45), less into the nebula
+  (GLOW 45, BLOOM 30); AFTERGLOW: ORBIT on the overtone series (maj9, m7, 6, h9), BLOOM 55; KITTEN: SUN (its bass sings
+  7/4, which only the sun's own chord takes). Every other system: LEVEL 0, ORBIT ready when it is turned up.
+- The page shows the chord (its root large, its kind, its ratios: 4:5:6:9, u12:10:8:7 when subharmonic is shorter),
+  the progression with the chord lit, and each voice as a star where its note is.
+- The cost, all on (x86, callgrind -Os): ~+250 instructions a frame (D19: ~+260); nothing while off.

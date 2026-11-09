@@ -148,6 +148,7 @@ static void orb_sys_clear(orb_sys_t *s, const char *name)
     s->lrate[0] = 30; s->lrate[1] = 12; s->lshape[1] = LS_DRIFT;
     s->macro[MAC_GRAVITY] = 40;
     s->hgrain = 50; s->hretro = 0; s->hshift = -12;
+    s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 40; s->bg_silk = 40; s->bg_width = 55;   /* (LEVEL 0: up, and it plays) */
 }
 
 static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8_t amt)
@@ -170,6 +171,7 @@ static void orb_system_kitten(orb_sys_t *s)
     orb_rdef_t C = {1, 1, 16, 8, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0xAA};
     orb_rdef_t D = {1, 1, 16, 6, 0, 0, DIR_FWD, 0, 0, 0, md, 6, 0x1};
     s->tuning = 0; s->sun = 5; s->bpm = 104; s->swing = 16;
+    s->bg_prog = 0;                         /* (its bass sings 7/4: under it, the sun's own chord fits) */
     s->snd[0] = SND_PAW; s->snd[0].oct = 0; s->snd[0].level = 74;
     s->snd[1] = SND_KICK;
     s->snd[2] = SND_CLAP;
@@ -203,13 +205,13 @@ static void orb_system_milky(orb_sys_t *s)
     s->dtime = 7; s->dfb = 45; s->ping = 1; s->dmix = 32; s->rmix = 55; s->rsize = 85; s->rdecay = 74;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 30);
-    s->bg_level = 34; s->bg_glow = 88; s->bg_silk = 55; s->bg_hiss = 18; s->bg_aniso = 75; s->bg_cut = 30;   /* under it all */
-    s->bloom = 60;
+    s->bg_level = 45; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 45; s->bg_silk = 45; s->bg_cut = 30;   /* under it all */
+    s->bloom = 30;
 }
 
-/* AFTERGLOW: the oldest light, under everything. The background radiation full (an open chord breathing, its hiss), the
- * nebula blooming, echoes that tire, a fourth lower each time; slow orbits of glass at 5:4 and a music
- * box at 7:4 in the overtone scale, boops at 3:2, a sub at half speed; the keys a tidal bell */
+/* AFTERGLOW: the oldest light, under everything. The background radiation's chords on the overtone series (ORBIT: maj9,
+ * m7, 6, h9, two bars each), the nebula blooming, echoes that tire, a fourth lower each time; slow orbits of glass at
+ * 5:4 and a music box at 7:4, boops at 3:2, a sub at half speed; the keys a tidal bell */
 static void orb_system_afterglow(orb_sys_t *s)
 {
     static const int8_t mb[] = {4, 6, 7, 9, 11}, mc[] = {8, 10, 12, 14, 11, 9, 13}, md[] = {2, 4, 6, 4};
@@ -228,8 +230,8 @@ static void orb_system_afterglow(orb_sys_t *s)
     s->mutate = 12; s->var = 15;
     s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 60; s->rsize = 95; s->rdecay = 80; s->rdamp = 50;
     s->macro[MAC_GRAVITY] = 60; s->macro[MAC_ORBIT] = 20;
-    s->bg_level = 52; s->bg_glow = 96; s->bg_silk = 50; s->bg_hiss = 28; s->bg_aniso = 85; s->bg_cut = 35; s->bg_temp = 0;
-    s->bloom = 90; s->tired = 5;
+    s->bg_level = 48; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 55; s->bg_silk = 40; s->bg_width = 65; s->bg_cut = 35;
+    s->bloom = 55; s->tired = 5;
     orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 30);
     orb_mod_set(s, 1, SRC_CONJ, DST_MOON, 30);
 }

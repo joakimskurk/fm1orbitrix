@@ -61,7 +61,7 @@ DEMOS = [   # build/audio/tour/NN_name.wav, in the systems' order
     ("GW150914", "The first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon."),
     ("ALPHA CEN", "A triple star: the rings pull hard on each other, the three-body problem, tuned."),
     ("SGR A*", "The black hole at the centre: when the pad's point dips, everything slides in, redshifted and partly backwards."),
-    ("AFTERGLOW", "The oldest light under everything: the background radiation, a blooming nebula, echoes that tire a fourth lower each time."),
+    ("AFTERGLOW", "The oldest light under everything: chords from the overtone series, a blooming nebula, echoes that tire a fourth lower each time."),
 ]
 SPEC_W, SPEC_H, SPEC_N = 1200, 160, 8192
 SPEC_LO, SPEC_HI, SPEC_DB = 40.0, 16000.0, 75.0

@@ -9,6 +9,8 @@
  *   orb_render macro N M OUT.wav                 system N playing, macro M (0..4) 0 -> 99 -> 0 over 24 s
  *   orb_render lib DIR                           every library sound (SOUND's list) -> DIR/NN_name.wav: a beat for a
  *                                                drum, a phrase for the rest, played as the keys play a part (A's voice)
+ *   orb_render bg N PROG SECONDS OUT.wav [alone] system N with the background radiation's chords PROG (0..7, its
+ *                                                level as the system has it, or 45), "alone": the rings and keys quiet
  *   orb_render bench                             the worst case: 8 voices, everything on; ns and x86 instructions a frame
  * Each prints the render's peak, RMS and DC. (MUTATE is the engine's own, at each ring's lap.) */
 #include <math.h>
@@ -164,6 +166,22 @@ int main(int argc, char **argv)
         orb_play(&O, 0);
         run_ms(1500);
         write_wav(argv[4]);
+    } else if (argc >= 6 && !strcmp(argv[1], "bg")) {
+        uint32_t r;
+        orb_system((uint32_t)atoi(argv[2]), &S);
+        S.bg_prog = (uint8_t)(atoi(argv[3]) % ORB_NBGPROG);
+        if (!S.bg_level) S.bg_level = 45;
+        if (getenv("ORB_BGLEVEL")) S.bg_level = (uint8_t)atoi(getenv("ORB_BGLEVEL"));
+        if (argc > 6 && !strcmp(argv[6], "alone")) {
+            for (r = 0; r < ORB_NRING; r++) S.ring[r].mute = 1;
+            S.snd[0].level = 0;
+        }
+        orb_init(&O, &S, &MEM);
+        orb_play(&O, 1);
+        run_ms((uint32_t)atoi(argv[4]) * 1000u);
+        orb_play(&O, 0);
+        run_ms(4000);
+        write_wav(argv[5]);
     } else if (argc >= 3 && !strcmp(argv[1], "tour")) {
         uint32_t i, secs = argc > 3 ? (uint32_t)atoi(argv[3]) : 16u;
         for (i = 0; i < ORB_NSYSTEM; i++) {
@@ -241,7 +259,7 @@ int main(int argc, char **argv)
         }
         S.cut = 60; S.res = 50; S.drive = 30;
         S.macro[MAC_TIDE] = 99; S.macro[MAC_HORIZON] = 60; S.hretro = 30;
-        S.bg_level = 80; S.bg_glow = 80; S.bg_cut = 30; S.bg_aniso = 40; S.bg_hiss = 40; S.bloom = 80; S.tired = 6;   /* (the cosmic ones) */
+        S.bg_level = 80; S.bg_glow = 80; S.bg_cut = 30; S.bg_width = 60; S.bg_silk = 40; S.bg_prog = 7; S.bloom = 80; S.tired = 6;   /* (the cosmic ones) */
         orb_play(&O, 1);
         for (k = 0; k < 4u; k++) orb_note_on(&O, (uint8_t)(k + 1u), orb_key_pitch(&S, 50u + 4u * k, 0, 0), 100);
         for (k = 0; k < 200u; k++) { memset(blk, 0, sizeof blk); orb_render(&O, blk, 256); }

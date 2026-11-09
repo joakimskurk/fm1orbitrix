@@ -30,7 +30,7 @@
 #define ORB_RLEN 4096u                      /* a NEBULA line (a power of 2: a mask) */
 #define ORB_APLEN 1024u
 #define ORB_HLEN 32768u                     /* HORIZON's memory (mono, 0.74 s) */
-#define ORB_NBG 8u                          /* BACKGROUND RADIATION: its partials (the acoustic peaks) */
+#define ORB_NBG 8u                          /* BACKGROUND RADIATION: its voices (a bass, seven above) */
 #define ORB_NTIRED 8u                       /* TIRED LIGHT: OFF, and seven just intervals an echo */
 
 enum { ORB_KEYS = 0, ORB_A, ORB_B, ORB_C, ORB_D };
@@ -119,15 +119,16 @@ typedef struct {
     uint8_t ox, oy, orad, orate;            /* the orbit pad: centre, radius, period (ORB_SYNC_*) */
     uint8_t lrate[2], lshape[2], lsync[2];  /* LFO 1 and 2: rate (free 0..99, synced ORB_SYNC_* index), shape */
     orb_mod_t mod[ORB_NMOD];
-    /* BACKGROUND RADIATION (an ambient pad under everything, an open chord on one harmonic series, from every side):
-     * its level, its glow into NEBULA, Silk damping (its highs softer), its hiss (the static it was first heard as),
-     * its drift (how deeply each voice breathes on its own, and wanders a few cents), the low cut (of it, and of what
-     * goes into NEBULA); its temperature: the octave, -2..1 */
-    uint8_t bg_level, bg_glow, bg_silk, bg_hiss, bg_aniso, bg_cut;
+    /* BACKGROUND RADIATION (chords under everything, a carpet: voiced in tools/gen_tables.py, ORB_BGP_V): its level,
+     * its glow into NEBULA, SILK (its highs softer), its chords (a progression, ORB_BGPROG_NAME), WIDTH (each voice
+     * two, a few cents apart, one each side), the low cut (of it, and of what goes into NEBULA); its temperature: the
+     * octave, -2..1; CHANGE: a chord every 1, 2, 4 or 8 bars (0..3); OUT: faded out, its settings kept (SEL+GLO) */
+    uint8_t bg_level, bg_glow, bg_silk, bg_prog, bg_width, bg_cut;
     int8_t bg_temp;
     uint8_t bloom;                          /* NEBULA's own light back into it: longer, denser, 0..99 */
     uint8_t tired;                          /* TIRED LIGHT: each echo a just interval redder (ORB_TIRED_*), 0 off */
-    uint8_t rsv[7];
+    uint8_t bg_change, bg_out;
+    uint8_t rsv[5];
 } orb_sys_t;
 
 /* ---- the engine's own state */
@@ -217,15 +218,15 @@ typedef struct {
                                              * times r_q, how clear it is: a moved sun clears it), BLOOM's share, the
                                              * low cut's state, its own light (for BLOOM), the low cut's coefficient */
     uint32_t r_sun, r_dip;                  /* (r_dip: the clearing going down, ~50 ms, before it comes back) */
-    /* BACKGROUND RADIATION, at NEBULA's half rate: the partials' phases, steps (and where they glide to), amplitudes
-     * (and their steps a half-rate frame), pans, fluctuations (and their targets); the swell; its output */
-    uint32_t bg_ph[ORB_NBG], bg_inc[ORB_NBG], bg_pan[ORB_NBG];
-    int32_t bg_a[ORB_NBG], bg_as[ORB_NBG], bg_gl[ORB_NBG], bg_gr[ORB_NBG], bg_fl[ORB_NBG], bg_ft[ORB_NBG];
-    int32_t bg_env, bg_on, bg_glow, bg_ol[2], bg_or[2], bg_g[ORB_NBG];   /* bg_g: its shape: Silk, the low cut (Q15) */
-    int32_t bg_pd[ORB_NBG], bg_pt[ORB_NBG];   /* each voice's wandering pitch (and where it wanders to), +-32767 */
-    int32_t bg_cool, bg_hg, bg_h[4];        /* cooling: an octave above at the start, down in ~2 s; the hiss: its gain, filters */
-    uint32_t bg_rng;
-    uint32_t bg_k;
+    /* BACKGROUND RADIATION, at NEBULA's half rate: each voice's two oscillators (phases, steps), its amplitude (and its
+     * step a half-rate frame), its note now (1/256 semitone, 0 none), its fade (Q15: down to change its note, up when
+     * it has it: a note never glides), its wave; the chord now and the ticks since it came; the swell; WIDTH, SILK,
+     * the glow; SILK's two poles a side and the low cut's state; its output */
+    uint32_t bg_pa[ORB_NBG], bg_pb[ORB_NBG], bg_ia[ORB_NBG], bg_ib[ORB_NBG];
+    int32_t bg_a[ORB_NBG], bg_as[ORB_NBG], bg_note[ORB_NBG], bg_x[ORB_NBG];
+    uint8_t bg_tb[ORB_NBG];
+    uint32_t bg_chord, bg_cc;
+    int32_t bg_env, bg_on, bg_glow, bg_wd, bg_silk, bg_lp[4], bg_hp[2], bg_ol[2], bg_or[2];
     /* TIRED LIGHT: the feedback's slow-down (Q16 a frame), its ramp (Q16), the shifted taps' tone */
     uint32_t z_rate, z_p;
     int32_t z_lp[2];
@@ -1041,75 +1042,68 @@ static void orb_fx_tick(orb_t *o)
     }
     /* TIRED LIGHT */
     o->z_rate = ORB_TIRED_RATE[sy->tired % ORB_NTIRED];
-    /* BACKGROUND RADIATION: the sun's harmonic series (the acoustic peaks of the first light: a harmonic series, odd
-     * peaks taller with baryons, the high ones damped by photon diffusion, Silk's), from every side, its tiny
-     * fluctuations drifting; it swells in while the orrery plays and fades when it stops */
+    /* BACKGROUND RADIATION: chords, a carpet under everything (ORB_BGP_V: eight voices, voiced and led in
+     * tools/gen_tables.py, every chord in the tuning's own notes). A chord every CHANGE bars, an eighth early (the old
+     * notes have left as the bar comes). A voice whose note changes fades out, takes the new one in silence and swells
+     * in: a note never glides. The lowest goes first, the next ~20 ms later: the chord blooms upwards. A note the next
+     * chord keeps is held. It swells in while the orrery plays (~3 s), and out when it stops, or with OUT */
     {
-        /* an open chord, all on one harmonic series (so nothing in it can clash): of the sun two octaves down, 2 3 4 6
-         * 8 9 12 16, the root, fifths and octaves over four octaves and a ninth (C2 G2 C3 G3 C4 D4 G4 C5 on C); in
-         * UTONAL, of the sun's third below: 1, 4/3, 2, 8/3, 4, 16/3, 8, 32/3 */
-        static const uint8_t NUM[ORB_NTUNING][ORB_NBG] = {{2, 3, 4, 6, 8, 9, 12, 16}, {2, 3, 4, 6, 8, 9, 12, 16},
-            {3, 4, 6, 8, 12, 16, 24, 32}, {2, 3, 4, 6, 8, 9, 12, 16}, {2, 3, 4, 6, 8, 9, 12, 16}};
-        static const uint8_t DEN[ORB_NTUNING] = {4, 4, 3, 4, 4};
-        static const int16_t TILT[ORB_NBG] = {22937, 26214, 32767, 29491, 24576, 19661, 16384, 11469};   /* a gentle hump */
-        int32_t target = sy->bg_level && o->playing ? 32767 : 0, de = target - o->bg_env, st = orb_rz(de, 12);
-        uint32_t k, live = 0;
+        static const int16_t TILT[ORB_NBG] = {24000, 26000, 25000, 23500, 22000, 20000, 18000, 16000};
+        uint32_t t = sy->tuning % ORB_NTUNING, p = sy->bg_prog % ORB_NBGPROG, n = ORB_BGP_N[t][p], k, live = 0;
+        int32_t target = sy->bg_level && !sy->bg_out && o->playing ? 32767 : 0, de = target - o->bg_env, st = orb_rz(de, 12);
         if (!st && de) st = de > 0 ? (de < 16 ? de : 16) : (de > -16 ? de : -16);   /* (the last of it: never past) */
-        if (!o->bg_env && target) o->bg_cool = 32767;   /* from silence: the first light cools in, an octave down */
-        o->bg_env += st;                          /* (~3 s in, ~3 s out) */
-        {   /* (down to the note exactly: the last of it in steps, never past) */
-            int32_t cs = orb_rz(-o->bg_cool, 10);
-            if (!cs && o->bg_cool) cs = o->bg_cool > 16 ? -16 : -o->bg_cool;
-            o->bg_cool += cs;
+        o->bg_env += st;
+        {
+            uint32_t c = o->bg_chord;
+            if (o->playing) c = (o->T + 2u * ORB_TPS) / ((16u * ORB_TPS) << (sy->bg_change & 3u)) % n;
+            if (c >= n) c = 0;                    /* (stopped, on a shorter progression) */
+            if (c != o->bg_chord) { o->bg_chord = c; o->bg_cc = 0; }
+            else if (o->bg_cc < 4096u) o->bg_cc++;
         }
-        for (k = 0; k < ORB_NBG; k++) live |= (uint32_t)o->bg_a[k];
+        for (k = 0; k < ORB_NBG; k++) live |= (uint32_t)o->bg_a[k] | (uint32_t)o->bg_as[k];
         o->bg_on = o->bg_env > 0 || live;
-        if (!o->bg_on) { o->bg_ol[0] = o->bg_ol[1] = o->bg_or[0] = o->bg_or[1] = 0; }
-        if (o->bg_on) {
-            uint32_t t = sy->tuning % ORB_NTUNING, fi, cinc;
-            int32_t temp = orb_clamp(sy->bg_temp, -2, 1), lvl = orb_lin(sy->bg_level), sl, an;
-            fi = orb_inc((48 + 12 * temp + (int32_t)(sy->sun % 12u)) * 256) * 2u / DEN[t];   /* of C3 + the sun, half rate */
-            cinc = (uint32_t)(20 + (int32_t)sy->bg_cut * 4) * 194783u;   /* the low cut's frequency, as a step */
-            lvl = (int32_t)(((lvl * lvl) >> 15) * (o->bg_env >> 0) >> 15);
-            sl = (int32_t)sy->bg_silk * sy->bg_silk / 25;
-            an = (int32_t)sy->bg_aniso * 331;             /* DRIFT, Q15 */
+        if (!o->bg_on) {
+            o->bg_ol[0] = o->bg_ol[1] = o->bg_or[0] = o->bg_or[1] = 0;
+            for (k = 0; k < 4u; k++) o->bg_lp[k] = 0;
+            o->bg_hp[0] = o->bg_hp[1] = 0;
+        } else {
+            const int16_t *V = ORB_BGP_V[t][p][o->bg_chord];
+            int32_t sun = (int32_t)(sy->sun % 12u), lvl = orb_lin(sy->bg_level);
+            int32_t base = (48 + 12 * orb_clamp(sy->bg_temp, -2, 1) + sun - (sun > 6 ? 12 : 0)) * 256;   /* (F#2 .. F#3) */
+            uint32_t wdet = (uint32_t)sy->bg_width * 98u;   /* each voice's two: +-4 cents at 99 */
+            lvl = (int32_t)(((lvl * lvl) >> 15) * o->bg_env >> 15);
             o->bg_glow = orb_lin(sy->bg_glow);
-            o->bg_hg = (int32_t)(((int64_t)orb_lin(sy->bg_hiss) * orb_lin(sy->bg_hiss) >> 15) * lvl >> 16);
-            if ((o->bg_k & 511u) == 0u) {         /* each voice in turn, every ~3 s: where it breathes to, and wanders */
-                uint32_t q = (o->bg_k >> 9) % ORB_NBG, x = orb_xs(&o->rng);
-                o->bg_ft[q] = (int32_t)(x >> 17);              /* 0 .. 32767 */
-                o->bg_pt[q] = (int32_t)((x & 0xFFFFu) >> 0) - 32768;
-            }
-            o->bg_k++;
+            o->bg_wd = orb_q15(sy->bg_width);
+            o->bg_silk = ORB_SILK[sy->bg_silk % 100u];
             for (k = 0; k < ORB_NBG; k++) {
-                uint32_t n = NUM[t][k], tinc = fi * n;
-                int32_t a, d;
-                o->bg_fl[k] += orb_rz((o->bg_ft[k] - o->bg_fl[k]), 11);   /* (~1.5 s a breath) */
-                o->bg_pd[k] += orb_rz((o->bg_pt[k] - o->bg_pd[k]), 12);
-                o->bg_pan[k] += 90000u + k * 31000u;       /* each drifts round (~0.03 .. 0.06 Hz) */
-                if ((o->bg_k & 3u) == (k & 3u) || !o->bg_gl[k]) {   /* (two a tick: they move slowly) */
-                    uint32_t th = 0x20000000u + (uint32_t)(orb_sin(o->bg_pan[k] + k * 0x3A000000u) * 0x3000);
-                    o->bg_gl[k] = orb_cos(th);    /* from every side: its pan swings +-34 degrees about the middle */
-                    o->bg_gr[k] = orb_sin(th);
-                }
-                {   /* its pitch: on the series, a few cents astray as it drifts (+-3.4 at DRIFT 99), cooling down */
-                    int32_t det = (int32_t)((((int64_t)(tinc >> 9) * o->bg_pd[k]) >> 15) * an >> 15);
-                    uint32_t ti = tinc + (uint32_t)det + (uint32_t)(((int64_t)tinc * o->bg_cool) >> 15);
-                    if (!o->bg_inc[k]) o->bg_inc[k] = ti;
-                    o->bg_inc[k] += (uint32_t)orb_rz((int32_t)(ti - o->bg_inc[k]), 9);   /* a moved sun: it glides */
-                }
-                if ((o->bg_k & 7u) == k || !o->bg_g[k]) {   /* its shape: one voice a tick (they move with a knob) */
-                    a = TILT[k];
-                    a = (a * (int32_t)(2147418112u / (65536u + (k + 1u) * (k + 1u) * (uint32_t)sl))) >> 15;   /* SILK */
-                    if (sy->bg_cut) {             /* the low cut on each voice: (f/fc)^2 / (1 + (f/fc)^2) */
-                        uint32_t r = cinc / ((tinc >> 8) | 1u);   /* fc / f, Q8 */
-                        a = (int32_t)(((int64_t)a * (int32_t)(2147418112u / (65536u + r * r))) >> 15);
+                int32_t want = V[k] == -32768 ? 0 : base + V[k], x = o->bg_x[k], a, d;
+                if (want != o->bg_note[k]) {
+                    if (!o->bg_a[k] && !o->bg_as[k]) {   /* silent: it may take its note (or rest) */
+                        if (want) {
+                            o->bg_note[k] = want;
+                            o->bg_pa[k] = 0;
+                            o->bg_pb[k] = 0x55555555u;
+                            if (o->bg_env) x = 0;
+                        } else
+                            x = 0;
+                    } else if (o->bg_cc >= k * 28u) {   /* (the next voice ~20 ms after this one) */
+                        int32_t s2 = orb_rz(-x, 7);   /* (out in ~0.2 s) */
+                        if (!s2 && x) s2 = x > 16 ? -16 : -x;
+                        x += s2;
                     }
-                    o->bg_g[k] = a > 0 ? a : 1;
+                } else if (x < 32767) {           /* (in, ~0.7 s) */
+                    int32_t s2 = orb_rz(32767 - x, 10);
+                    if (!s2) s2 = 32767 - x < 16 ? 32767 - x : 16;
+                    x += s2;
                 }
-                /* DRIFT: each voice breathes on its own, deeper the more: voices come and go, the chord turns inside */
-                a = (int32_t)(((int64_t)o->bg_g[k] * (32767 - ((an * (32767 - o->bg_fl[k])) >> 15))) >> 15);
-                a = (int32_t)(((int64_t)a * lvl) >> 17);   /* (8 of them: a quarter each at most, then the level) */
+                o->bg_x[k] = x;
+                if (o->bg_note[k]) {              /* its two, a few cents apart; above ~1.3 kHz the wave of four */
+                    uint32_t inc = orb_inc(o->bg_note[k]) * 2u, dd = (uint32_t)(((uint64_t)inc * wdet) >> 22);
+                    o->bg_ia[k] = inc + dd;
+                    o->bg_ib[k] = inc - dd;
+                    o->bg_tb[k] = inc > 260000000u;
+                }
+                a = (int32_t)(((TILT[k] * x) >> 15) * lvl >> 17);   /* (eight voices: a quarter each at most) */
                 d = a - o->bg_a[k];
                 if (d < 16 && d > -16) { o->bg_a[k] = a; o->bg_as[k] = 0; }   /* (the last of a ramp: there) */
                 else o->bg_as[k] = orb_rz(d, 4);  /* (16 half-rate frames a tick: there exactly, never past) */
@@ -1186,27 +1180,47 @@ static void orb_fx_render(orb_t *o, int32_t *out)
             int32_t h0, h1, h2, h3;
             rin = o->r_acc;
             o->r_acc = 0;
-            if (o->bg_on) {                 /* BACKGROUND RADIATION: its partials, each panned; its glow into NEBULA */
-                int32_t bl = 0, br = 0;
+            if (o->bg_on) {                 /* BACKGROUND RADIATION: each voice two oscillators, A left and B right
+                                             * as WIDTH has it; SILK; the low cut; its glow into NEBULA */
+                int32_t sa = 0, sb = 0, bl, br, m, sd;
                 for (k = 0; k < ORB_NBG; k++) {
-                    int32_t sv;
-                    if (!o->bg_a[k] && !o->bg_as[k]) continue;   /* (a partial damped away, or the tuning's unused) */
-                    sv = (orb_sin(o->bg_ph[k]) * o->bg_a[k]) >> 15;
-                    o->bg_ph[k] += o->bg_inc[k];
-                    o->bg_a[k] += o->bg_as[k];
-                    bl += (sv * o->bg_gl[k]) >> 15;
-                    br += (sv * o->bg_gr[k]) >> 15;
+                    const int16_t *W;
+                    uint32_t pa, pb, ia, ib;
+                    int32_t a = o->bg_a[k], va, vb;
+                    if (!a && !o->bg_as[k]) continue;   /* (a voice at rest) */
+                    W = ORB_PADW[o->bg_tb[k]];
+                    pa = o->bg_pa[k];
+                    pb = o->bg_pb[k];
+                    ia = pa >> 22;
+                    ib = pb >> 22;
+                    va = W[ia] + (((W[ia + 1u] - W[ia]) * (int32_t)((pa >> 7) & 0x7FFFu)) >> 15);
+                    vb = W[ib] + (((W[ib + 1u] - W[ib]) * (int32_t)((pb >> 7) & 0x7FFFu)) >> 15);
+                    o->bg_pa[k] = pa + o->bg_ia[k];
+                    o->bg_pb[k] = pb + o->bg_ib[k];
+                    o->bg_a[k] = a + o->bg_as[k];
+                    sa += (va * a) >> 15;
+                    sb += (vb * a) >> 15;
                 }
-                if (o->bg_hg) {             /* the hiss: noise between ~250 Hz and ~1.5 kHz, a different one each side */
-                    int32_t n0 = (int32_t)(orb_xs(&o->bg_rng) >> 17) - 16384, n1 = (int32_t)(orb_xs(&o->bg_rng) >> 17) - 16384;
-                    o->bg_h[0] += orb_rz((n0 - o->bg_h[0]) * 11000, 15);
-                    o->bg_h[1] += orb_rz((n1 - o->bg_h[1]) * 11000, 15);
-                    o->bg_h[2] += orb_rz((o->bg_h[0] - o->bg_h[2]) * 2300, 15);
-                    o->bg_h[3] += orb_rz((o->bg_h[1] - o->bg_h[3]) * 2300, 15);
-                    bl += ((o->bg_h[0] - o->bg_h[2]) * o->bg_hg) >> 15;
-                    br += ((o->bg_h[1] - o->bg_h[3]) * o->bg_hg) >> 15;
+                m = (sa + sb) >> 1;
+                sd = (((sa - sb) >> 1) * o->bg_wd) >> 15;
+                bl = orb_clamp(m + sd, -49151, 49151);
+                br = orb_clamp(m - sd, -49151, 49151);
+                {   /* SILK: two poles a side (Q14: in range at 1.5 x full scale) */
+                    int32_t c = o->bg_silk >> 1;
+                    o->bg_lp[0] += orb_rz((bl - o->bg_lp[0]) * c, 14);
+                    o->bg_lp[1] += orb_rz((o->bg_lp[0] - o->bg_lp[1]) * c, 14);
+                    o->bg_lp[2] += orb_rz((br - o->bg_lp[2]) * c, 14);
+                    o->bg_lp[3] += orb_rz((o->bg_lp[2] - o->bg_lp[3]) * c, 14);
+                    bl = o->bg_lp[1];
+                    br = o->bg_lp[3];
                 }
-                rin += (((bl + br) >> 1) * o->bg_glow) >> 15;
+                if (o->r_cut) {             /* the low cut, the same as NEBULA's */
+                    o->bg_hp[0] += orb_rz((bl - o->bg_hp[0]) * o->r_cut, 15);
+                    o->bg_hp[1] += orb_rz((br - o->bg_hp[1]) * o->r_cut, 15);
+                    bl -= o->bg_hp[0];
+                    br -= o->bg_hp[1];
+                }
+                rin += (((bl + br) >> 2) * o->bg_glow) >> 14;
                 o->bg_ol[0] = o->bg_ol[1]; o->bg_ol[1] = bl;
                 o->bg_or[0] = o->bg_or[1]; o->bg_or[1] = br;
             }
@@ -1471,7 +1485,6 @@ static void orb_init(orb_t *o, orb_sys_t *sys, orb_mem_t *mem)
     o->mem = mem;
     o->rng = 0x2545F491u;
     o->vrng = 0x1234567u;
-    o->bg_rng = 0x6A09E667u;
     orb_restart(o);
 }
 

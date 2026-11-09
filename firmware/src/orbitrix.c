@@ -225,7 +225,7 @@ static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME"
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED };
+       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -296,10 +296,11 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
     [PG_HORIZON] = {{"DEPTH", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"SHIFT", W_SYS, F_SEMI, SO(hshift), -24, 24},
                     {"RETRO", W_SYS, F_PCT, SO(hretro), 0, 99}, {"GRAIN", W_SYS, F_GRAIN, SO(hgrain), 0, 99},
                     {"TIRED", W_SYS, F_TIRED, SO(tired), 0, ORB_NTIRED - 1}, P_NONE, P_NONE, P_NONE, P_BPM},
-    [PG_BG] = {{"LEVEL", W_SYS, F_NUM, SO(bg_level), 0, 99}, {"GLOW", W_SYS, F_NUM, SO(bg_glow), 0, 99},
-               {"SILK", W_SYS, F_NUM, SO(bg_silk), 0, 99}, {"TEMP", W_SYS, F_TEMP, SO(bg_temp), -2, 1},
-               {"HISS", W_SYS, F_NUM, SO(bg_hiss), 0, 99}, {"DRIFT", W_SYS, F_NUM, SO(bg_aniso), 0, 99},
-               {"LOW CUT", W_SYS, F_LOWCUT, SO(bg_cut), 0, 99}, {"BLOOM", W_SYS, F_NUM, SO(bloom), 0, 99}, P_BPM},
+    [PG_BG] = {{"LEVEL", W_SYS, F_NUM, SO(bg_level), 0, 99}, {"CHORDS", W_SYS, F_BGPROG, SO(bg_prog), 0, ORB_NBGPROG - 1},
+               {"CHANGE", W_SYS, F_CHANGE, SO(bg_change), 0, 3}, {"TEMP", W_SYS, F_TEMP, SO(bg_temp), -2, 1},
+               {"SILK", W_SYS, F_NUM, SO(bg_silk), 0, 99}, {"WIDTH", W_SYS, F_NUM, SO(bg_width), 0, 99},
+               {"LOW CUT", W_SYS, F_LOWCUT, SO(bg_cut), 0, 99}, {"GLOW", W_SYS, F_NUM, SO(bg_glow), 0, 99},
+               {"BLOOM", W_SYS, F_NUM, SO(bloom), 0, 99}},
     [PG_PAD] = {{"X", W_SYS, F_NUM, SO(ox), 0, 99}, {"Y", W_SYS, F_NUM, SO(oy), 0, 99},
                 {"RAD", W_SYS, F_NUM, SO(orad), 0, 50}, {"PERIOD", W_SYS, F_SYNC, SO(orate), 0, ORB_NSYNC - 1},
                 P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
@@ -424,6 +425,8 @@ static void pd_text(const pd_t *d, char *s)
     case F_TEMP: { static const char *const T[4] = {"0.7K", "1.4K", "2.7K", "5.5K"}; put_s(s, T[orb_clamp(v, -2, 1) + 2]); break; }
     case F_LOWCUT: if (v) put_s(put_u(s, 20u + (uint32_t)v * 4u), "Hz"); else put_s(s, "OFF"); break;
     case F_TIRED: put_s(s, ORB_TIRED_NAME[(uint32_t)v % ORB_NTIRED]); break;
+    case F_BGPROG: put_s(s, ORB_BGPROG_NAME[(uint32_t)v % ORB_NBGPROG]); break;
+    case F_CHANGE: put_s(put_u(s, 1u << ((uint32_t)v & 3u)), v ? " BARS" : " BAR"); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
 }
@@ -1205,20 +1208,23 @@ static void draw_space(void)
 }
 
 /* BACKGROUND: the first light, as its map is drawn (an oval of the whole sky, its tiny fluctuations warm and cold,
- * drifting), Astralica at its middle; below, its voices as they sound now (each breathing on its own, the highs
- * softened by SILK), its temperature */
+ * drifting), Astralica at its middle; below, the chord now (its name; in a just tuning its ratios), the progression
+ * (the chord lit) and its voices, each a star where its note is, as bright as it sounds */
 static void draw_bg(void)
 {
     static const uint16_t MAP[8] = {RGB(20, 24, 110), RGB(36, 70, 200), RGB(60, 140, 235), RGB(120, 210, 240),
                                     RGB(236, 232, 200), RGB(255, 196, 70), RGB(250, 120, 60), RGB(220, 50, 70)};   /* cold .. warm */
-    int32_t cx = 120, cy = 44, x, y, k, on = eng.bg_on, an = 10 + sys.bg_aniso / 2;
+    uint32_t tu = sys.tuning % ORB_NTUNING, pr = sys.bg_prog % ORB_NBGPROG, n = ORB_BGP_N[tu][pr], c = eng.bg_chord;
+    int32_t cx = 120, cy = 44, x, y, k, on = eng.bg_on, an = 10 + sys.bg_width / 2;
     uint32_t t = fm1_ms * 5000u, hs = 0x51ED27u;
+    const char *st = on ? "GLOWING" : !sys.bg_level ? "LEVEL 0: ASLEEP" : sys.bg_out ? "OUT  SEL+GLO: IN" : "PLAY: IT GLOWS";
     char s[24];
+    if (c >= n) c = 0;
     cv_begin(240, 144, C_BG);
     stars(240, 144, 61, 30);
     for (y = -40; y <= 40; y += 2)
         for (x = -108; x <= 108; x += 2) {
-            int32_t v, c;
+            int32_t v, cc;
             uint32_t h;
             if (x * x * 40 * 40 / (108 * 108) + y * y > 40 * 40) continue;
             h = ((uint32_t)(x * 73856093) ^ (uint32_t)(y * 19349663) ^ hs) * 2654435761u;   /* (a grain each cell) */
@@ -1227,8 +1233,8 @@ static void draw_bg(void)
                 (orb_sin((uint32_t)(x * 0x0B300000) - (uint32_t)(y * 0x08700000) + t / 3u) >> 1) +
                 (orb_sin((uint32_t)((x + 2 * y) * 0x0E900000) + t * 2u) >> 1) + (int32_t)((h >> 17) & 0x7FFFu) - 16384;
             v = v * an / 45;
-            c = orb_clamp((v + 65536) * 8 / 131072, 0, 7);
-            cv_rect(cx + x - 1, cy + y - 1, 2, 2, on ? MAP[c] : dim565(MAP[c], 4));
+            cc = orb_clamp((v + 65536) * 8 / 131072, 0, 7);
+            cv_rect(cx + x - 1, cy + y - 1, 2, 2, on ? MAP[cc] : dim565(MAP[cc], 4));
         }
     for (k = 0; k < 96; k++) {                  /* its edge */
         uint32_t ph = (uint32_t)k << 26 | (uint32_t)k << 24;
@@ -1237,26 +1243,40 @@ static void draw_bg(void)
     cat_draw_small(cx, cy, 80u);
     put_s(put_s(s, "T "), sys.bg_temp <= -2 ? "0.68K" : sys.bg_temp == -1 ? "1.36K" : sys.bg_temp == 0 ? "2.725K" : "5.45K");
     tx(4, 88, &FONT_S, s, C_GREY, C_BG);
-    tx(236 - text_w(&FONT_S, on ? "GLOWING" : sys.bg_level ? "PLAY: IT GLOWS" : "LEVEL 0: ASLEEP"), 88, &FONT_S,
-       on ? "GLOWING" : sys.bg_level ? "PLAY: IT GLOWS" : "LEVEL 0: ASLEEP", on ? C_LIME : C_DIMT, C_BG);
-    {   /* the acoustic peaks: each partial a peak, as loud as it is now */
-        int32_t mx = 1, px = 0, py = 0, base = 140;
-        for (k = 0; k < (int32_t)ORB_NBG; k++) if (eng.bg_a[k] > mx) mx = eng.bg_a[k];
-        cv_rect(4, base, 232, 1, C_FDIM);
-        for (x = 0; x <= 228; x += 2) {
-            int32_t v = 0;
-            for (k = 0; k < (int32_t)ORB_NBG; k++) {
-                int32_t d = x - (14 + k * 28), w = 13 - (d < 0 ? -d : d);
-                if (w > 0) v += eng.bg_a[k] * w / 13;
-            }
-            y = base - 1 - (on ? v * 34 / mx : 0);
-            cv_rect(6 + x, y, 2, base - y, dim565(C_LIME, 5));
-            if (x) cv_line(px, py, 6 + x, y, C_LIME);
-            px = 6 + x; py = y;
+    tx(236 - text_w(&FONT_S, st), 88, &FONT_S, st, on ? C_LIME : C_DIMT, C_BG);
+    {   /* the chord: its root large, what it is small beside it (and over what bass), its ratios under */
+        uint32_t id = ORB_BGP_C[tu][pr][c], root = (sys.sun + ORB_BGC_ROOT[id]) % 12u, bass = (sys.sun + ORB_BGC_BASS[id]) % 12u;
+        uint16_t col = on ? C_LIME : C_DIMT;
+        char nm[4] = {NOTE_NAME[root][0], NOTE_NAME[root][1], 0, 0}, *q;
+        x = tx(6, 106, &FONT_L, nm, col, C_BG) + 2;
+        q = put_s(s, ORB_BGC_SUF[id]);
+        if (bass != root) put_s(put_s(q, "/"), NOTE_NAME[bass]);
+        tx(x, 108, &FONT_S, s, col, C_BG);
+        tx(x, 124, &FONT_S, ORB_BGC_RATIO[id][0] ? ORB_BGC_RATIO[id] : ORB_TUNING_NAME[tu], C_GREY, C_BG);
+    }
+    {   /* the progression, the chord now lit; every CHANGE bars */
+        char *q = put_s(s, ORB_BGPROG_NAME[pr]);
+        int32_t w = (int32_t)n * 12 - 4, x0 = 236 - w;
+        if (n > 1u) { q = put_s(q, "  "); put_s(put_u(q, 1u << (sys.bg_change & 3u)), "BR"); }
+        tx(236 - text_w(&FONT_S, s), 104, &FONT_S, s, C_GREY, C_BG);
+        for (k = 0; k < (int32_t)n; k++) {
+            int lit = (uint32_t)k == c;
+            cv_rect(x0 + k * 12, 122, 8, 5, lit ? (on ? C_LIME : C_DIMT) : C_FDIM);
+            if (lit) cv_rect(x0 + k * 12 + 2, 120, 4, 9, on ? C_LIME : C_DIMT);
         }
+    }
+    {   /* its voices: a star each where its note is (an octave and a half below the sun's to three above), bright as
+         * it sounds */
+        int32_t mx = 1, base = (48 + (int32_t)sys.sun - (sys.sun > 6u ? 12 : 0)) * 256;
+        cv_rect(130, 138, 106, 1, C_FDIM);
+        for (k = 0; k < (int32_t)ORB_NBG; k++) if (eng.bg_a[k] > mx) mx = eng.bg_a[k];
         for (k = 0; k < (int32_t)ORB_NBG; k++) {
-            char n[3] = {(char)('1' + k), 0, 0};
-            tx(4 + 14 + k * 28 - 3, 106, &FONT_S, n, k & 1 ? C_DIMT : C_GREY, C_BG);   /* (odd: compressions) */
+            int32_t a = eng.bg_a[k], nt = eng.bg_note[k] - base - 12 * 256 * orb_clamp(sys.bg_temp, -2, 1), b;
+            if (!eng.bg_note[k] || a <= 0 || !on) continue;
+            x = 130 + orb_clamp((nt + 9 * 256) * 106 / (45 * 256), 0, 105);
+            b = 3 + a * 12 / mx;
+            cv_rect(x - 1, 133, 3, 3, dim565(C_TXT, (uint32_t)b));
+            if (b > 12) { cv_pset(x, 131, dim565(C_CYAN, 12)); cv_pset(x, 137, dim565(C_CYAN, 12)); }
         }
     }
     cv_blit(0, 24);
@@ -2304,7 +2324,14 @@ static void handle_buttons(void)
     if (b & (1u << BTN_ENV)) goto_page(PG_ENV, PG_ENV);
     if (b & (1u << BTN_LFO)) goto_page(PG_MOD, PG_LFO);
     if (b & (1u << BTN_FX)) goto_page3(PG_FILTER, PG_SPACE, PG_HORIZON);
-    if (b & (1u << BTN_GLO)) goto_page(PG_BG, PG_PAD);
+    if (b & (1u << BTN_GLO)) {
+        if (isel()) {                           /* SEL+GLO: the chords out (they fade), and in again */
+            sys.bg_out = !sys.bg_out;
+            say(sys.bg_out ? "BACKGROUND: OUT" : sys.bg_level ? "BACKGROUND: IN" : "BACKGROUND: IN (LEVEL 0)");
+            main_dirty = 1;
+        } else
+            goto_page(PG_BG, PG_PAD);
+    }
     if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
     if (b & (1u << BTN_PLAY)) { if (!eng.playing) cat_happy(); orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
     if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the keys: into A) */

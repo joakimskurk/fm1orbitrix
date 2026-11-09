@@ -367,8 +367,8 @@ static void test_cosmic(void)
     uint32_t b, k, i;
     orb_system(2, &S);                      /* (HARMONICES, its rings quiet) */
     for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
-    S.tuning = 1; S.sun = 0; S.rmix = 0; S.dmix = 0; S.cut = 99; S.res = 0; S.fmode = 0;
-    S.bg_level = 99; S.bg_glow = 0; S.bg_silk = 20; S.bg_hiss = 0; S.bg_aniso = 60; S.bg_cut = 0; S.bg_temp = 0;
+    S.tuning = 0; S.sun = 0; S.rmix = 0; S.dmix = 0; S.cut = 99; S.res = 0; S.fmode = 0;
+    S.bg_level = 99; S.bg_glow = 0; S.bg_silk = 0; S.bg_prog = 0; S.bg_width = 0; S.bg_cut = 0; S.bg_temp = 0;
     memset(S.mod, 0, sizeof S.mod);
     orb_init(&O, &S, &MEM);
     orb_play(&O, 1);
@@ -378,23 +378,73 @@ static void test_cosmic(void)
         orb_render(&O, out, 256);
         for (k = 0; k < 256u; k++) x[i + k] = (float)out[2u * k];
     }
-    {   /* the open chord: of C3 / 4, harmonics 2 3 4 6 8 9 12 16 (within 2 bins: its drift a few cents) */
-        static const int H[8] = {2, 3, 4, 6, 8, 9, 12, 16};
-        double f0 = 440.0 * pow(2.0, (48 - 69) / 12.0) / 4.0, tot = 0, harm = 0, bin = 44100.0 / 8192.0;
+    {   /* SUN in JUST on C: C3 G3 C4 E4 G4 C5 D5, each its harmonics 1..8 (WIDTH 0: no detune) */
+        const int16_t *V = ORB_BGP_V[0][0][0];
+        double tot = 0, harm = 0, bin = 44100.0 / 8192.0, peak = 0;
         static float w[8192];
-        int kk, h;
-        for (i = 0; i < 8192u; i++) w[i] = x[i] * (float)(0.5 - 0.5 * cos(2 * M_PI * i / 8192.0));
-        for (kk = 1; kk < 400; kk++) {      /* up to 2.1 kHz */
+        int kk, h, v;
+        for (i = 0; i < 8192u; i++) {
+            w[i] = x[i] * (float)(0.5 - 0.5 * cos(2 * M_PI * i / 8192.0));
+            if (fabs(x[i]) > peak) peak = fabs(x[i]);
+        }
+        for (kk = 1; kk < 1500; kk++) {     /* up to 8 kHz */
             double m = dft_mag(w, 8192, kk), f = kk * bin;
             int on = 0;
-            for (h = 0; h < 8; h++) if (fabs(f - H[h] * f0) <= 2 * bin) on = 1;
+            for (v = 0; v < (int)ORB_NBG; v++) {
+                double f0 = V[v] == -32768 ? 0 : 440.0 * pow(2.0, (48 + V[v] / 256.0 - 69) / 12.0);
+                for (h = 1; h <= 8 && f0 > 0; h++) if (fabs(f - h * f0) <= 2 * bin) on = 1;
+            }
             tot += m * m;
             if (on) harm += m * m;
         }
-        printf("background radiation: %.4f of its energy on its chord (one harmonic series)\n", harm / tot);
+        printf("background radiation: %.4f of its energy on its chord's notes and their harmonics; peak %.1f dBFS\n",
+               harm / tot, 20 * log10(peak / 32768.0));
         CHECK(harm / tot > 0.99, "background radiation: %.4f on its chord", harm / tot);
         CHECK(tot > 1e3, "background radiation: silent");
+        CHECK(peak < 32767 && peak > 2000, "background radiation: its level (peak %.0f)", peak);
     }
+    {   /* VOYAGE, a chord a bar at 160 bpm, every tuning: a chord comes on the bar (an eighth early); a voice takes a
+         * new note only in silence, its two steps never move while it sounds (no glide); a note the next chord keeps
+         * is held (its fade never goes down) */
+        uint32_t tu, nch = 0, nsw = 0, nheld = 0, bad = 0, badbar = 0, badgl = 0;
+        for (tu = 0; tu < ORB_NTUNING; tu++) {
+            int32_t pa[ORB_NBG], pas[ORB_NBG], pn[ORB_NBG], px[ORB_NBG];
+            uint32_t pia[ORB_NBG], pc = 0, tick;
+            S.tuning = (uint8_t)tu; S.sun = (uint8_t)(tu * 5 % 12); S.bg_prog = 7; S.bg_change = 0; S.bpm = 160;
+            S.bg_width = 60; S.bg_silk = 40;
+            orb_init(&O, &S, &MEM);
+            orb_play(&O, 1);
+            for (k = 0; k < ORB_NBG; k++) { pa[k] = 0; pas[k] = 0; pn[k] = 0; px[k] = 0; pia[k] = 0; }
+            for (tick = 0; tick < (uint32_t)(24.0 * 44100 / 32); tick++) {
+                uint32_t want_c;
+                memset(out, 0, sizeof out);
+                orb_render(&O, out, 32);
+                want_c = (O.T + 2u * ORB_TPS) / (16u * ORB_TPS) % ORB_BGP_N[tu][7];
+                if (O.bg_chord != want_c && tick > 2) badbar++;
+                if (O.bg_chord != pc) nch++;
+                for (k = 0; k < ORB_NBG; k++) {
+                    const int16_t *V = ORB_BGP_V[tu][7][O.bg_chord];
+                    int32_t sun = S.sun, base = (48 + sun - (sun > 6 ? 12 : 0)) * 256;
+                    int32_t want = V[k] == -32768 ? 0 : base + V[k];
+                    if (O.bg_note[k] != pn[k]) {
+                        nsw++;
+                        if (pa[k] || pas[k]) bad++;
+                    } else if (pn[k] && pa[k] && O.bg_ia[k] != pia[k]) badgl++;
+                    if (want == O.bg_note[k] && O.bg_note[k] == pn[k] && O.bg_x[k] < px[k]) bad++;
+                    if (O.bg_chord != pc && want == O.bg_note[k] && O.bg_x[k] == 32767) nheld++;
+                    pa[k] = O.bg_a[k]; pas[k] = O.bg_as[k]; pn[k] = O.bg_note[k]; px[k] = O.bg_x[k]; pia[k] = O.bg_ia[k];
+                }
+                pc = O.bg_chord;
+            }
+        }
+        printf("background radiation, VOYAGE in every tuning: %u chords, %u new notes, %u held across a change\n", nch,
+               nsw, nheld);
+        CHECK(!bad, "background radiation: %u notes changed while sounding, or held notes faded", bad);
+        CHECK(!badgl, "background radiation: %u glides", badgl);
+        CHECK(!badbar, "background radiation: %u ticks with a chord off the bar", badbar);
+        CHECK(nch > 40 && nsw > 100 && nheld > 20, "background radiation: too few changes (%u %u %u)", nch, nsw, nheld);
+    }
+    S.tuning = 0; S.bg_prog = 0; S.bpm = 112;
     /* NEBULA, all the way: size, decay, BLOOM, no damping, the pad glowing into it; then off: it must die away */
     S.rmix = 99; S.rsize = 99; S.rdecay = 99; S.rdamp = 0; S.bloom = 99; S.bg_glow = 99; S.bg_cut = 30;
     orb_init(&O, &S, &MEM);

@@ -229,7 +229,7 @@ if (fm1) {
         if (m.type === 'frame') { if (m.lcd) draw(m.lcd); show(m.leds, m.glow); if (m.store) keepStore(m.store); }
         else if (m.type === 'ready') {
           $('start').hidden = true; fm1.classList.add('on'); fm1.classList.toggle('active', active);
-          say('Running: the legend of Astralica first (PLAY skips it), then press PLAY to start the orrery.');
+          say('Running: the splash first (PLAY skips it), then press PLAY to start the orrery.');
         } else if (m.type === 'error') say(`It did not start: ${m.message}`);
       };
       node.port.postMessage({ type: 'boot', wasm, store: loadStore() }, [wasm]);
