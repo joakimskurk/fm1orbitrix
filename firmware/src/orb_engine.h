@@ -39,7 +39,7 @@ enum { ORB_KEYS = 0, ORB_A, ORB_B, ORB_C, ORB_D };
 enum { DIR_FWD, DIR_REV, DIR_PING, DIR_SPIRAL, DIR_RND, ORB_NDIR };
 enum { LOG_FREE, LOG_AND, LOG_NOT, LOG_XOR, LOG_CONJ, ORB_NLOGIC };
 enum { MAC_CHAOS, MAC_SPECTRAL, MAC_GRAVITY, MAC_FRACT, MAC_ORBIT, MAC_TIDE, MAC_HORIZON, ORB_NMACRO };
-enum { KM_SOLAR, KM_HARMONIC };
+enum { KM_SOLAR, KM_HARMONIC, KM_CHORD, ORB_NKM };   /* KM_CHORD: every key a note of the chord now */
 enum { LS_SINE, LS_TRI, LS_SAW, LS_SQR, LS_SH, LS_DRIFT, ORB_NLSHAPE };
 enum { SRC_OFF, SRC_LFO1, SRC_LFO2, SRC_ORBX, SRC_ORBY, SRC_RND, SRC_STEP, SRC_CONJ, SRC_VEL, SRC_MODW, SRC_AFT, ORB_NSRC };
 enum { DST_ECC, DST_SLING, DST_ANG, DST_SPR, DST_MOON, DST_DUST, DST_PIXEL, DST_PITCH, DST_CUT, DST_RES, DST_MODE,
@@ -95,7 +95,8 @@ typedef struct {                            /* a ring */
     uint8_t ratio, len, hits, rot;          /* speed (ORB_RATIO_*), length 1..64, even hits, rotation */
     uint8_t dir, logic, ltgt, prob;         /* direction, trigger logic, its other ring, probability 0..99 */
     int8_t deg;                             /* the degree it sings (of the tuning), -14..21 */
-    uint8_t mute, rsv[2];
+    uint8_t mute, follow, rsv;              /* follow: its degrees are the notes of the chord now (FOLLOW), not the
+                                             * tuning's: 0 the chord's bass, 1 the next note up, ... an octave a round */
     uint8_t on[ORB_NSTEP];                  /* 0 rest, 1 hit, 2 accent */
     int8_t dg[ORB_NSTEP];                   /* each step's degree, added to deg */
 } orb_ring_t;                               /* 140 B */
@@ -131,7 +132,8 @@ typedef struct {
     uint8_t bloom;                          /* NEBULA's own light back into it: longer, denser, 0..99 */
     uint8_t tired;                          /* TIRED LIGHT: each echo a just interval redder (ORB_TIRED_*), 0 off */
     uint8_t bg_change, bg_out, bg_halo;
-    uint8_t rsv[4];
+    uint8_t mood;                           /* (the app's: the mood it was made or last turned to, ORB_MOOD_*) */
+    uint8_t rsv[3];
 } orb_sys_t;
 
 /* ---- the engine's own state */
@@ -321,6 +323,24 @@ static int32_t orb_degree(const orb_sys_t *s, int32_t deg)
     return oct * 3072 + ORB_SCALE[t][deg];
 }
 
+/* FOLLOW: the background radiation's chord at tick T (on the bar: its own, whether it sounds or not), and its d-th
+ * note over the sun (1/256 semitone): 0 the bass (-5 .. +6 semitones about the sun), up through its notes, an octave
+ * a round, below 0 down */
+static uint32_t orb_chord_at(const orb_sys_t *s, uint32_t T)
+{
+    uint32_t t = s->tuning % ORB_NTUNING, p = s->bg_prog % ORB_NBGPROG;
+    return ORB_BGP_C[t][p][(T / ((16u * ORB_TPS) << (s->bg_change & 3u))) % ORB_BGP_N[t][p]];
+}
+static int32_t orb_chord_tone(uint32_t id, int32_t d)
+{
+    int32_t nt = id < ORB_NBGC ? ORB_BGC_NT[id] : 1, oc = 0;
+    if (id >= ORB_NBGC) id = 0;
+    while (d < 0 && oc > -8) { d += nt; oc--; }      /* (bounded) */
+    while (d >= nt && oc < 8) { d -= nt; oc++; }
+    if (d < 0 || d >= nt) d = 0;
+    return oc * 3072 + ORB_BGC_TONE[id][d];
+}
+
 /* the pull toward the just ratios a key gets (Q8: 0..256) from GRAVITY: 0..50 -> 0..1, then full */
 static int32_t orb_pull(const orb_sys_t *s)
 {
@@ -332,6 +352,26 @@ static int32_t orb_pull(const orb_sys_t *s)
  * 1..16 of the sun, black ones 17..27. note: MIDI (SOLAR) or the key's index 0..26 from F3 (HARMONIC, keyoct: OCT) */
 static const uint8_t ORB_WHITE_H[27] = {1, 17, 2, 18, 3, 19, 4, 5, 20, 6, 21, 7, 22, 8, 9, 23, 10, 24, 11, 12, 25,
                                         13, 26, 14, 27, 15, 16};   /* F3 .. G5: white keys 1..16, black 17..27 */
+static int32_t orb_key_pitch(const orb_sys_t *s, uint32_t note, int32_t keyoct, int32_t *et);
+/* CHORD keys: the white keys the chord's notes going up (C4 its bass about the sun's C4), a black key the white one
+ * under it an octave up: whatever is played is in the chord sounding now. note: MIDI */
+static int32_t orb_key_chord(const orb_sys_t *s, uint32_t T, uint32_t note)
+{
+    static const uint8_t WP[12] = {0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6};   /* (a black key: the white under it) */
+    static const uint8_t BK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+    int32_t w = 7 * ((int32_t)note / 12) + WP[note % 12u] - 35, sun = (int32_t)(s->sun % 12u);
+    return (60 + sun - (sun > 6 ? 12 : 0)) * 256 + orb_chord_tone(orb_chord_at(s, T), w) + (BK[note % 12u] ? 3072 : 0);
+}
+/* a key's pitch as the engine plays it now (CHORD needs the bar: the others are orb_key_pitch's) */
+static int32_t orb_key_pitch_o(const orb_t *o, uint32_t note, int32_t keyoct, int32_t *et)
+{
+    if (o->sys->keymode == KM_CHORD) {
+        int32_t p = orb_key_chord(o->sys, o->T, note);
+        if (et) *et = p;
+        return p;
+    }
+    return orb_key_pitch(o->sys, note, keyoct, et);
+}
 static int32_t orb_key_pitch(const orb_sys_t *s, uint32_t note, int32_t keyoct, int32_t *et)
 {
     uint32_t t = s->tuning < ORB_NTUNING ? s->tuning : 0u;
@@ -874,7 +914,8 @@ static void orb_clock(orb_t *o)
         if (sy->hum) vel -= (int32_t)(orb_xs(&o->rng) % 6000u) * sy->hum / 99;
         vel = orb_clamp(vel, 3000, 32767);
         deg = g->deg + dg;
-        pitch = (36 + (int32_t)(sy->sun % 12u)) * 256 + orb_degree(sy, deg);
+        pitch = (36 + (int32_t)(sy->sun % 12u)) * 256 +
+                (g->follow ? orb_chord_tone(orb_chord_at(sy, o->T), deg) : orb_degree(sy, deg));
         orb_ring_fire(o, r, pitch, vel);
         if (conj) nconj++;
         /* FRACT: a hit may split into 2..4 */

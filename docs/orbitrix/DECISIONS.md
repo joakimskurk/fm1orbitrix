@@ -422,3 +422,37 @@ header for the preview on the git landing page." Decided:
   colours), the title in its lime pill with cat ears, what it is and "astral cuteness", in the firmware's own fonts
   (read from felucca_font.h) and colours, in pixels doubled: docs/readme/header.png (1280 x 640: the README's top, and
   the size GitHub's social preview wants), and the page's link preview at 1200 x 630 from the same drawing.
+
+## D24 — A set of its own kinds, FOLLOW, CUTE (2026-11-09)
+
+The user: "STARDUST has a lot of disharmony, and the rest all sound alike; I want a better set of patches, and to make
+cute things more intuitively." Asked, they chose a whole new set (KITTEN kept, the strangest of the sky's out or made
+musical) and all four tools offered. Decided:
+
+- **The disharmony**: STARDUST's progression held 15/8 and 7/4 (B and B-flat over C) in chords one after the other,
+  and the halo holds each chord under the next: a semitone for twenty seconds. The same in other OTONAL and UTONAL
+  progressions (8/7 against 16/15) and JUST's ECLIPSE and VOYAGE (the borrowed chords). Now every progression keeps to
+  one scale's notes, and gen_tables.py checks it (a progression's notes together must never crowd: no gap under 90
+  cents, never two under 150 in a row) and fails the build otherwise.
+- **FOLLOW** (a ring's flag, STEPS' ALGORITHM): its degrees are the notes of the chord of the bar, not the tuning's:
+  #0 the chord's bass (within six semitones of the sun), up through its notes (not its added ninth: so on any chord #1
+  is the third, #2 the fifth), an octave a round. The chord is the background radiation's even when it is silent.
+  MUTATE steps a FOLLOW ring along the chord. Turned on or off, a ring's notes go to the nearest of the other kind.
+  Tested: in every tuning, a chord a bar, MUTATE on, every note fired is in the chord of its bar.
+- **CHORD keys** (KM_CHORD): the white keys the chord's notes going up from C4, a black key the white one under it an
+  octave up; tested in every tuning: every key in its chord. The KEYS page names them, the bass lit; the LEDs glow on
+  the bass.
+- **IDEA** writes FOLLOW patterns on pitched rings (the bass on #0 and its neighbours, a melody walking #1 .. #6).
+- **CUTE** (HOME's third page; SEL+HOME): a whole patch in a mood, from banks written by hand: each mood's roles (a
+  kick, a snare, a melody, a sparkle, a counter, a bass), their sounds to pick from, its tunings (only the consonant
+  ones), chords, tempos, swing, space, halo; every pitched ring FOLLOWs, the keys CHORD. **MOOD** turns the patch playing
+  to one (tempo, sounds by kind, space, chords; the patterns and their places kept). Tested: 24 made in the four moods,
+  every note in its chord, none too quiet or over. The page draws her in the mood (asleep with z's, hearts, her eyes
+  aglow among stars, her kittens racing).
+- **The set**, sixteen, each its own genre, tempo, sounds and space: KITTEN, MILKY WAY, HARMONICES, PURRSEC (lo-fi),
+  ZOOMIES (house), CATWALK (disco), SPIRAL (generative), LUNA NOVA (bossa nova), SGR A* (dub, one drop; its old slide
+  into the horizon taken out: a glide), BOOP BOP (chiptune, dry), SNOWGLOBE (a music box in 12/8: rings at 3:4, twelve
+  steps a bar), STARDUST (synth pop), ALPHA CEN (a gamelan: interlocking bells, TIDE their shimmer), MOON NAP,
+  AFTERGLOW, PULSAR (minimal techno). Out: GALILEAN, TRAPPIST, KIRKWOOD, NEBULA, ROCHE, LAGRANGE, ACCRETION, GW150914
+  (glides, chaos, or a twin of another). Every melody's register checked (the highest a star at E6 .. F7 in the music
+  boxes), every part's level measured alone. SET_VER 6.

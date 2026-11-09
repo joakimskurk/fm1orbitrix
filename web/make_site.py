@@ -12,7 +12,7 @@ browser, the legend, the systems to hear, the installer.
                               offered)
   film/legend.webp, .m4a      the legend of Astralica: an animation on a transparent night, and its sound
                               (tools/make_legend.py: the firmware's legend, filmed on the host)
-  audio/                      the twenty systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
+  audio/                      the sixteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
                               one's spectrum as a picture (WebP), low to high; audio/songs/ the little songs
                               (orb_render song: the systems with chords, arranged)
   screens/                    the cat, the icon, the link preview, the pages' screens, the legend's poster
@@ -50,31 +50,29 @@ DEMOS = [   # build/audio/tour/NN_name.wav, in the systems' order
     ("KITTEN", "A beat to start from, on the grid: a kick, a clap, hats, a purring bass. Yours to change."),
     ("MILKY WAY", "A lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick, a purring bass; the keys mew."),
     ("HARMONICES", "4, 5, 6 and 7 hits a bar on the chord 4:5:6:7, in the overtone scale: the idea itself."),
-    ("GALILEAN", "Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way."),
-    ("TRAPPIST", "A resonant chain, 1:1 3:2 5:3 8:5: glassy plucks that mutate."),
-    ("KIRKWOOD", "The asteroid gaps against Jupiter (3, 5/2, 2): pixel percussion over a pentatonic blip melody."),
-    ("SPIRAL DRIFT", "16, 24, 20 and 28 steps at 1:1 3:2 5:4 7:5, all turning as they go; they tug at each other where they meet."),
-    ("PULSAR", "Drums: an infall kick, a dust snare with a beam, pixel hats, a bass."),
-    ("NEBULA", "Slow and wide, UTONAL, moons, a deep nebula; notes fall into tune, and now and then into the horizon."),
-    ("ROCHE", "Torn apart: bells off whole ratios, dust, chaos, the tide."),
-    ("LAGRANGE", "The keys are the sun's harmonics over a calm orbit."),
-    ("ACCRETION", "Gravity high: every note falls into tune, the rings glide."),
-    ("GW150914", "The first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon."),
-    ("ALPHA CEN", "A triple star: the rings pull hard on each other, the three-body problem, tuned."),
-    ("SGR A*", "The black hole at the centre: when the pad's point dips, everything slides in, redshifted and partly backwards."),
-    ("AFTERGLOW", "The oldest light under everything: chords from the overtone series, a blooming nebula, echoes that tire a fourth lower each time."),
-    ("PURRSEC", "A cat café at 84, swung: a soft thump, a brushed pat, the purr walking the royal road under its chords; the keys a toy piano."),
-    ("STARDUST", "A nursery of stars on the overtone series: stars at 3:2, glass at 5:4, a sub on the chords' roots, a long halo."),
-    ("MOON NAP", "A lullaby on the subharmonics: a paw rocking the chord, a music box, a slow sub, a thirty-second halo; the keys mew."),
-    ("ZOOMIES", "A kitten's mad minute at 124: four on the floor, a squeak chasing at 3:2, a growl leaping octaves, a chord a bar."),
+    ("PURRSEC", "Lo-fi in a cat café, 84 and swung: a soft thump, a brushed pat, the purr on the royal road, a toy piano."),
+    ("ZOOMIES", "A kitten's mad minute, house at 124: four on the floor, a squeak chasing at 3:2, a growl, a chord a bar."),
+    ("CATWALK", "Disco on the runway, 116: plucked chord stabs off the beat, the purr in sixteenths, a chord a bar."),
+    ("SPIRAL", "Generative: 16, 24, 20 and 28 steps turning as they go, never twice the same, every note in the chord."),
+    ("LUNA NOVA", "Bossa nova under a new moon, 92: a rim on the clave, a shaker, a paw comping jazz chords, a flute."),
+    ("SGR A*", "Dub at the black hole, 72, one drop: a pluck skanking into echoes that tire a minor third each time."),
+    ("BOOP BOP", "Chiptune at 140, dry: a pixel arpeggio up and down the chord, a pixel bass, a kick and a zap."),
+    ("SNOWGLOBE", "A music box in twelve-eight: a bell turning, a toy answering, stars falling, no drums."),
+    ("STARDUST", "Synth pop in a nursery of stars, 108, on the overtone series: glass arpeggios, stars at 3:2."),
+    ("ALPHA CEN", "A triple star as a gamelan: two bells interlocking, a slow melody, a gong; the planets pull and shimmer."),
+    ("MOON NAP", "A lullaby on the subharmonics: a paw rocking the chord, a music box, a slow sub, a long halo; she mews."),
+    ("AFTERGLOW", "The oldest light under everything: chords from the overtone series, a blooming nebula, echoes that tire."),
+    ("PULSAR", "Minimal techno, 128: open hats off the beat, pulsing zaps, a rolling sub, a resonant filter breathing."),
 ]
 SONGS = [   # build/audio/songs/NN_name.wav (orb_render song): the systems with chords, arranged
-    ("PURRSEC", "Its chords in a halo, then the purr, the beat, the hats; a break where the toy piano sings the chords' own notes; the tail."),
-    ("STARDUST", "The overtone chords alone, the sub, the half-time thump, the stars and the glass; the bell sings in the break."),
-    ("MOON NAP", "No drums: the chords, the sub, the paw rocking, the music box and the stars; her mew in the break; thirty seconds of halo."),
-    ("ZOOMIES", "The chords low, the growl, four on the floor and the clap, the squeak chasing; the pixel lead sings in the break."),
-    ("MILKY WAY", "The lullaby arranged: the pentatonic chords, the bass, the soft kick, the boops and the music box; she mews in the break."),
-    ("AFTERGLOW", "The oldest light: chords on the overtone series in a long halo, the sub, glass at 5:4, a music box at 7:4, tired echoes."),
+    ("PURRSEC", "Its chords, then the purr, the beat, the hats; a break where the toy piano sings the chords' own notes."),
+    ("CATWALK", "Disco: the chords low, the purr, four on the floor and the clap, the stabs; the lead sings in the break."),
+    ("LUNA NOVA", "Bossa: the jazz chords alone, the bass, the rim and the shaker, the paw comping; the flute in the break."),
+    ("SNOWGLOBE", "The music box: its chords over the sun, the sub, the bell turning in twelve-eight, the toy, the stars."),
+    ("ZOOMIES", "House: the chords low, the growl, four on the floor and the clap, the squeak chasing; the pixel lead."),
+    ("STARDUST", "Synth pop: the overtone chords, the sub, the thump, the glass arpeggios, the stars; the bell sings."),
+    ("MOON NAP", "No drums: the chords, the sub, the paw rocking, the music box and the stars; her mew in the break."),
+    ("MILKY WAY", "The lullaby arranged: the pentatonic chords, the bass, the soft kick, the boops and the music box."),
 ]
 SPEC_W, SPEC_H, SPEC_N = 1200, 160, 8192
 SPEC_LO, SPEC_HI, SPEC_DB = 40.0, 16000.0, 75.0

@@ -28,7 +28,8 @@ What is here (docs/orbitrix/PLAN.md):
   ORB_SEMI     2^(s/12), Q16, s = -24..24: HORIZON's redshift
   ORB_BGP_V    the background radiation's chords (bg_chords): per tuning, eight progressions of up to eight chords, a
                bass and seven voices each (1/256 semitone over the sun in its octave 3, -32768 a rest), checked (in the
-               tuning, every interval pure) and voice-led here; ORB_BGP_N their lengths, ORB_BGP_C, ORB_BGC_* their names
+               tuning, every interval pure, a progression's notes never crowding) and voice-led here; ORB_BGP_N their
+               lengths, ORB_BGP_C, ORB_BGC_* their names, ORB_BGC_TONE each chord's notes (FOLLOW: the bass first)
   ORB_PADW     its voice's wave: a soft saw, 8 harmonics and 4 (for the high notes: nothing folds over at 22 kHz)
   ORB_SILK     SILK's low-pass, a pole's coefficient (Q15) for 0..99: 9 kHz .. 400 Hz
   ORB_HALO_*   HALO, the background radiation's own space: its lines and allpasses (at 11 kHz), each line's feedback for
@@ -193,18 +194,22 @@ def bg_chords(scales):
         "Ubbm/F": ratio(10, "m", 5, F(4, 3), [F(16, 9), F(16, 15)]),
         "Udb/F": ratio(1, "", 5, F(4, 3), [F(16, 15), F(8, 5)]),
     }
+    # (each progression keeps to one scale's notes: a halo holds the last chord under the next, so two that differ by
+    # a semitone, B and B-flat, would clash for as long as it rings: tested below, bg_crowded)
     D = ["Iadd9"], ["Iadd9", "IVmaj7"], ["Iadd9", "vi7", "IVadd9", "V6"], ["vi9", "IVmaj7", "Iadd9", "iii7"], \
-        ["IVmaj7", "V6", "iii7", "vi9"], ["Iadd9", "bVImaj7", "IVmaj7", "iv9"], ["Iadd9", "IV/I", "Iadd9", "V/I"], \
-        ["Iadd9", "iii7", "vi9", "IVmaj9", "Iadd9", "V6", "IVadd9", "iv9"]
+        ["IVmaj7", "V6", "iii7", "vi9"], ["vi9", "V6", "IVmaj7", "iii7"], ["Iadd9", "IV/I", "Iadd9", "V/I"], \
+        ["Iadd9", "iii7", "vi9", "IVmaj9", "Iadd9", "V6", "IVadd9", "vi7"]
     P = ["Iadd9"], ["Iadd9", "vi7"], ["Iadd9", "iii7", "vi7", "I6/V"], ["vi7", "I6/V", "Iadd9", "iii7"], \
         ["I6/V", "iii7", "vi7", "Iadd9"], ["vi7", "iii7/II", "I6/V", "Iadd9"], ["Iadd9", "I6", "Isus2", "I6"], \
         ["Iadd9", "iii7", "vi7", "iii7/II", "I6/V", "Iadd9/V", "vi7", "I6"]
-    O = ["Oadd9"], ["Oh9", "OV6"], ["Omaj9", "Oiii7", "OV6", "Oh9"], ["Oiii7", "Osm", "OV6", "Oadd9"], \
-        ["OV6", "Oiii7", "Omaj7", "Oh9"], ["Oh9", "Ou", "Osm", "O7911"], ["Oadd9", "OV/I", "Omaj7", "Oh7"], \
-        ["Oh9", "Oiii7", "OV6", "Osm", "O7911", "Ou", "Omaj9", "Oadd9"]
-    U = ["Ufm"], ["Ufm", "Udbmaj7"], ["Ufm", "Udbmaj7", "Ubbm7", "Ufm6"], ["Ubbm7", "Udbmaj7", "Uab6", "Ufm"], \
-        ["Udbmaj7", "Ubbm7", "Ufm", "Uab6"], ["Ufm6", "Udb", "Ubbm", "Ufm"], ["Ufm", "Ubbm/F", "Ufm", "Udb/F"], \
-        ["Ufm", "Udb", "Ubbm7", "Ufm6", "Udbmaj7", "Ubbm", "Uab6", "Ufm"]
+    # (OTONAL: the 15th harmonic's chords or the 7th's, never both in one: 15/8 and 7/4 are a semitone apart)
+    O = ["Oadd9"], ["Omaj9", "OV6"], ["Omaj9", "Oiii7", "OV6", "Oadd9"], ["Oiii7", "OV6", "OV/I", "Omaj7"], \
+        ["OV6", "Oiii7", "Omaj7", "Oadd9"], ["Oh9", "Ou", "Osm", "Oh7"], ["Oadd9", "OV/I", "Omaj7", "OV/I"], \
+        ["Omaj9", "Oiii7", "OV6", "Oadd9", "Omaj7", "Oiii7", "OV/I", "Oadd9"]
+    # (UTONAL: the 8/7 of Fm6 never with D-flat's 16/15)
+    U = ["Ufm"], ["Ufm", "Udbmaj7"], ["Ufm", "Udbmaj7", "Ubbm7", "Uab6"], ["Ubbm7", "Udbmaj7", "Uab6", "Ufm"], \
+        ["Udbmaj7", "Ubbm7", "Ufm", "Uab6"], ["Ufm6", "Uab6", "Ufm", "Ufm6"], ["Ufm", "Ubbm/F", "Ufm", "Udb/F"], \
+        ["Ufm", "Udb", "Ubbm7", "Uab6", "Udbmaj7", "Ubbm", "Ufm", "Uab6"]
     plan = {"JUST": (diatonic("JUST"), D), "OTONAL": (otonal, O), "UTONAL": (utonal, U), "PENTA": (penta("PENTA"), P),
             "ET": (diatonic("ET"), D)}
 
@@ -319,7 +324,13 @@ def bg_chords(scales):
                 best = (float(tot[j]), js)
         return [A[i][j] for i, j in enumerate(best[1])]
 
-    return plan, pure, label, voicings, lead
+    def crowded(tones):             # the notes of a whole progression together: two semitones in a row (a chromatic
+        pcs = sorted({round(_cents(t) % 1200.0, 1) for t in tones})   # crowd: B, B-flat and C at once) or closer
+        gaps = [(pcs[(i + 1) % len(pcs)] - pcs[i]) % 1200.0 for i in range(len(pcs))]
+        return any(g < 90.0 for g in gaps) or any(gaps[i] < 150.0 and gaps[(i + 1) % len(gaps)] < 150.0
+                                                   for i in range(len(gaps)))
+
+    return plan, pure, label, voicings, lead, crowded
 
 
 def main():
@@ -460,7 +471,7 @@ def main():
     # ---- BACKGROUND RADIATION: its chords (bg_chords: per tuning, eight progressions of up to eight chords, eight
     # voices each, 1/256 semitone over the sun in its octave 3), what each chord is called; the voice's wave (a soft
     # saw: 8 harmonics, and 4 for the high notes, so nothing folds over at NEBULA's half rate); SILK's low-pass
-    plan, pure, label, voicings, lead = bg_chords(scales)
+    plan, pure, label, voicings, lead, crowded = bg_chords(scales)
     cat, cat_ix, bgn, bgc, bgv = [], {}, [], [], []
     for n in names:
         chords, progs = plan[n]
@@ -469,6 +480,8 @@ def main():
         rn, rc, rv = [], [], []
         for prog in progs:
             assert 1 <= len(prog) <= 8
+            alltones = [t for cn in prog for t in [chords[cn][3]] + chords[cn][4]]
+            assert not crowded(alltones), (n, prog, "its notes together crowd: one would clash with the next's tail")
             opts, ids = [], []
             for cn in prog:
                 root, suf, bsemi, bass, ups = chords[cn]
@@ -481,7 +494,21 @@ def main():
                         for j in range(i + 1, len(tones)):
                             assert _red(tones[i] / tones[j]) == 1 or pure(tones[i], tones[j]), (n, cn, tones[i], tones[j])
                     lab = label(bass, ups)
-                key = (root, suf, bsemi, lab)
+                pcs = sorted({round(_cents(t) % 1200.0, 3) for t in [bass] + ups})
+                bc = round(_cents(bass) % 1200.0, 3)
+                if len(pcs) >= 4:               # (FOLLOW walks the chord, not its added ninth: a ninth over the
+                    rootc = round(_cents(scales["JUST"][root % 12] if n != "ET" else 2 ** (root / 12.0)) % 1200.0, 3)   # root, when
+                    nin = [pc for pc in pcs if 150.0 < (pc - rootc) % 1200.0 < 240.0]   # a third is there too)
+                    thirds = [pc for pc in pcs if 250.0 < (pc - rootc) % 1200.0 < 450.0]
+                    if n in ("OTONAL", "UTONAL"):
+                        rootc = bc
+                        nin = [pc for pc in pcs if 150.0 < (pc - rootc) % 1200.0 < 240.0]
+                        thirds = [pc for pc in pcs if 250.0 < (pc - rootc) % 1200.0 < 450.0]
+                    if nin and thirds and nin[0] != bc:
+                        pcs = [pc for pc in pcs if pc != nin[0]]
+                b0 = bc if bc < 650.0 else bc - 1200.0          # (the bass about the sun: -5 .. +6 semitones)
+                tones = tuple(sorted(int(round((b0 + (pc - bc) % 1200.0) * 2.56)) for pc in pcs))
+                key = (root, suf, bsemi, lab, tones)
                 if key not in cat_ix:
                     cat_ix[key] = len(cat)
                     cat.append(key)
@@ -515,6 +542,15 @@ def main():
     parts.append(c_array("ORB_BGC_BASS", "uint8_t", [k[2] for k in cat]))
     parts.append("static const char *const ORB_BGC_SUF[%d] = {%s};\n" % (len(cat), ", ".join(f'"{k[1]}"' for k in cat)))
     parts.append("static const char *const ORB_BGC_RATIO[%d] = {%s};\n" % (len(cat), ", ".join(f'"{k[3]}"' for k in cat)))
+    # FOLLOW: each chord's notes, its bass first (-5 .. +6 semitones about the sun), then up within an octave, 1/256 st
+    assert max(len(k[4]) for k in cat) <= 6
+    parts.append(c_array("ORB_BGC_NT", "uint8_t", [len(k[4]) for k in cat]))
+    lines = ["static const int16_t ORB_BGC_TONE[%d][6] = {" % len(cat)]
+    for k in cat:
+        t = list(k[4]) + [k[4][0]] * (6 - len(k[4]))
+        lines.append("    {" + ", ".join(str(v) for v in t) + "},")
+    lines.append("};\n")
+    parts.append("\n".join(lines))
     amps = [1.0 / h ** 1.45 for h in range(1, 9)]
     waves = []
     for nh in (8, 4):

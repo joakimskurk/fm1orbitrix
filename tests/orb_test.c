@@ -360,6 +360,123 @@ static double peak_freq(const float *x, int n, double lo, double hi)
     }
     return bf;
 }
+/* FOLLOW: a ring's degrees are the chord's notes; CHORD keys too: in every tuning, every note fired is a note of the
+ * chord of its bar */
+static int in_chord(uint32_t id, int32_t rel)  /* rel: 1/256 semitone over the sun */
+{
+    uint32_t i;
+    for (i = 0; i < ORB_BGC_NT[id]; i++) if ((((rel - ORB_BGC_TONE[id][i]) % 3072) + 3072) % 3072 == 0) return 1;
+    return 0;
+}
+static void test_follow(void)
+{
+    static int32_t out[64];
+    static const int8_t mel[] = {0, 1, 2, 3, 4, -1, 5, 2, -2, 7};
+    uint32_t tu, fired = 0, bad = 0, keys = 0, kbad = 0;
+    for (tu = 0; tu < ORB_NTUNING; tu++) {
+        uint32_t tick, k, fl = 0;
+        orb_system(2, &S);
+        S.tuning = (uint8_t)tu; S.sun = (uint8_t)(tu * 7 % 12); S.bg_prog = 7; S.bg_change = 0; S.bpm = 150;
+        S.mutate = 40; S.var = 50;          /* (MUTATE steps a FOLLOW ring's notes along the chord: still in it) */
+        for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
+        orb_ring_pat(&S.ring[0], 1, 1, "xxxxxxxxxx......", mel, 10, 0);
+        S.ring[0].follow = 1; S.ring[0].mute = 0;
+        orb_init(&O, &S, &MEM);
+        orb_play(&O, 1);
+        for (tick = 0; tick < (uint32_t)(20.0 * 44100 / 32); tick++) {
+            memset(out, 0, sizeof out);
+            orb_render(&O, out, 32);
+            if (O.rs[0].flash != fl) {
+                int32_t rel = O.v[0].target - (int32_t)S.snd[ORB_A].oct * 3072 - (36 + (int32_t)S.sun) * 256;
+                fl = O.rs[0].flash;
+                fired++;
+                if (!in_chord(orb_chord_at(&S, O.T), rel)) bad++;
+            }
+            if ((tick & 255u) == 0u) {      /* the CHORD keys, all of them, now */
+                uint32_t n, id = orb_chord_at(&S, O.T);
+                S.keymode = KM_CHORD;
+                for (n = 48; n < 96; n++) {
+                    int32_t sun = (int32_t)S.sun, rel = orb_key_chord(&S, O.T, n) - (60 + sun - (sun > 6 ? 12 : 0)) * 256;
+                    keys++;
+                    if (!in_chord(id, rel)) kbad++;
+                }
+                S.keymode = KM_SOLAR;
+            }
+        }
+    }
+    printf("follow: %u notes fired in every tuning, VOYAGE a chord a bar, MUTATE on: %u outside their chord; "
+           "CHORD keys: %u, %u outside\n", fired, bad, keys, kbad);
+    CHECK(fired > 500 && !bad, "follow: %u of %u notes outside the chord", bad, fired);
+    CHECK(keys > 1000 && !kbad, "chord keys: %u of %u outside the chord", kbad, keys);
+}
+
+/* CUTE: patches made at a press, every mood, a few of each: they play (not silent, not over), and every note a ring
+ * fires is in its chord; MOOD turns a factory system and keeps its notes in register */
+static void test_cute(void)
+{
+    static int32_t out[64];
+    uint32_t mood, seed, fired = 0, bad = 0, quiet = 0, loud = 0;
+    for (mood = 0; mood < ORB_NMOOD; mood++)
+        for (seed = 0; seed < 6u; seed++) {
+            uint32_t tick, r, fl[ORB_NRING] = {0, 0, 0, 0};
+            int32_t peak = 0;
+            double sq = 0;
+            orb_cute(&S, mood, seed);
+            orb_init(&O, &S, &MEM);
+            orb_play(&O, 1);
+            for (tick = 0; tick < (uint32_t)(10.0 * 44100 / 32); tick++) {
+                uint32_t k;
+                memset(out, 0, sizeof out);
+                orb_render(&O, out, 32);
+                for (k = 0; k < 64u; k++) {
+                    int32_t a = out[k] < 0 ? -out[k] : out[k];
+                    if (a > peak) peak = a;
+                    if (tick > 4u * 1378u) sq += (double)out[k] * out[k];
+                }
+                for (r = 0; r < ORB_NRING; r++)
+                    if (O.rs[r].flash != fl[r]) {
+                        fl[r] = O.rs[r].flash;
+                        if (!S.ring[r].follow) continue;
+                        fired++;
+                        if (!in_chord(orb_chord_at(&S, O.T),
+                                      O.v[r].target - (int32_t)S.snd[ORB_A + r].oct * 3072 - (36 + (int32_t)S.sun) * 256)) bad++;
+                    }
+            }
+            {
+                double rms = 10 * log10(sq / (6.0 * 44100 * 2) / (32768.0 * 32768.0) + 1e-12);
+                if (rms < -34.0) quiet++;
+                if (peak > 32767) loud++;
+                if (seed == 0) printf("cute %-8s %3u bpm %-6s %-7s  peak %5.1f dBFS  rms %5.1f dBFS\n", ORB_MOOD_NAME[mood],
+                                      S.bpm, ORB_TUNING_NAME[S.tuning], ORB_BGPROG_NAME[S.bg_prog],
+                                      20 * log10((peak + 1) / 32768.0), rms);
+            }
+        }
+    printf("cute: 24 patches, %u notes followed their chords, %u outside; %u too quiet, %u over\n", fired, bad, quiet, loud);
+    CHECK(fired > 1000 && !bad, "cute: %u of %u notes outside their chord", bad, fired);
+    CHECK(!quiet && !loud, "cute: %u too quiet, %u over full scale", quiet, loud);
+    {   /* MOOD on MILKY WAY: its notes where they were (each within a tone of its old pitch) */
+        uint32_t r, i, far = 0, n = 0;
+        orb_sys_t before;
+        orb_system(1, &S);
+        before = S;
+        orb_mood(&S, ORB_MOOD_SPARKLY);
+        for (r = 0; r < ORB_NRING; r++) {
+            uint32_t id = ORB_BGP_C[S.tuning % ORB_NTUNING][S.bg_prog % ORB_NBGPROG][0];
+            if (!S.ring[r].follow || before.ring[r].follow) continue;
+            for (i = 0; i < before.ring[r].len; i++) {
+                int32_t a, b;
+                if (!before.ring[r].on[i]) continue;
+                a = orb_degree(&before, before.ring[r].deg + before.ring[r].dg[i]);
+                b = orb_chord_tone(id, S.ring[r].deg + S.ring[r].dg[i]);
+                n++;
+                if (abs(a - b) > 3 * 256) far++;
+            }
+        }
+        printf("mood: MILKY WAY turned SPARKLY at %u bpm, %u notes followed, %u moved more than a minor third\n", S.bpm, n, far);
+        CHECK(n > 10 && !far, "mood: %u of %u notes moved far", far, n);
+    }
+}
+
 static void test_cosmic(void)
 {
     static int32_t out[512];
@@ -545,6 +662,8 @@ int main(void)
     test_horizon();
     test_library();
     test_cosmic();
+    test_follow();
+    test_cute();
     test_systems();
     if (fails) { printf("orb_test: %d FAILED\n", fails); return 1; }
     printf("orb_test: all passed\n");

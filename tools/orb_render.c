@@ -11,6 +11,7 @@
  *                                                drum, a phrase for the rest, played as the keys play a part (A's voice)
  *   orb_render bg N PROG SECONDS OUT.wav [alone] system N with the background radiation's chords PROG (0..7, its
  *                                                level as the system has it, or 45), "alone": the rings and keys quiet
+ *   orb_render cutesong MOOD SEED OUT.wav        the same of a patch CUTE makes (MOOD 0..3: SLEEPY PLAYFUL SPARKLY ZOOMIES)
  *   orb_render song N OUT.wav                    a little song from system N: its chords alone, then its parts come
  *                                                in by kind (bass, beat, melodies), a break where the keys sing the
  *                                                chords' own notes, all of it, the beat out, STOP and the tail
@@ -179,6 +180,8 @@ static int32_t chord_tone(uint32_t tick, uint32_t k)   /* the k-th note (from th
     i = nu > 4u ? nu - 4u + k : k;
     return up[i < nu ? i : nu - 1u];
 }
+static int32_t cute_mood = -1;
+static uint32_t cute_seed;
 static void song(uint32_t sysn)
 {
     enum { G_BASS = 1, G_BEAT = 2, G_MEL = 4, G_KEYS = 8 };
@@ -190,7 +193,8 @@ static void song(uint32_t sysn)
     static const uint8_t PH_LEN[2][8] = {{3, 3, 2, 7, 3, 3, 2, 7}, {6, 2, 7, 6, 2, 7, 0, 0}};
     static const uint8_t PH_K[2][8] = {{1, 2, 3, 2, 1, 0, 1, 3}, {2, 3, 1, 1, 0, 2, 0, 0}};
     uint32_t grp[ORB_NRING], r, sec, slow, nph, bar = 0, nbeat = 0, step, off_at[4] = {0, 0, 0, 0}, nk = 0, mels = 0;
-    reset(sysn);
+    if (cute_mood >= 0) { orb_cute(&S, (uint32_t)cute_mood, cute_seed); orb_init(&O, &S, &MEM); }
+    else reset(sysn);
     slow = S.bpm < 90u;
     nph = slow ? 6u : 8u;
     for (r = 0; r < ORB_NRING; r++) {
@@ -257,6 +261,14 @@ int main(int argc, char **argv)
         orb_play(&O, 0);
         run_ms(4000u + (S.bg_halo ? ORB_HALO_SEC[S.bg_halo % 100u] * 500u : 0u));   /* (HALO: its tail too) */
         write_wav(argv[5]);
+    } else if (argc >= 5 && !strcmp(argv[1], "cutesong")) {   /* a song of a CUTE patch: mood, seed */
+        cute_mood = atoi(argv[2]) % ORB_NMOOD;
+        cute_seed = (uint32_t)atoi(argv[3]);
+        song(0);
+        printf("cute %s, seed %u: %u bpm, %s, %s, %s / %s / %s / %s, keys %s\n", ORB_MOOD_NAME[cute_mood], cute_seed, S.bpm,
+               ORB_TUNING_NAME[S.tuning], ORB_BGPROG_NAME[S.bg_prog], orb_lib_name(&S.snd[1]), orb_lib_name(&S.snd[2]),
+               orb_lib_name(&S.snd[3]), orb_lib_name(&S.snd[4]), orb_lib_name(&S.snd[0]));
+        write_wav(argv[4]);
     } else if (argc >= 4 && !strcmp(argv[1], "song")) {
         song((uint32_t)atoi(argv[2]));
         write_wav(argv[3]);

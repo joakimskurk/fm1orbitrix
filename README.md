@@ -198,36 +198,52 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Twenty systems
+## Sixteen systems
 
-The first two are to start from, a beat and a lullaby; the next fourteen are named after real resonances in the sky; the
-last four are astral cuteness, made by hand around the background radiation's chords: in each, the bass walks the
-chords' roots (they change together, on the bar) and the melodies keep to the notes every chord holds.
+Each is its own kind of music, with its own tempo, sounds and space, and each sounds right the moment it plays. In
+every one with chords the bass and the melodies FOLLOW them: they play the chord's own notes, so they change with it on
+the bar, and whatever CHORDS is turned to, nothing clashes.
 
-| | Rings | |
+| | | |
 | --- | --- | --- |
-| **KITTEN** | 1:1 1:1 1:1 1:1 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
-| **MILKY WAY** | 1:1 1:1 3:2 1:2 | a lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the background radiation's chords under it (ORBIT); the keys mew |
-| **HARMONICES** | 1:1 5:4 3:2 7:4, 4 5 6 7 hits a bar | 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
-| **GALILEAN** | 1:1 1:2 1:4 2:1 | Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way |
-| **TRAPPIST** | 1:1 3:2 5:3 8:5 | a resonant chain of glassy plucks that mutate |
-| **KIRKWOOD** | 1:3 1:1 5:6 2:3 | the asteroid gaps against Jupiter (3, 5/2, 2): pixel percussion |
-| **SPIRAL DRIFT** | 1:1 3:2 5:4 7:5, 16 24 20 28 steps | everything SPIRAL, PROB 74, MUTATE 42 |
-| **PULSAR** | 1:1 1:1 2:1 1:2 | drums: an infall kick, a dust snare, pixel hats, a bass |
-| **NEBULA** | 1:3 1:2 2:3 3:4 | slow, UTONAL, moons, a deep NEBULA, notes falling into tune |
-| **ROCHE** | 5:4 4:3 7:5 3:2 | torn apart: bells off whole ratios, dust, CHAOS |
-| **LAGRANGE** | 1:1 1:2 3:2 2:1 | HARMONIC keys over a calm orbit |
-| **ACCRETION** | 1:2 1:1 3:4 3:2 | GRAVITY high: every note falls into tune, the rings glide |
-| **GW150914** | 1:2 1:1 3:2 2:1 | the first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon |
-| **ALPHA CEN** | 1:1 4:3 5:3 1:4 | a triple star: the rings pull hard on each other (TIDE), the three-body problem, tuned |
-| **SGR A*** | 1:2 2:3 1:3 3:4 | the black hole at the centre: deep, UTONAL; when the pad's point dips, everything slides in, redshifted and partly backwards |
-| **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation's chords on the overtone series, the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
-| **PURRSEC** | 1:1 1:1 1:1 1:2 | a cat café at 84, swung: a soft thump, a brushed pat, hats that come and go, the purr walking the royal road (Gmaj7 A6 F#m7 Bm9 on D) under its chords in a halo; the keys a toy piano |
-| **STARDUST** | 1:1 3:2 5:4 1:2 | a nursery of stars at 100 on the overtone series (maj9 m7 6 h9): a half-time thump, stars twinkling at 3:2 and glass at 5:4 on the notes all four chords share, a sub on the roots, a long halo; the keys a tidal bell |
-| **MOON NAP** | 1:1 3:2 5:4 1:4 | a lullaby at 66 on the subharmonics (Dm Bbmaj7 Gm7 Dm6): a paw rocking the chord, a music box, now and then a star, a slow sub, the halo at 30 s, no drums; the keys her mew |
-| **ZOOMIES** | 1:1 1:1 3:2 1:1 | a kitten's mad minute at 124: four on the floor, a clap, a squeak chasing at 3:2, a growl leaping octaves on the roots of a chord a bar, a short halo; the keys a pixel lead |
+| **KITTEN** | a beat to start from, 104 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
+| **MILKY WAY** | a lullaby, 86 | a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the chords under it; the keys mew |
+| **HARMONICES** | the idea, 96 | 4, 5, 6 and 7 hits a bar at 1:1 5:4 3:2 7:4: the chord 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
+| **PURRSEC** | lo-fi, 84, swung | a cat café: a soft thump, a brushed pat, ticking hats that come and go, the purr on the royal road (Gmaj7 A6 F#m7 Bm9), dark short chords; a toy piano |
+| **ZOOMIES** | house, 124 | a kitten's mad minute: four on the floor, a clap, a squeak chasing at 3:2, a growl bouncing on the bass and fifth, a chord a bar; a pixel lead |
+| **CATWALK** | disco, 116 | four on the floor, a clap, plucked chord stabs off the beat, the purr in sixteenths, a chord a bar, glossy; a lead |
+| **SPIRAL** | generative, 112 | 16 24 20 28 steps at 1:1 3:2 5:4 7:5, all SPIRAL, PROB 74, MUTATE 30: never twice the same, every note in the chord (VOYAGE: eight of them) |
+| **LUNA NOVA** | bossa nova, 92 | a rim on the clave, a shaker, a paw comping jazz chords (Am9 Fmaj7 Cadd9 Em7), the bass on the root and fifth; a flute |
+| **SGR A\*** | dub, 72 | one drop: the kick and the rim on three, a pluck skanking into long echoes that tire a minor third each time (steps, never a slide), a sub walking the chords |
+| **BOOP BOP** | chiptune, 140 | dry: a pixel arpeggio up and down the chord in sixteenths, a pixel bass, a kick and a zap; the chords silent, only played |
+| **SNOWGLOBE** | a music box, 96, in 12/8 | the rings at 3:4, twelve steps a bar: a bell turning, a toy answering, stars falling, a sub on the bass and fifth, no drums |
+| **STARDUST** | synth pop, 108 | on the overtone series (maj9 m7 6 add9): a thump on one and three, glass arpeggiating, stars at 3:2, a sub, a halo |
+| **ALPHA CEN** | a gamelan, 100 | a triple star: two bells interlocking (one on the beat, one between), a slow melody, a gong; TIDE makes them shimmer and beat as a gamelan's pairs do; pentatonic, no chords |
+| **MOON NAP** | a lullaby, 66 | on the subharmonics (Dm Bbmaj7 Gm7): a paw rocking the chord, a music box at 5:4, now and then a star, a slow sub, a 30 s halo, no drums; her mew |
+| **AFTERGLOW** | ambient, 70 | the oldest light: chords on the overtone series in a long halo, a sub, glass at 5:4, stars at 7:4, boops at 3:2, the nebula blooming, echoes that tire |
+| **PULSAR** | minimal techno, 128 | four on the floor, open hats off the beat, zaps pulsing on the chord (BEAM), a rolling sub, a resonant filter breathing slowly |
 
 There are also eight places of your own, U1–U8.
+
+## Making cute things
+
+- **CUTE** (HOME's third page): Astralica in the mood, and **SEL + HOME** makes a whole new patch in it: SLEEPY,
+  PLAYFUL, SPARKLY or ZOOMIES. Each mood has its sounds for each role, its tunings and chords, its tempos and space,
+  and rhythms written by hand to pick from; every pitched ring follows the chords and the keys are CHORD keys, so
+  whatever comes out is in tune with itself. Another press, another one; SAVE keeps it.
+- **MOOD** (CUTE's K1) turns the patch playing to a mood: its tempo, sounds, space and chords, its patterns kept (their
+  notes moved to the nearest note of the chord, so they stay where they were).
+- **FOLLOW** (STEPS, ALGORITHM): a ring plays the chord's own notes instead of the tuning's degrees: #0 the chord's
+  bass, #1 the next note up, #2 the next, and so on round, an octave a round. A bass on #0 walks the chords' roots, a
+  melody on #2 to #5 moves with each chord, whatever the progression; MUTATE then only steps it along the chord.
+- **IDEA knows the chords**: on a bass, a melody, boops or a voice it writes a FOLLOW pattern (a bass on the chord's
+  bass and its neighbours, a melody walking its notes).
+- **CHORD keys** (KEYS' MODE): every white key a note of the chord sounding now (C4 its bass, going up), a black key the
+  one under it an octave up; the KEYS page names what each key plays, its bass lit. Nothing on the keyboard is wrong.
+
+<p align="center">
+  <img src="docs/readme/screen_cute.png" width="240" alt="CUTE: Astralica in the mood, her kittens round her, the mood's name, SEL+HOME: A NEW ONE">
+</p>
 
 ## The controls
 
@@ -237,11 +253,11 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 
 | Control | What it does |
 | --- | --- |
-| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their levels) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) |
-| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
+| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their levels) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) → CUTE (MOOD CHORDS HALO BPM · CHORD LV CHANGE SWING KEYS) |
+| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC · ALGORITHM: FOLLOW; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
 | **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED BLOOM) · BACKGROUND (LEVEL CHORDS CHANGE HALO · SILK WIDTH LOW CUT TEMP · ALGORITHM: GLOW) → ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED BLOOM) · BACKGROUND (LEVEL CHORDS CHANGE HALO · SILK WIDTH LOW CUT TEMP · ALGORITHM: GLOW) → ORBIT PAD · KEYS (mode: SOLAR, HARMONIC or CHORD; tuning, sun, octave, gravity, MIDI channel) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: K (the keys), A, B, C, D: what the pages edit and the keys play |
@@ -249,6 +265,7 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 | **PLAY** · **REC** | the orrery · the keys write into the focused track |
 | **SAVE**, SAVE | store the system in U1–U8 |
 | **SEL + a key** | the sun moves there |
+| **SEL + HOME** | a new patch in the mood (CUTE) |
 | **SEL + SEQ** | the focused track muted or not |
 | **SEL + GLO** | the background radiation's chords out (they fade) and in again |
 | **OCT− OCT+** | the keys' octave; on STEPS, which 16 steps the white keys show |
@@ -270,7 +287,7 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the twenty systems with a progression on the keys, `build/audio/songs/` little songs of the
+`build/audio/tour/` holds the sixteen systems with a progression on the keys, `build/audio/songs/` little songs of the
 ones with chords (`orb_render song`: the chords alone, the parts coming in, a break where the keys sing, the tail), `build/audio/lib/` every sound SOUND
 can pick, `build/look/` their spectrograms. `tools/readme_screens.sh` makes the screens here.
 
@@ -284,7 +301,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend, the songs and the twenty systems to hear, and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend, the songs and the sixteen systems to hear, and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
@@ -301,7 +318,7 @@ run one a millisecond.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the sound library (30 sounds by name) and the twenty systems
+firmware/src/orb_systems.h  the sound library (30 sounds by name), the sixteen systems and CUTE
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)
