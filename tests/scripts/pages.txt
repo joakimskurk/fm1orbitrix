@@ -26,6 +26,8 @@
 9100 shot
 9300 btn 7
 9700 shot
+9760 btn 7
+9860 shot
 9900 btn 10
 10300 shot
 10400 keys 0

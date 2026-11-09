@@ -5,7 +5,7 @@
   harmonically beautiful. The look is the user's two ORBITRIX drawings: deep indigo, violet frames with cut corners, a
   lime title pill, the ring colours cyan, magenta, yellow, violet (A–D), lime for KEYS, pixel stars.
 - The code: `firmware/src/orb_engine.h` (the engine, no platform, shared with the host tools), `orb_systems.h` (the
-  sound library, 30 sounds by name, and the fifteen systems: KITTEN and MILKY WAY, to start from, first), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
+  sound library, 30 sounds by name, and the sixteen systems: KITTEN and MILKY WAY, to start from, first), `orbitrix.c` (the app), `orb_splash.h` (the cat, from `tools/gen_splash.py`: never edit it).
   The laws live in `tools/gen_tables.py`: change them there and rerun it, never edit `orb_tables.h`.
 - After every engine change: `tests/run_orb.sh` (tests, the same under ASan/UBSan, renders, spectrograms, bench). After
   an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt`, `splash.txt` and `groove.txt`
@@ -21,7 +21,8 @@
   systems at none but a ring's own re-attacks).
 - The budget (docs/RULES.md): the audio ISR under half of its 5.8 ms. The voice loop on the chip is ~110
   instructions a frame plain, ~310 with SLING, MOON, DUST, PIXEL, TIDE, BEAM and the send; the FX ~700 a frame with
-  the filter, NEBULA and HORIZON on. Over 80 % the interrupt sheds the quietest voice (`orb_shed`). Count with
+  the filter, NEBULA and HORIZON on, ~+260 (x86, callgrind) with the background radiation, BLOOM, the low cut and TIRED
+  LIGHT all on as well (nothing while they are off). Over 80 % the interrupt sheds the quietest voice (`orb_shed`). Count with
   callgrind on the host (`-Os`) or on the chip's own code (JieLi clang `-Os -c`, objdump). The app shows `CPU nn%` on
   the hint line.
 - Audio code: no float, no 64-bit division, no flash access in `orb_render`, no loop whose length a parameter sets,

@@ -219,13 +219,13 @@ static void undo_forget(void) { uint32_t r; for (r = 0; r < ORB_NRING; r++) undo
 
 /* ---- the pages and their values */
 enum { PG_ORRERY, PG_MACRO, PG_RING, PG_TIME, PG_SOUND, PG_ORBIT, PG_BODY, PG_COSMOS, PG_ENV, PG_MOD, PG_LFO, PG_FILTER,
-       PG_SPACE, PG_HORIZON, PG_PAD, PG_KEYS, NPAGE };
+       PG_SPACE, PG_HORIZON, PG_BG, PG_PAD, PG_KEYS, NPAGE };
 static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME", "SOUND", "ORBIT", "BODY", "COSMOS", "ENV", "MOD",
-                                             "LFO", "FILTER MAP", "SPACE", "HORIZON", "ORBIT PAD", "KEYS"};
+                                             "LFO", "FILTER MAP", "SPACE", "HORIZON", "BACKGROUND", "ORBIT PAD", "KEYS"};
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_LIB };
+       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -295,7 +295,11 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                   {"PING", W_SYS, F_ONOFF, SO(ping), 0, 1}},
     [PG_HORIZON] = {{"DEPTH", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"SHIFT", W_SYS, F_SEMI, SO(hshift), -24, 24},
                     {"RETRO", W_SYS, F_PCT, SO(hretro), 0, 99}, {"GRAIN", W_SYS, F_GRAIN, SO(hgrain), 0, 99},
-                    P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
+                    {"TIRED", W_SYS, F_TIRED, SO(tired), 0, ORB_NTIRED - 1}, P_NONE, P_NONE, P_NONE, P_BPM},
+    [PG_BG] = {{"LEVEL", W_SYS, F_NUM, SO(bg_level), 0, 99}, {"GLOW", W_SYS, F_NUM, SO(bg_glow), 0, 99},
+               {"SILK", W_SYS, F_NUM, SO(bg_silk), 0, 99}, {"TEMP", W_SYS, F_TEMP, SO(bg_temp), -2, 1},
+               {"BARYON", W_SYS, F_NUM, SO(bg_baryon), 0, 99}, {"ANISO", W_SYS, F_NUM, SO(bg_aniso), 0, 99},
+               {"LOW CUT", W_SYS, F_LOWCUT, SO(bg_cut), 0, 99}, {"BLOOM", W_SYS, F_NUM, SO(bloom), 0, 99}, P_BPM},
     [PG_PAD] = {{"X", W_SYS, F_NUM, SO(ox), 0, 99}, {"Y", W_SYS, F_NUM, SO(oy), 0, 99},
                 {"RAD", W_SYS, F_NUM, SO(orad), 0, 50}, {"PERIOD", W_SYS, F_SYNC, SO(orate), 0, ORB_NSYNC - 1},
                 P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
@@ -417,6 +421,9 @@ static void pd_text(const pd_t *d, char *s)
     case F_SEMI: put_s(put_i(s, v, 1), "st"); break;
     case F_GRAIN: put_s(put_u(s, (256u + (uint32_t)v * 39u) * 10u / 441u), "ms"); break;
     case F_LIB: put_s(s, v > 0 && v < (int32_t)ORB_NLIB ? ORB_LIB[v].name : "OWN"); break;
+    case F_TEMP: { static const char *const T[4] = {"0.7K", "1.4K", "2.7K", "5.5K"}; put_s(s, T[orb_clamp(v, -2, 1) + 2]); break; }
+    case F_LOWCUT: if (v) put_s(put_u(s, 20u + (uint32_t)v * 4u), "Hz"); else put_s(s, "OFF"); break;
+    case F_TIRED: put_s(s, ORB_TIRED_NAME[(uint32_t)v % ORB_NTIRED]); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
 }
@@ -1197,6 +1204,64 @@ static void draw_space(void)
     cv_blit(0, 24);
 }
 
+/* BACKGROUND: the first light, as its map is drawn (an oval of the whole sky, its tiny fluctuations warm and cold,
+ * drifting), Astralica at its middle; below, its acoustic peaks as they sound now (the sun's harmonics: odd taller with
+ * baryons, the high ones damped by SILK), its temperature */
+static void draw_bg(void)
+{
+    static const uint16_t MAP[8] = {RGB(20, 24, 110), RGB(36, 70, 200), RGB(60, 140, 235), RGB(120, 210, 240),
+                                    RGB(236, 232, 200), RGB(255, 196, 70), RGB(250, 120, 60), RGB(220, 50, 70)};   /* cold .. warm */
+    int32_t cx = 120, cy = 44, x, y, k, on = eng.bg_on, an = 10 + sys.bg_aniso / 2;
+    uint32_t t = fm1_ms * 5000u, hs = 0x51ED27u;
+    char s[24];
+    cv_begin(240, 144, C_BG);
+    stars(240, 144, 61, 30);
+    for (y = -40; y <= 40; y += 2)
+        for (x = -108; x <= 108; x += 2) {
+            int32_t v, c;
+            uint32_t h;
+            if (x * x * 40 * 40 / (108 * 108) + y * y > 40 * 40) continue;
+            h = ((uint32_t)(x * 73856093) ^ (uint32_t)(y * 19349663) ^ hs) * 2654435761u;   /* (a grain each cell) */
+            v = orb_sin((uint32_t)(x * 0x05000000) + (uint32_t)(y * 0x03400000) + t) +
+                orb_sin((uint32_t)(x * -0x03C00000) + (uint32_t)(y * 0x06100000) - t / 2u) +
+                (orb_sin((uint32_t)(x * 0x0B300000) - (uint32_t)(y * 0x08700000) + t / 3u) >> 1) +
+                (orb_sin((uint32_t)((x + 2 * y) * 0x0E900000) + t * 2u) >> 1) + (int32_t)((h >> 17) & 0x7FFFu) - 16384;
+            v = v * an / 45;
+            c = orb_clamp((v + 65536) * 8 / 131072, 0, 7);
+            cv_rect(cx + x - 1, cy + y - 1, 2, 2, on ? MAP[c] : dim565(MAP[c], 4));
+        }
+    for (k = 0; k < 96; k++) {                  /* its edge */
+        uint32_t ph = (uint32_t)k << 26 | (uint32_t)k << 24;
+        cv_pset(cx + icos(ph, 109), cy + isin(ph, 42), C_FRAME);
+    }
+    cat_draw_small(cx, cy, 80u);
+    put_s(put_s(s, "T "), sys.bg_temp <= -2 ? "0.68K" : sys.bg_temp == -1 ? "1.36K" : sys.bg_temp == 0 ? "2.725K" : "5.45K");
+    tx(4, 88, &FONT_S, s, C_GREY, C_BG);
+    tx(236 - text_w(&FONT_S, on ? "GLOWING" : sys.bg_level ? "PLAY: IT GLOWS" : "LEVEL 0: ASLEEP"), 88, &FONT_S,
+       on ? "GLOWING" : sys.bg_level ? "PLAY: IT GLOWS" : "LEVEL 0: ASLEEP", on ? C_LIME : C_DIMT, C_BG);
+    {   /* the acoustic peaks: each partial a peak, as loud as it is now */
+        int32_t mx = 1, px = 0, py = 0, base = 140;
+        for (k = 0; k < (int32_t)ORB_NBG; k++) if (eng.bg_a[k] > mx) mx = eng.bg_a[k];
+        cv_rect(4, base, 232, 1, C_FDIM);
+        for (x = 0; x <= 228; x += 2) {
+            int32_t v = 0;
+            for (k = 0; k < (int32_t)ORB_NBG; k++) {
+                int32_t d = x - (14 + k * 28), w = 13 - (d < 0 ? -d : d);
+                if (w > 0) v += eng.bg_a[k] * w / 13;
+            }
+            y = base - 1 - (on ? v * 34 / mx : 0);
+            cv_rect(6 + x, y, 2, base - y, dim565(C_LIME, 5));
+            if (x) cv_line(px, py, 6 + x, y, C_LIME);
+            px = 6 + x; py = y;
+        }
+        for (k = 0; k < (int32_t)ORB_NBG; k++) {
+            char n[3] = {(char)('1' + k), 0, 0};
+            tx(4 + 14 + k * 28 - 3, 106, &FONT_S, n, k & 1 ? C_DIMT : C_GREY, C_BG);   /* (odd: compressions) */
+        }
+    }
+    cv_blit(0, 24);
+}
+
 /* ORBIT PAD: the galaxy, the centre, the circle, the point going round it */
 static void draw_pad(void)
 {
@@ -1423,6 +1488,7 @@ static void draw_main(void)
     case PG_FILTER: draw_filter(); break;
     case PG_SPACE: draw_space(); break;
     case PG_PAD: draw_pad(); break;
+    case PG_BG: draw_bg(); break;
     default: draw_keys_page(); break;
     }
 }
@@ -1430,7 +1496,7 @@ static int page_animated(void)
 {
     return page == PG_ORRERY || page == PG_MACRO || page == PG_RING || page == PG_TIME || page == PG_SOUND || page == PG_ORBIT ||
            page == PG_BODY || page == PG_MOD || page == PG_LFO || page == PG_PAD || page == PG_COSMOS ||
-           page == PG_HORIZON;
+           page == PG_HORIZON || page == PG_BG;
 }
 
 /* the splash: the cat-planet (tools/gen_splash.py, 3x), stars twinkling round it as in the drawing, planets going
@@ -2238,7 +2304,7 @@ static void handle_buttons(void)
     if (b & (1u << BTN_ENV)) goto_page(PG_ENV, PG_ENV);
     if (b & (1u << BTN_LFO)) goto_page(PG_MOD, PG_LFO);
     if (b & (1u << BTN_FX)) goto_page3(PG_FILTER, PG_SPACE, PG_HORIZON);
-    if (b & (1u << BTN_GLO)) goto_page(PG_PAD, PG_PAD);
+    if (b & (1u << BTN_GLO)) goto_page(PG_BG, PG_PAD);
     if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
     if (b & (1u << BTN_PLAY)) { if (!eng.playing) cat_happy(); orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
     if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the keys: into A) */
@@ -2287,7 +2353,7 @@ static void leds(void)
     fm1_led_key(BTN_ENV, page == PG_ENV);
     fm1_led_key(BTN_LFO, page == PG_MOD || page == PG_LFO);
     fm1_led_key(BTN_FX, page == PG_FILTER || page == PG_SPACE || page == PG_HORIZON);
-    fm1_led_key(BTN_GLO, page == PG_PAD);
+    fm1_led_key(BTN_GLO, page == PG_BG || page == PG_PAD);
     fm1_led_key(BTN_ARP, page == PG_KEYS);
     fm1_led_key(BTN_PLAY, eng.playing ? (eng.T % (4u * ORB_TPS)) < ORB_TPS * 3u : 0);
     fm1_led_key(BTN_REC, rec && ((fm1_ms >> 8) & 1u));

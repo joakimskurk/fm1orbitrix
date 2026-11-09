@@ -346,6 +346,104 @@ static void test_library(void)
     printf("library: %u sounds load with their registers; the keys play a track's sound on their own voices\n", ORB_NLIB - 1u);
 }
 
+/* BACKGROUND RADIATION: all its energy on the sun's harmonics (it cannot beat with itself), its fluctuations on too;
+ * NEBULA at its longest with BLOOM: it dies away, never past full scale; TIRED LIGHT: each echo 2/3 of the last */
+static double peak_freq(const float *x, int n, double lo, double hi)
+{
+    static float w[8192];
+    double best = 0, bf = lo, f;
+    int i;
+    for (i = 0; i < n; i++) w[i] = x[i] * (float)(0.5 - 0.5 * cos(2 * M_PI * i / n));
+    for (f = lo; f <= hi; f += 0.5) {
+        double m = dft_mag(w, n, f * n / 44100.0);
+        if (m > best) { best = m; bf = f; }
+    }
+    return bf;
+}
+static void test_cosmic(void)
+{
+    static int32_t out[512];
+    static float x[8192];
+    uint32_t b, k, i;
+    orb_system(2, &S);                      /* (HARMONICES, its rings quiet) */
+    for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
+    S.tuning = 1; S.sun = 0; S.rmix = 0; S.dmix = 0; S.cut = 99; S.res = 0; S.fmode = 0;
+    S.bg_level = 99; S.bg_glow = 0; S.bg_silk = 20; S.bg_baryon = 40; S.bg_aniso = 60; S.bg_cut = 0; S.bg_temp = 0;
+    memset(S.mod, 0, sizeof S.mod);
+    orb_init(&O, &S, &MEM);
+    orb_play(&O, 1);
+    for (b = 0; b < (uint32_t)(6.0 * 44100 / 256); b++) { memset(out, 0, sizeof out); orb_render(&O, out, 256); }
+    for (i = 0; i < 8192u; i += 256u) {
+        memset(out, 0, sizeof out);
+        orb_render(&O, out, 256);
+        for (k = 0; k < 256u; k++) x[i + k] = (float)out[2u * k];
+    }
+    {
+        double f0 = 440.0 * pow(2.0, (48 - 69) / 12.0), tot = 0, harm = 0, bin = 44100.0 / 8192.0;
+        static float w[8192];
+        int kk;
+        for (i = 0; i < 8192u; i++) w[i] = x[i] * (float)(0.5 - 0.5 * cos(2 * M_PI * i / 8192.0));
+        for (kk = 1; kk < 400; kk++) {      /* up to 2.1 kHz */
+            double m = dft_mag(w, 8192, kk), f = kk * bin, n = floor(f / f0 + 0.5);
+            tot += m * m;
+            if (n >= 1 && n <= 8 && fabs(f - n * f0) <= 4 * bin) harm += m * m;
+        }
+        printf("background radiation: %.4f of its energy on the sun's harmonics 1..8\n", harm / tot);
+        CHECK(harm / tot > 0.995, "background radiation: %.4f harmonic", harm / tot);
+        CHECK(tot > 1e3, "background radiation: silent");
+    }
+    /* NEBULA, all the way: size, decay, BLOOM, no damping, the pad glowing into it; then off: it must die away */
+    S.rmix = 99; S.rsize = 99; S.rdecay = 99; S.rdamp = 0; S.bloom = 99; S.bg_glow = 99; S.bg_cut = 30;
+    orb_init(&O, &S, &MEM);
+    orb_play(&O, 1);
+    {
+        int32_t peak = 0;
+        double e1 = 0, e2 = 0;
+        for (b = 0; b < (uint32_t)(70.0 * 44100 / 256); b++) {
+            if (b == (uint32_t)(4.0 * 44100 / 256)) orb_play(&O, 0);
+            memset(out, 0, sizeof out);
+            orb_render(&O, out, 256);
+            for (k = 0; k < 512u; k++) {
+                int32_t a = out[k] < 0 ? -out[k] : out[k];
+                double t = b * 256.0 / 44100;
+                if (a > peak) peak = a;
+                if (t >= 10 && t < 15) e1 += (double)out[k] * out[k];
+                if (t >= 60 && t < 65) e2 += (double)out[k] * out[k];
+            }
+        }
+        printf("NEBULA at its longest with BLOOM: peak %.1f dBFS; 50 s later %.1f dB down\n", 20 * log10((peak + 1) / 32768.0),
+               10 * log10((e1 + 1) / (e2 + 1)));
+        CHECK(peak <= 32767, "NEBULA with BLOOM: over full scale");
+        CHECK(e2 < e1 * 0.5, "NEBULA with BLOOM does not die away (%.3g then %.3g)", e1, e2);
+        CHECK(e1 > 1e6, "NEBULA with BLOOM: no tail");
+    }
+    /* TIRED LIGHT: a short A4 into the echo; the second echo 2/3 of the first */
+    orb_system(2, &S);
+    for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
+    plain(&S.snd[0]);
+    S.snd[0].send = 99;
+    S.bpm = 120; S.dtime = 5; S.dfb = 80; S.dmix = 99; S.ping = 0; S.rmix = 0; S.dtone = 99; S.tired = 6;
+    S.macro[MAC_GRAVITY] = 0; memset(S.mod, 0, sizeof S.mod);
+    orb_init(&O, &S, &MEM);
+    {
+        static float rec[4 * 44100];
+        uint32_t n = 0, D = 11025;
+        double f1, f2;
+        orb_note_on(&O, 1, 69 * 256, 100);
+        while (n + 256u <= sizeof rec / sizeof rec[0]) {
+            if (n >= 4410u && n < 4410u + 256u) orb_note_off(&O, 1);
+            memset(out, 0, sizeof out);
+            orb_render(&O, out, 256);
+            for (k = 0; k < 256u; k++) rec[n + k] = (float)out[2u * k];
+            n += 256u;
+        }
+        f1 = peak_freq(rec + D + 600, 2048, 200, 700);
+        f2 = peak_freq(rec + 2 * D + 1800, 2048, 150, 700);
+        printf("tired light: the echoes at %.1f Hz and %.1f Hz: %.3f (2/3)\n", f1, f2, f2 / f1);
+        CHECK(fabs(f2 / f1 - 2.0 / 3.0) < 0.02, "tired light: %.3f, want 0.667", f2 / f1);
+    }
+}
+
 int main(void)
 {
     test_orbit();
@@ -355,6 +453,7 @@ int main(void)
     test_inspiral();
     test_horizon();
     test_library();
+    test_cosmic();
     test_systems();
     if (fails) { printf("orb_test: %d FAILED\n", fails); return 1; }
     printf("orb_test: all passed\n");

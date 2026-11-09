@@ -1,5 +1,6 @@
 # ORBITRIX: the README's screens (tests/run_host.sh tests/scripts/readme.txt, then tools/readme_screens.sh). KITTEN:
-# HOME, STEPS (D), TIME, SOUND (D); then HARMONICES: MACROS, ORBIT (C), ENV, MOD, FILTER MAP, SPACE, ORBIT PAD, KEYS
+# HOME, STEPS (D), TIME, SOUND (D); then HARMONICES: MACROS, ORBIT (C), ENV, MOD, FILTER MAP, SPACE, ORBIT PAD, KEYS;
+# then AFTERGLOW: BACKGROUND
 2000 btn 12
 2700 shot
 2800 btn 11
@@ -27,9 +28,13 @@
 9300 btn 2
 9800 shot
 9900 btn 7
+9950 btn 7
 10400 shot
 10500 btn 10
 10500 keys 0x4890
 11000 shot
 11100 keys 0
-11300 end
+11200 enc 6 13
+11800 btn 7
+16000 shot
+16100 end

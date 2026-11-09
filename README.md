@@ -125,6 +125,23 @@ only at moments: where the orbits meet, at the end of a long ramp, when the pad'
   <img src="docs/readme/screen_splash.png" width="240" alt="The splash">
 </p>
 
+## Under it all: the background radiation, the nebula, tired light
+
+The universe's oldest light, the afterglow of the Big Bang, comes from every side at the same 2.725 K, but for tiny
+fluctuations. Its map has acoustic peaks: the first sound, the plasma ringing, and the peaks are a harmonic series.
+Baryons make the odd peaks taller than the even (cosmologists weigh the universe by it), and photons diffusing damp the
+high ones (Silk damping). ORBITRIX lays it under the music, a huge pad that cannot clash with itself:
+
+| | |
+| --- | --- |
+| **BACKGROUND RADIATION** | GLO's page. Eight partials on the sun's harmonic series (in UTONAL, of the sun's third below), so they never beat; each panned and slowly turning, from every side. **SILK** damps the high peaks, **BARYON** lifts the odd over the even, **ANISO** sets its tiny fluctuations, **TEMP** its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** takes its lowest partials away (and what goes into the nebula). It swells in while the orrery plays and glides when the sun moves. **GLOW** feeds it into NEBULA. The page draws its map, warm and cold, and its peaks as they sound. |
+| **BLOOM** | NEBULA's own light back into it: its lines' feedback up towards 0.985 and a little of its wet again through the diffusers. The tail gets far longer and denser at no cost (no new lines); the two never sum past 0.995, so it is stable. The lines now run hotter, rounded once, and saturate softly, so the tail's last 20 dB are heard instead of cut. When the sun moves, the nebula clears a moment, so the old chord's tail does not clash with the new. |
+| **TIRED LIGHT** | HORIZON's second row. Zwicky's 1929 idea, long given up, that light tires on its way and reddens with distance; here it is an echo: what goes round again is read slower than it was written, so each echo comes back a just interval lower than the last (z 0.07 a semitone … z 0.50 a fifth … z 1.00 an octave) and, through the echo's tone, dimmer: redder. |
+
+<p align="center">
+  <img src="docs/readme/screen_bg.png" width="240" alt="BACKGROUND: the first light's map, warm and cold, Astralica at its middle; its acoustic peaks below">
+</p>
+
 ## Harmony: gravity
 
 Everything is tuned to the **sun**, a pitch class you move with SEL + a key.
@@ -189,14 +206,14 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
   <img src="docs/readme/screen_env.png" width="240" alt="ENV: the amplitude envelope and the eccentricity envelope">
 </p>
 
-## Fifteen systems
+## Sixteen systems
 
 The first two are to start from, a beat and a lullaby; the others are named after real resonances in the sky.
 
 | | Rings | |
 | --- | --- | --- |
 | **KITTEN** | 1:1 1:1 1:1 1:1 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
-| **MILKY WAY** | 1:1 1:1 3:2 1:2 | a lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing; the keys mew |
+| **MILKY WAY** | 1:1 1:1 3:2 1:2 | a lullaby: a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the background radiation under it; the keys mew |
 | **HARMONICES** | 1:1 5:4 3:2 7:4, 4 5 6 7 hits a bar | 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
 | **GALILEAN** | 1:1 1:2 1:4 2:1 | Io, Europa and Ganymede's 1:2:4: four on the floor, a bass, a pad, hats that keep out of the kick's way |
 | **TRAPPIST** | 1:1 3:2 5:3 8:5 | a resonant chain of glassy plucks that mutate |
@@ -210,6 +227,7 @@ The first two are to start from, a beat and a lullaby; the others are named afte
 | **GW150914** | 1:2 1:1 3:2 2:1 | the first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon |
 | **ALPHA CEN** | 1:1 4:3 5:3 1:4 | a triple star: the rings pull hard on each other (TIDE), the three-body problem, tuned |
 | **SGR A*** | 1:2 2:3 1:3 3:4 | the black hole at the centre: deep, UTONAL; when the pad's point dips, everything slides in, redshifted and partly backwards |
+| **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation full (the odd peaks tall), the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
 
 There are also eight places of your own, U1–U8.
 
@@ -225,7 +243,7 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 | **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
 | **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN) · ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel, INTRO) |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED) · BACKGROUND (LEVEL GLOW SILK TEMP · BARYON ANISO LOW CUT BLOOM) → ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: K (the keys), A, B, C, D: what the pages edit and the keys play |
@@ -253,7 +271,7 @@ tests/run_host.sh tests/scripts/pages.txt   # the app on the host: every page as
 python3 tools/fm1_install.py build/orbitrix.fwsc   # onto an FM-1 over USB (it asks first)
 ```
 
-`build/audio/tour/` holds the fifteen systems with a progression on the keys, `build/audio/lib/` every sound SOUND
+`build/audio/tour/` holds the sixteen systems with a progression on the keys, `build/audio/lib/` every sound SOUND
 can pick, `build/look/` their spectrograms. `tools/readme_screens.sh` makes the screens here.
 
 Hold **OCT−** while switching on for the USB rescue. Any firmware in the
@@ -266,7 +284,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend's film, the fifteen systems to hear, and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend, the sixteen systems to hear, and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh
@@ -283,7 +301,7 @@ run one a millisecond.
 ```
 docs/orbitrix/PLAN.md       the design: the idea, the sound, harmony, rhythm, the screens, the budget
 firmware/src/orb_engine.h   the engine (orbit voices, gravity, the orrery, modulation, the filter map, SPACE)
-firmware/src/orb_systems.h  the sound library (30 sounds by name) and the fifteen systems
+firmware/src/orb_systems.h  the sound library (30 sounds by name) and the sixteen systems
 firmware/src/orbitrix.c     the app: pages, the panel, storage, MIDI
 tools/gen_tables.py         Kepler's equation, the aliasing caps, pitch, envelopes, the tunings, the chirp: the tables
 tools/gen_splash.py         the splash's cat-planet as pixel art (assets/cat_source.png, if there, is sampled instead)

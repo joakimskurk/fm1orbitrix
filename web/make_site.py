@@ -12,7 +12,7 @@ browser, the legend, the systems to hear, the installer.
                               offered)
   film/legend.webp, .m4a      the legend of Astralica: an animation on a transparent night, and its sound
                               (tools/make_legend.py: the firmware's legend, filmed on the host)
-  audio/                      the fifteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
+  audio/                      the sixteen systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
                               one's spectrum as a picture (WebP), low to high
   screens/                    the cat, the icon, the link preview, the pages' screens, the legend's poster
   .nojekyll                   (served as it is)
@@ -61,6 +61,7 @@ DEMOS = [   # build/audio/tour/NN_name.wav, in the systems' order
     ("GW150914", "The first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon."),
     ("ALPHA CEN", "A triple star: the rings pull hard on each other, the three-body problem, tuned."),
     ("SGR A*", "The black hole at the centre: when the pad's point dips, everything slides in, redshifted and partly backwards."),
+    ("AFTERGLOW", "The oldest light under everything: the background radiation, a blooming nebula, echoes that tire a fourth lower each time."),
 ]
 SPEC_W, SPEC_H, SPEC_N = 1200, 160, 8192
 SPEC_LO, SPEC_HI, SPEC_DB = 40.0, 16000.0, 75.0

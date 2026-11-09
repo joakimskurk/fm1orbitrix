@@ -155,9 +155,9 @@ static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8
     s->mod[k].src = src; s->mod[k].dst = dst; s->mod[k].amt = amt;
 }
 
-#define ORB_NSYSTEM 15u
+#define ORB_NSYSTEM 16u
 static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"KITTEN", "MILKY WAY", "HARMONICES", "GALILEAN", "TRAPPIST", "KIRKWOOD",
-    "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION", "GW150914", "ALPHA CEN", "SGR A*"};
+    "SPIRAL DRIFT", "PULSAR", "NEBULA", "ROCHE", "LAGRANGE", "ACCRETION", "GW150914", "ALPHA CEN", "SGR A*", "AFTERGLOW"};
 
 /* KITTEN: a beat to start from, on the grid (all 1:1, so every step is where you look for it): a kick on the beat, a
  * clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates:
@@ -203,6 +203,35 @@ static void orb_system_milky(orb_sys_t *s)
     s->dtime = 7; s->dfb = 45; s->ping = 1; s->dmix = 32; s->rmix = 55; s->rsize = 85; s->rdecay = 74;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 30);
+    s->bg_level = 46; s->bg_glow = 70; s->bg_silk = 40; s->bg_baryon = 30; s->bg_aniso = 30; s->bg_cut = 30;   /* under it all */
+    s->bloom = 45;
+}
+
+/* AFTERGLOW: the oldest light, under everything. The background radiation full (its peaks the sun's harmonics, the odd
+ * ones tall), the nebula blooming, echoes that tire, a fourth lower each time; slow orbits of glass at 5:4 and a music
+ * box at 7:4 in the overtone scale, boops at 3:2, a sub at half speed; the keys a tidal bell */
+static void orb_system_afterglow(orb_sys_t *s)
+{
+    static const int8_t mb[] = {4, 6, 7, 9, 11}, mc[] = {8, 10, 12, 14, 11, 9, 13}, md[] = {2, 4, 6, 4};
+    orb_rdef_t A = {1, 2, 8, 2, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x1};
+    orb_rdef_t B = {5, 4, 20, 5, 0, 0, DIR_FWD, 0, 0, 90, mb, 5, 0x1};
+    orb_rdef_t C = {7, 4, 28, 7, 2, 0, DIR_FWD, 0, 0, 85, mc, 7, 0};
+    orb_rdef_t D = {3, 2, 24, 4, 1, 0, DIR_FWD, 0, 0, 80, md, 4, 0};
+    s->tuning = 1; s->sun = 2; s->bpm = 70;
+    s->snd[0] = SND_TIDAL; s->snd[0].oct = 0; s->snd[0].level = 58;
+    s->snd[1] = SND_SUB; s->snd[1].oct = -1; s->snd[1].level = 70; s->snd[1].gate = 90;
+    s->snd[2] = SND_GLASS; s->snd[2].oct = 1; s->snd[2].level = 64;
+    s->snd[3] = SND_STAR; s->snd[3].oct = 2; s->snd[3].level = 60;
+    s->snd[4] = SND_BOOP; s->snd[4].oct = 1; s->snd[4].level = 58;
+    orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
+    orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
+    s->mutate = 12; s->var = 15;
+    s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 60; s->rsize = 95; s->rdecay = 80; s->rdamp = 50;
+    s->macro[MAC_GRAVITY] = 60; s->macro[MAC_ORBIT] = 20;
+    s->bg_level = 72; s->bg_glow = 85; s->bg_silk = 30; s->bg_baryon = 55; s->bg_aniso = 45; s->bg_cut = 35; s->bg_temp = -1;
+    s->bloom = 85; s->tired = 5;
+    orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 30);
+    orb_mod_set(s, 1, SRC_CONJ, DST_MOON, 30);
 }
 
 static void orb_system(uint32_t i, orb_sys_t *s)
@@ -210,6 +239,7 @@ static void orb_system(uint32_t i, orb_sys_t *s)
     orb_sys_clear(s, ORB_SYSTEM_NAME[i % ORB_NSYSTEM]);
     if (i % ORB_NSYSTEM == 0u) { orb_system_kitten(s); return; }
     if (i % ORB_NSYSTEM == 1u) { orb_system_milky(s); return; }
+    if (i % ORB_NSYSTEM == 15u) { orb_system_afterglow(s); return; }
     switch (i % ORB_NSYSTEM - 2u) {           /* (the sky's: HARMONICES 0 ..) */
     case 0: {   /* HARMONICES: 4, 5, 6, 7 hits a bar on the 4:5:6:7 chord, in the overtone scale (OTONAL) */
         static const int8_t mb[] = {0, 1, 0, -1, 2}, mc[] = {0, 0, 2, 0, -2, 1}, md[] = {0, 2, 0, 4, 0, -1, 1};

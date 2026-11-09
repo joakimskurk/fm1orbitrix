@@ -290,3 +290,35 @@ background. Decided:
   scaled pixel for pixel by the page), a still, and its sound (AAC). PRESS PLAY TO SKIP went (it was the FM-1's), and
   the line over the words. It loops silent; "From the start, with its sound" restarts it with its sound.
 - CI makes it in place of the film (`make_film.sh` stays, for films of the host).
+
+## D19 — Under it all: the background radiation, a nebula that blooms, tired light (2026-11-09)
+
+The user: it is not astral yet; a huuuge pad must lie under it, not clashing with itself, fed extra into the reverb,
+which must be longer (to save CPU, its wet fed back into itself), and low-cut. Then: the pad is rather "background
+radiation"; bring in astral ideas, vague theories too; make redshift into an FX; read up. Read: the CMB's acoustic peaks
+form a harmonic series; baryons make the odd peaks taller (a "baryometer"); photon diffusion damps the high ones (Silk
+damping); its temperature is 2.725 K with fluctuations about one in 100 000; sonifications of it fall in pitch as the
+universe expands (Cramer's "Sound of the Big Bang"); Zwicky's tired light (1929) had light lose energy with distance;
+the CMB cold spot and the "axis of evil" are its unexplained anomalies. Decided:
+
+- **BACKGROUND RADIATION** (GLO's first page): eight partials on the sun's harmonic series (1..8; PENTA and ET without
+  the 7th; UTONAL on the sun's third below: 1, 4/3, 2, 8/3, 4, 16/3), so it cannot beat with itself (tested: all its
+  energy on the harmonics, its fluctuations on). SILK, BARYON, ANISO, TEMP (an octave each way, shown in kelvin: Wien's
+  law), LOW CUT (each partial's own second-order response, no filter a frame; and a pole on NEBULA's input), GLOW into
+  NEBULA. It swells in on PLAY (~1.5 s), fades on STOP, glides when the sun moves (~0.4 s). Made at NEBULA's half rate,
+  plain table sines (a pad has no harmonics of its own to alias); its shape's divisions one partial a tick. The page
+  draws a map of the first light (warm and cold, drifting, its grain), Astralica at its middle, the peaks below.
+- **NEBULA longer**: BLOOM lifts its lines' feedback towards 0.985 and puts 0.01 of its wet back through the
+  diffusers (denser); the two never pass 0.995 together (stable whatever the rest: tested at everything full, 117 dB
+  down 50 s later, never past full scale). And the lines run twice as hot, the gain rounded once (it was twice, two bits
+  lost), with a soft knee above three quarters: the tail used to be cut ~58 dB down by the rounding, now its last 20 dB
+  are heard, in every system (their levels as before). A moved sun clears it a moment (its gain to 0.55, back in 0.6 s)
+  when the background or BLOOM is on, so the old chord's tail never clashes with the new.
+- **TIRED LIGHT** (HORIZON, second row): the echo's feedback read slower than it was written (two taps a 46 ms window
+  apart, triangles), so each echo is a just interval lower than the last (15/16 .. 1/2, shown as z): tested, the second
+  echo of an A4 at 0.674 of the first (2/3). Through the echo's tone it also dims.
+- **AFTERGLOW**, the sixteenth system, the last of the sky's: all of it. MILKY WAY has the background radiation under it.
+- The cost, all on (x86, callgrind -Os): ~+260 instructions a frame; nothing while off. The FM-1's image is 192 KB.
+- Kept for later, from the reading: the cold spot, the axis of evil (an alignment where none should be), Hawking
+  radiation (a black hole's glow, hotter as it shrinks), dark matter's flat rotation curves, the gravitational-wave
+  background pulsars hear, lensing's time delays (the Einstein cross's images hours apart).
