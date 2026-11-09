@@ -485,3 +485,13 @@ The user: "first, calm the page down: take away these clips (CATWALK, SNOWGLOBE,
 WAY), and the systems' sound demos too", and then the legend's universe too. The page now has two little songs,
 PURRSEC and LUNA NOVA, and no section of the systems; the site is ~5 MB.
 tests/run_orb.sh still renders every system's tour for build/audio (to hear here), only the songs go to the page.
+
+## D27 — The web FM-1, small and a cat (2026-11-09)
+
+The user: "the emulator takes an awful lot of room; make it cuter, and much smaller on the page." It was a 480-pixel
+screen between two columns of controls over a full-width keyboard, and five boxes of how-to under it (~900 x 700).
+Now (~560 x 375): the screen at the firmware's own 240 pixels (crisp on any display: one or two device pixels a
+pixel), ZOOM for twice that; the knobs, eight in two rows, little cat heads (two ears on each); the buttons small
+pills, PLAY a paw; the shell with a cat's ears (violet, pink inside, lime while it has the keys), whiskers by the
+screen and the lime ORBITRIX pill on top; a shorter keyboard; the how-to folded away ("How to play it"). The same
+hooks for play.js, so nothing in how it plays changed. Tried in Chromium at 1100 and 390 wide: no sideways scroll.
