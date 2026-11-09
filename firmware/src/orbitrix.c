@@ -225,7 +225,7 @@ static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME"
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE };
+       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE, F_HALO };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -295,12 +295,13 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                   {"PING", W_SYS, F_ONOFF, SO(ping), 0, 1}},
     [PG_HORIZON] = {{"DEPTH", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"SHIFT", W_SYS, F_SEMI, SO(hshift), -24, 24},
                     {"RETRO", W_SYS, F_PCT, SO(hretro), 0, 99}, {"GRAIN", W_SYS, F_GRAIN, SO(hgrain), 0, 99},
-                    {"TIRED", W_SYS, F_TIRED, SO(tired), 0, ORB_NTIRED - 1}, P_NONE, P_NONE, P_NONE, P_BPM},
+                    {"TIRED", W_SYS, F_TIRED, SO(tired), 0, ORB_NTIRED - 1}, {"BLOOM", W_SYS, F_NUM, SO(bloom), 0, 99},
+                    P_NONE, P_NONE, P_BPM},
     [PG_BG] = {{"LEVEL", W_SYS, F_NUM, SO(bg_level), 0, 99}, {"CHORDS", W_SYS, F_BGPROG, SO(bg_prog), 0, ORB_NBGPROG - 1},
-               {"CHANGE", W_SYS, F_CHANGE, SO(bg_change), 0, 3}, {"TEMP", W_SYS, F_TEMP, SO(bg_temp), -2, 1},
+               {"CHANGE", W_SYS, F_CHANGE, SO(bg_change), 0, 3}, {"HALO", W_SYS, F_HALO, SO(bg_halo), 0, 99},
                {"SILK", W_SYS, F_NUM, SO(bg_silk), 0, 99}, {"WIDTH", W_SYS, F_NUM, SO(bg_width), 0, 99},
-               {"LOW CUT", W_SYS, F_LOWCUT, SO(bg_cut), 0, 99}, {"GLOW", W_SYS, F_NUM, SO(bg_glow), 0, 99},
-               {"BLOOM", W_SYS, F_NUM, SO(bloom), 0, 99}},
+               {"LOW CUT", W_SYS, F_LOWCUT, SO(bg_cut), 0, 99}, {"TEMP", W_SYS, F_TEMP, SO(bg_temp), -2, 1},
+               {"GLOW", W_SYS, F_NUM, SO(bg_glow), 0, 99}},
     [PG_PAD] = {{"X", W_SYS, F_NUM, SO(ox), 0, 99}, {"Y", W_SYS, F_NUM, SO(oy), 0, 99},
                 {"RAD", W_SYS, F_NUM, SO(orad), 0, 50}, {"PERIOD", W_SYS, F_SYNC, SO(orate), 0, ORB_NSYNC - 1},
                 P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
@@ -427,6 +428,7 @@ static void pd_text(const pd_t *d, char *s)
     case F_TIRED: put_s(s, ORB_TIRED_NAME[(uint32_t)v % ORB_NTIRED]); break;
     case F_BGPROG: put_s(s, ORB_BGPROG_NAME[(uint32_t)v % ORB_NBGPROG]); break;
     case F_CHANGE: put_s(put_u(s, 1u << ((uint32_t)v & 3u)), v ? " BARS" : " BAR"); break;
+    case F_HALO: if (v) put_s(put_u(s, ORB_HALO_SEC[(uint32_t)v % 100u]), " s"); else put_s(s, "DRY"); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
 }
@@ -1236,9 +1238,14 @@ static void draw_bg(void)
             cc = orb_clamp((v + 65536) * 8 / 131072, 0, 7);
             cv_rect(cx + x - 1, cy + y - 1, 2, 2, on ? MAP[cc] : dim565(MAP[cc], 4));
         }
-    for (k = 0; k < 96; k++) {                  /* its edge */
-        uint32_t ph = (uint32_t)k << 26 | (uint32_t)k << 24;
+    for (k = 0; k < 96; k++) {                  /* its edge; HALO, a shell of violet light about it, as full as it rings */
+        uint32_t ph = (uint32_t)k << 26 | (uint32_t)k << 24, tw = (uint32_t)k * 2654435761u >> 28;
         cv_pset(cx + icos(ph, 109), cy + isin(ph, 42), C_FRAME);
+        if (sys.bg_halo && eng.g_on) {
+            uint32_t b = 6u + (uint32_t)eng.g_level * 9u / 99u, r = 112u + (tw & 3u) + ((fm1_ms / 300u + tw) & 1u);
+            cv_pset(cx + icos(ph + (uint32_t)fm1_ms * 90000u, (int32_t)r), cy + isin(ph + (uint32_t)fm1_ms * 90000u,
+                    (int32_t)(r * 42u / 109u) + 2), dim565(C_VIO, b > 15u ? 15u : b));
+        }
     }
     cat_draw_small(cx, cy, 80u);
     put_s(put_s(s, "T "), sys.bg_temp <= -2 ? "0.68K" : sys.bg_temp == -1 ? "1.36K" : sys.bg_temp == 0 ? "2.725K" : "5.45K");

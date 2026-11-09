@@ -115,7 +115,7 @@ pixel stars. Top bar: the page, the system, the tempo and the sun. The bottom: K
 | ENV | ENV | A D S R (ECC AMT, ECC A, ECC D, VEL) |
 | LFO | MOD → LFO | SRC DST AMT (SELECT: the slot) · RATE SHAPE for LFO 1 and 2 |
 | FX | FILTER MAP → SPACE → HORIZON | CUT RES MODE DRIVE · TIME FDBK SIZE MIX (TONE DECAY DAMP ECHO) · DEPTH SHIFT RETRO GRAIN (TIRED) |
-| GLO | BACKGROUND → ORBIT PAD | LEVEL CHORDS CHANGE TEMP (SILK WIDTH LOW CUT GLOW; ALG BLOOM) · X Y RAD RATE |
+| GLO | BACKGROUND → ORBIT PAD | LEVEL CHORDS CHANGE HALO (SILK WIDTH LOW CUT TEMP; ALG GLOW) · X Y RAD RATE |
 | ARP | KEYS | MODE TUNING SUN OCT |
 
 SELECT turns the focus (K for the keys, A, B, C, D) on every page: what the pages edit, and what the keys play (a

@@ -369,6 +369,7 @@ static void test_cosmic(void)
     for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
     S.tuning = 0; S.sun = 0; S.rmix = 0; S.dmix = 0; S.cut = 99; S.res = 0; S.fmode = 0;
     S.bg_level = 99; S.bg_glow = 0; S.bg_silk = 0; S.bg_prog = 0; S.bg_width = 0; S.bg_cut = 0; S.bg_temp = 0;
+    S.bg_halo = 0;                          /* (dry: its spectrum exactly) */
     memset(S.mod, 0, sizeof S.mod);
     orb_init(&O, &S, &MEM);
     orb_play(&O, 1);
@@ -444,7 +445,44 @@ static void test_cosmic(void)
         CHECK(!badbar, "background radiation: %u ticks with a chord off the bar", badbar);
         CHECK(nch > 40 && nsw > 100 && nheld > 20, "background radiation: too few changes (%u %u %u)", nch, nsw, nheld);
     }
-    S.tuning = 0; S.bg_prog = 0; S.bpm = 112;
+    {   /* HALO: all wet (the dry chords and HALO 65's hardly correlate), about as loud, long, and silent in the end */
+        static float dry[8 * 44100], wet[8 * 44100];
+        uint32_t pass, n, off = 0;
+        double c = 0, ed = 0, ew = 0, md = 0, mw = 0;
+        for (pass = 0; pass < 2u; pass++) {
+            float *dst = pass ? wet : dry;
+            S.tuning = 0; S.sun = 0; S.bg_prog = 2; S.bg_change = 0; S.bpm = 120; S.bg_level = 80; S.bg_glow = 0;
+            S.bg_halo = pass ? 65 : 0; S.rmix = 0; S.dmix = 0;
+            orb_init(&O, &S, &MEM);
+            orb_play(&O, 1);
+            for (n = 0; n < (uint32_t)(14.0 * 44100); n += 256u) {
+                memset(out, 0, sizeof out);
+                orb_render(&O, out, 256);
+                for (k = 0; k < 256u; k++)
+                    if (n + k >= 6u * 44100u && n + k < 14u * 44100u) dst[n + k - 6u * 44100u] = (float)out[2u * k];
+            }
+            if (pass) {                     /* stopped: how long it rings */
+                orb_play(&O, 0);
+                for (n = 0; n < 120u * 44100u && O.g_on; n += 256u) { memset(out, 0, sizeof out); orb_render(&O, out, 256); }
+                off = n;
+            }
+        }
+        for (n = 0; n < 8u * 44100u; n++) { md += dry[n]; mw += wet[n]; }
+        md /= 8.0 * 44100; mw /= 8.0 * 44100;
+        for (n = 0; n < 8u * 44100u; n++) {
+            c += (dry[n] - md) * (wet[n] - mw);
+            ed += (dry[n] - md) * (dry[n] - md);
+            ew += (wet[n] - mw) * (wet[n] - mw);
+        }
+        c /= sqrt(ed * ew + 1);
+        printf("halo: all wet (its correlation with the dry chords %.3f), %+.1f dB to them, silent %.1f s after STOP\n", c,
+               10 * log10((ew + 1) / (ed + 1)), off / 44100.0);
+        CHECK(fabs(c) < 0.2, "halo: not all wet (correlation %.3f)", c);
+        CHECK(fabs(10 * log10((ew + 1) / (ed + 1))) < 4.0, "halo: %.1f dB off the dry", 10 * log10((ew + 1) / (ed + 1)));
+        CHECK(off > 10u * 44100u && off < 120u * 44100u, "halo: silent after %.1f s", off / 44100.0);
+        CHECK(!O.bg_ol[1] && !O.bg_or[1], "halo: off, but its output is not 0");
+    }
+    S.tuning = 0; S.bg_prog = 0; S.bpm = 112; S.bg_halo = 0;
     /* NEBULA, all the way: size, decay, BLOOM, no damping, the pad glowing into it; then off: it must die away */
     S.rmix = 99; S.rsize = 99; S.rdecay = 99; S.rdamp = 0; S.bloom = 99; S.bg_glow = 99; S.bg_cut = 30;
     orb_init(&O, &S, &MEM);

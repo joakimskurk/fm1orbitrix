@@ -373,3 +373,27 @@ beat and ring in the nebula: an FM's colour. Decided:
 - The page shows the chord (its root large, its kind, its ratios: 4:5:6:9, u12:10:8:7 when subharmonic is shorter),
   the progression with the chord lit, and each voice as a star where its note is.
 - The cost, all on (x86, callgrind -Os): ~+250 instructions a frame (D19: ~+260); nothing while off.
+
+## D22 — HALO: the chords all wet (2026-11-09)
+
+The user, hearing D21: "Fine now, but shouldn't they be 100 % wet in a reverb or something? I miss the big floating
+soundscape." The chords were dry, with a little of them into NEBULA, which is the rings' space and sized for them.
+Decided:
+
+- **HALO**, the background radiation's own space (a galaxy's halo: vast, faint, all round it), only for it, all wet:
+  no dry chord at all. Four allpasses (10 .. 31 ms) and four lines (primes, 161 .. 273 ms) in a Hadamard, at a quarter
+  of the rate (11 kHz: the chords are soft already, and SILK before it), each line damped at 3 kHz (its tail darkens as
+  it goes), two of them swimming (+-5 frames, ~0.12 and ~0.17 Hz: the tail never stands still, never rings). A pole at
+  4 kHz before the rate goes down and two after it comes up: its images ~61 dB down. HALO 1..99: 3 s .. 40 s to
+  -60 dB (gen_tables.py, each line's feedback), its output's gain set so it is as loud whatever its length (tested:
+  as loud as the dry chords, its correlation with them 0.02: all wet). HALO 0: dry, as before (dry <-> wet glides in
+  ~50 ms). A moved sun clears it a moment, as NEBULA.
+- **It ends**: its one-poles are written so they land on their input exactly (orb_pole: the distance shrinks, rounded
+  toward zero), so the tail gets to silence and the halo stops (tested: HALO 65 silent 19 s after STOP; before this,
+  the poles stuck a bit away and it hummed at -90 dB for ever).
+- HALO takes TEMP's knob (TEMP to the second row), GLOW goes to ALGORITHM, BLOOM to HORIZON's second row beside TIRED
+  (both: the strange space). MILKY WAY HALO 65 (~16 s), AFTERGLOW 80 (~24 s), every other system 70 when its chords
+  are turned up; GLOW lower (20, 30): the halo is their space now. The page draws a violet shell about the map, as full
+  as the halo rings.
+- Memory: 28 KB of the pool (331 776 B of 344 064). The cost (x86, callgrind -Os): HALO ~+60 instructions a frame;
+  everything cosmic on ~+340; nothing while off.

@@ -148,7 +148,7 @@ static void orb_sys_clear(orb_sys_t *s, const char *name)
     s->lrate[0] = 30; s->lrate[1] = 12; s->lshape[1] = LS_DRIFT;
     s->macro[MAC_GRAVITY] = 40;
     s->hgrain = 50; s->hretro = 0; s->hshift = -12;
-    s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 40; s->bg_silk = 40; s->bg_width = 55;   /* (LEVEL 0: up, and it plays) */
+    s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 20; s->bg_silk = 40; s->bg_width = 55; s->bg_halo = 70;   /* (LEVEL 0: up, and it plays) */
 }
 
 static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8_t amt)
@@ -205,8 +205,8 @@ static void orb_system_milky(orb_sys_t *s)
     s->dtime = 7; s->dfb = 45; s->ping = 1; s->dmix = 32; s->rmix = 55; s->rsize = 85; s->rdecay = 74;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 30);
-    s->bg_level = 45; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 45; s->bg_silk = 45; s->bg_cut = 30;   /* under it all */
-    s->bloom = 30;
+    s->bg_level = 45; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 20; s->bg_silk = 45; s->bg_cut = 30;   /* under it all, */
+    s->bg_halo = 65; s->bloom = 30;                                                                  /* all wet, ~16 s */
 }
 
 /* AFTERGLOW: the oldest light, under everything. The background radiation's chords on the overtone series (ORBIT: maj9,
@@ -230,8 +230,8 @@ static void orb_system_afterglow(orb_sys_t *s)
     s->mutate = 12; s->var = 15;
     s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 60; s->rsize = 95; s->rdecay = 80; s->rdamp = 50;
     s->macro[MAC_GRAVITY] = 60; s->macro[MAC_ORBIT] = 20;
-    s->bg_level = 48; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 55; s->bg_silk = 40; s->bg_width = 65; s->bg_cut = 35;
-    s->bloom = 55; s->tired = 5;
+    s->bg_level = 48; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 30; s->bg_silk = 40; s->bg_width = 65; s->bg_cut = 35;
+    s->bg_halo = 80; s->bloom = 55; s->tired = 5;                                                  /* (all wet, ~24 s) */
     orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 30);
     orb_mod_set(s, 1, SRC_CONJ, DST_MOON, 30);
 }

@@ -32,6 +32,8 @@
 #define ORB_HLEN 32768u                     /* HORIZON's memory (mono, 0.74 s) */
 #define ORB_NBG 8u                          /* BACKGROUND RADIATION: its voices (a bass, seven above) */
 #define ORB_NTIRED 8u                       /* TIRED LIGHT: OFF, and seven just intervals an echo */
+#define ORB_GLEN 3072u                      /* a HALO line (at a quarter rate: 279 ms) */
+#define ORB_GAPLEN 512u                     /* a HALO allpass (a power of 2: a mask) */
 
 enum { ORB_KEYS = 0, ORB_A, ORB_B, ORB_C, ORB_D };
 enum { DIR_FWD, DIR_REV, DIR_PING, DIR_SPIRAL, DIR_RND, ORB_NDIR };
@@ -122,13 +124,14 @@ typedef struct {
     /* BACKGROUND RADIATION (chords under everything, a carpet: voiced in tools/gen_tables.py, ORB_BGP_V): its level,
      * its glow into NEBULA, SILK (its highs softer), its chords (a progression, ORB_BGPROG_NAME), WIDTH (each voice
      * two, a few cents apart, one each side), the low cut (of it, and of what goes into NEBULA); its temperature: the
-     * octave, -2..1; CHANGE: a chord every 1, 2, 4 or 8 bars (0..3); OUT: faded out, its settings kept (SEL+GLO) */
+     * octave, -2..1; CHANGE: a chord every 1, 2, 4 or 8 bars (0..3); OUT: faded out, its settings kept (SEL+GLO);
+     * HALO: its own space, all wet (0: dry; 1..99: 3 s .. 40 s long) */
     uint8_t bg_level, bg_glow, bg_silk, bg_prog, bg_width, bg_cut;
     int8_t bg_temp;
     uint8_t bloom;                          /* NEBULA's own light back into it: longer, denser, 0..99 */
     uint8_t tired;                          /* TIRED LIGHT: each echo a just interval redder (ORB_TIRED_*), 0 off */
-    uint8_t bg_change, bg_out;
-    uint8_t rsv[5];
+    uint8_t bg_change, bg_out, bg_halo;
+    uint8_t rsv[4];
 } orb_sys_t;
 
 /* ---- the engine's own state */
@@ -179,6 +182,8 @@ typedef struct {
     int16_t ap[2][ORB_APLEN];
     int16_t hb[ORB_HLEN];
     int16_t hr[256];                        /* HORIZON's right: the wet a little later */
+    int16_t gl[4][ORB_GLEN];                /* HALO's lines and its allpasses */
+    int16_t gap[4][ORB_GAPLEN];
 } orb_mem_t;
 
 typedef struct {
@@ -227,6 +232,15 @@ typedef struct {
     uint8_t bg_tb[ORB_NBG];
     uint32_t bg_chord, bg_cc;
     int32_t bg_env, bg_on, bg_glow, bg_wd, bg_silk, bg_lp[4], bg_hp[2], bg_ol[2], bg_or[2];
+    /* HALO, at a quarter rate: the lines' write index, the allpasses', the swimming reads' LFOs and offsets (Q15
+     * frames), the lines' damping, their feedback now, the input gathering, its output (the one before and now, a
+     * side), whether it runs, which half-rate frame, the dry share (Q15: glides, dry <-> wet without a click), what
+     * the lines held this tick (0: silent), the ticks they have been silent */
+    uint32_t g_w, g_apw, g_lfo[2];
+    int32_t g_mo[2], g_lp[4], g_g[4], g_in, g_pl, g_cl, g_pr, g_cr, g_on, g_ph, g_dry, g_out, g_quiet;
+    int32_t g_ai, g_f[4];                   /* (the rate's change: a pole before, two a side after, at 4 kHz) */
+    uint32_t g_live;
+    volatile int32_t g_level;               /* how full it is (the screen), 0..99 */
     /* TIRED LIGHT: the feedback's slow-down (Q16 a frame), its ramp (Q16), the shifted taps' tone */
     uint32_t z_rate, z_p;
     int32_t z_lp[2];
@@ -256,6 +270,9 @@ ORB_INL int32_t orb_rz(int32_t t, int n)   /* round toward zero (a feedback loop
 ORB_INL int32_t orb_clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 ORB_INL int32_t orb_clamp64(int64_t v) { return v < -(1 << 24) ? -(1 << 24) : v > (1 << 24) ? (1 << 24) : (int32_t)v; }
 ORB_INL int32_t orb_rz64(int64_t t, int n) { return (int32_t)(t < 0 ? -((-t) >> n) : t >> n); }
+/* a one-pole low-pass that lands on its input exactly (its distance shrinks, rounded toward zero: never stuck a bit
+ * away, so a tail that must end does). y: the state, x: the input, k: 1 - the coefficient, Qn */
+ORB_INL int32_t orb_pole(int32_t y, int32_t x, int32_t k, int n) { return x + orb_rz((y - x) * k, n); }
 ORB_INL int32_t orb_sin(uint32_t ph)       /* Q15, interpolated */
 {
     uint32_t i = ph >> 22;
@@ -1063,7 +1080,7 @@ static void orb_fx_tick(orb_t *o)
         for (k = 0; k < ORB_NBG; k++) live |= (uint32_t)o->bg_a[k] | (uint32_t)o->bg_as[k];
         o->bg_on = o->bg_env > 0 || live;
         if (!o->bg_on) {
-            o->bg_ol[0] = o->bg_ol[1] = o->bg_or[0] = o->bg_or[1] = 0;
+            if (!o->g_on) o->bg_ol[0] = o->bg_ol[1] = o->bg_or[0] = o->bg_or[1] = 0;
             for (k = 0; k < 4u; k++) o->bg_lp[k] = 0;
             o->bg_hp[0] = o->bg_hp[1] = 0;
         } else {
@@ -1109,6 +1126,36 @@ static void orb_fx_tick(orb_t *o)
                 else o->bg_as[k] = orb_rz(d, 4);  /* (16 half-rate frames a tick: there exactly, never past) */
             }
         }
+    }
+    /* HALO: the background radiation's own space, all wet (a quarter rate: four allpasses, four lines in a Hadamard,
+     * damped at 3 kHz, two of them swimming). Its length 3 s .. 40 s; a moved sun clears it a moment, as NEBULA. It
+     * runs while the chords sound and until its tail is silent (rounded toward zero, it gets there) */
+    {
+        uint32_t k, v = sy->bg_halo % 100u;
+        int32_t dt = sy->bg_halo ? 0 : 32767, dd = dt - o->g_dry, s2 = orb_rz(dd, 6);
+        if (!s2 && dd) s2 = dd > 0 ? (dd < 64 ? dd : 64) : (dd > -64 ? dd : -64);   /* (~50 ms, never past) */
+        o->g_dry += s2;
+        for (k = 0; k < 4u; k++) o->g_g[k] = o->r_q >= 32767 ? ORB_HALO_G[v][k] : (ORB_HALO_G[v][k] * o->r_q) >> 15;
+        o->g_out = ORB_HALO_OUT[v];
+        o->g_lfo[0] += 37000u;                  /* (~0.12 and ~0.17 Hz: the tail never stands still) */
+        o->g_lfo[1] += 52000u;
+        o->g_mo[0] = orb_sin(o->g_lfo[0]) * 5;  /* +-5 frames, Q15 */
+        o->g_mo[1] = orb_sin(o->g_lfo[1] + 0x40000000u) * 4;
+        if (o->bg_on && o->g_dry < 32767) { o->g_on = 1; o->g_quiet = 0; }
+        else if (o->g_on) {
+            if (o->g_live) o->g_quiet = 0;
+            else if (++o->g_quiet > 600) {      /* (longer than its way through: all of it is zero) */
+                o->g_on = 0;
+                o->g_pl = o->g_cl = o->g_pr = o->g_cr = o->g_ai = 0;
+                o->g_f[0] = o->g_f[1] = o->g_f[2] = o->g_f[3] = 0;
+                if (!o->bg_on) o->bg_ol[0] = o->bg_ol[1] = o->bg_or[0] = o->bg_or[1] = 0;
+            }
+        }
+        {
+            int32_t m = (int32_t)(o->g_live > 32767u ? 32767u : o->g_live);
+            o->g_level = o->g_on ? orb_clamp(m * 99 / 8192, 1, 99) : 0;
+        }
+        o->g_live = 0;
     }
 }
 
@@ -1177,11 +1224,13 @@ static void orb_fx_render(orb_t *o, int32_t *out)
         if (i & 1u) {
             static const int16_t APL[2] = {120, 278};
             uint32_t k;
-            int32_t h0, h1, h2, h3;
+            int32_t h0, h1, h2, h3, pl, pr;
             rin = o->r_acc;
             o->r_acc = 0;
+            pl = pr = 0;
             if (o->bg_on) {                 /* BACKGROUND RADIATION: each voice two oscillators, A left and B right
-                                             * as WIDTH has it; SILK; the low cut; its glow into NEBULA */
+                                             * as WIDTH has it; SILK; the low cut; into HALO, or dry; its glow into
+                                             * NEBULA */
                 int32_t sa = 0, sb = 0, bl, br, m, sd;
                 for (k = 0; k < ORB_NBG; k++) {
                     const int16_t *W;
@@ -1220,9 +1269,81 @@ static void orb_fx_render(orb_t *o, int32_t *out)
                     bl -= o->bg_hp[0];
                     br -= o->bg_hp[1];
                 }
-                rin += (((bl + br) >> 2) * o->bg_glow) >> 14;
-                o->bg_ol[0] = o->bg_ol[1]; o->bg_ol[1] = bl;
-                o->bg_or[0] = o->bg_or[1]; o->bg_or[1] = br;
+                if (o->g_dry < 32767) {     /* into HALO (a pole at 4 kHz first: the quarter rate folds nothing) */
+                    o->g_ai = orb_pole(o->g_ai, (((bl + br) >> 1) * (32767 - o->g_dry)) >> 15, 5234, 14);
+                    o->g_in += o->g_ai >> 1;
+                }
+                pl = (bl * o->g_dry) >> 15;   /* (what stays dry) */
+                pr = (br * o->g_dry) >> 15;
+            }
+            if (o->g_on) {                  /* HALO, every other half-rate frame; between, half-way */
+                int32_t hl, hr;
+                if ((o->g_ph ^= 1) != 0) {
+                    uint32_t w = o->g_w, q;
+                    int32_t x = o->g_in, y[4], h0, h1, h2, h3, live = 0;
+                    o->g_in = 0;
+                    for (q = 0; q < 4u; q++) {   /* the diffusers */
+                        int32_t rd = mm->gap[q][(o->g_apw - (uint32_t)ORB_HALO_AP[q]) & (ORB_GAPLEN - 1u)];
+                        int32_t wv = x + orb_rz(rd * 19661, 15);
+                        x = rd - orb_rz(wv * 19661, 15);
+                        mm->gap[q][o->g_apw] = (int16_t)orb_clamp(wv, -32767, 32767);
+                    }
+                    o->g_apw = (o->g_apw + 1u) & (ORB_GAPLEN - 1u);
+                    for (q = 0; q < 4u; q++) {   /* the lines' reads, two of them swimming */
+                        int32_t r0 = (int32_t)w - ORB_HALO_LEN[q], yv;
+                        if (!(q & 1u)) {
+                            int32_t mo = o->g_mo[q >> 1], mi = mo >> 15, mf = (mo & 0x7FFF) >> 7, r1;
+                            r0 -= mi + 6;
+                            if (r0 < 0) r0 += (int32_t)ORB_GLEN;
+                            r1 = r0 ? r0 - 1 : (int32_t)ORB_GLEN - 1;
+                            yv = mm->gl[q][r0] + orb_rz((mm->gl[q][r1] - mm->gl[q][r0]) * mf, 8);
+                        } else {
+                            if (r0 < 0) r0 += (int32_t)ORB_GLEN;
+                            yv = mm->gl[q][r0];
+                        }
+                        o->g_lp[q] = orb_pole(o->g_lp[q], yv, 32767 - ORB_HALO_DAMP, 15);
+                        y[q] = o->g_lp[q];
+                        live |= y[q] < 0 ? -y[q] : y[q];
+                    }
+                    h0 = y[0] + y[1]; h1 = y[0] - y[1]; h2 = y[2] + y[3]; h3 = y[2] - y[3];
+                    {
+                        int32_t z[4];
+                        z[0] = h0 + h2; z[1] = h1 + h3; z[2] = h0 - h2; z[3] = h1 - h3;   /* x 2 */
+                        x >>= 1;
+                        for (q = 0; q < 4u; q++) {
+                            int64_t v = (int64_t)z[q] * o->g_g[q];   /* (Hadamard / 2) * g, rounded once, toward zero */
+                            int32_t wv = (int32_t)((v + (v < 0 ? 65535 : 0)) >> 16) + x;
+                            if (wv > 24576 || wv < -24576) {   /* (full: a soft knee, as NEBULA's) */
+                                int32_t dk = (wv < 0 ? -wv : wv) - 24576;
+                                dk = 24576 + dk * 8192 / (8192 + dk);
+                                wv = wv < 0 ? -dk : dk;
+                            }
+                            mm->gl[q][w] = (int16_t)orb_clamp(wv, -32767, 32767);
+                        }
+                    }
+                    o->g_w = w + 1u >= ORB_GLEN ? 0u : w + 1u;
+                    o->g_live |= (uint32_t)live;
+                    o->g_pl = o->g_cl;
+                    o->g_pr = o->g_cr;
+                    o->g_cl = ((y[0] + y[2]) * o->g_out) >> 14;   /* (as loud as it is dry) */
+                    o->g_cr = ((y[1] + y[3]) * o->g_out) >> 14;
+                    hl = (o->g_pl + o->g_cl) >> 1;
+                    hr = (o->g_pr + o->g_cr) >> 1;
+                } else {
+                    hl = o->g_cl;
+                    hr = o->g_cr;
+                }
+                o->g_f[0] = orb_pole(o->g_f[0], hl, 5234, 14);   /* (two poles at 4 kHz: its images gone) */
+                o->g_f[1] = orb_pole(o->g_f[1], o->g_f[0], 5234, 14);
+                o->g_f[2] = orb_pole(o->g_f[2], hr, 5234, 14);
+                o->g_f[3] = orb_pole(o->g_f[3], o->g_f[2], 5234, 14);
+                pl += o->g_f[1];
+                pr += o->g_f[3];
+            }
+            if (o->bg_on || o->g_on) {
+                rin += (((pl + pr) >> 2) * o->bg_glow) >> 14;
+                o->bg_ol[0] = o->bg_ol[1]; o->bg_ol[1] = pl;
+                o->bg_or[0] = o->bg_or[1]; o->bg_or[1] = pr;
             }
             if (o->r_be) rin += orb_rz(o->r_wet * o->r_be, 15);   /* BLOOM: its own light back in */
             if (o->r_cut) { o->r_hp += orb_rz((rin - o->r_hp) * o->r_cut, 15); rin -= o->r_hp; }   /* the low cut */
@@ -1485,6 +1606,7 @@ static void orb_init(orb_t *o, orb_sys_t *sys, orb_mem_t *mem)
     o->mem = mem;
     o->rng = 0x2545F491u;
     o->vrng = 0x1234567u;
+    o->g_dry = sys->bg_halo ? 0 : 32767;    /* (HALO: wet from the start, or dry) */
     orb_restart(o);
 }
 

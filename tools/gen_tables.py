@@ -31,6 +31,8 @@ What is here (docs/orbitrix/PLAN.md):
                tuning, every interval pure) and voice-led here; ORB_BGP_N their lengths, ORB_BGP_C, ORB_BGC_* their names
   ORB_PADW     its voice's wave: a soft saw, 8 harmonics and 4 (for the high notes: nothing folds over at 22 kHz)
   ORB_SILK     SILK's low-pass, a pole's coefficient (Q15) for 0..99: 9 kHz .. 400 Hz
+  ORB_HALO_*   HALO, the background radiation's own space: its lines and allpasses (at 11 kHz), each line's feedback for
+               HALO 0..99 (3 s .. 40 s to -60 dB), the output's gain for each, the seconds, the lines' damping (3 kHz)
 """
 import itertools
 import math
@@ -527,6 +529,29 @@ def main():
     silk = [int(round(32767 * (1 - math.exp(-2 * math.pi * 9000.0 * (400.0 / 9000.0) ** (v / 99.0) / 22050.0)))) for v in range(100)]
     parts.append(c_array("ORB_SILK", "int16_t", silk))
     bg_info = (len(BG_PROGS), len(cat), bgv)
+    # ---- HALO: the background radiation's own space, all wet, at a quarter of the rate (11 kHz: its chords are soft
+    # already). Four lines (primes, 161 .. 273 ms), four allpasses before them (10 .. 31 ms); each line's feedback for
+    # HALO 0..99 (0: dry, its tail gone in 1.5 s; 1..99: 3 s .. 40 s to -60 dB), and the output's gain that keeps it
+    # as loud whatever its length (a long one builds up: its energy goes as 1 / (1 - g^2))
+    FS4 = FS / 4
+    hlen, hap = [1777, 2203, 2609, 3011], [113, 162, 241, 337]
+    rt = [1.5] + [3.0 * (40.0 / 3.0) ** ((v - 1) / 98.0) for v in range(1, 100)]
+    hg, hout = [], []
+    for t in rt:
+        g = [10 ** (-3.0 * L / (FS4 * t)) for L in hlen]
+        hg.append([int(round(32767 * x)) for x in g])
+        ga = sum(g) / 4
+        hout.append(int(round(23170 * min(1.0, math.sqrt(1 - ga * ga) / math.sqrt(1 - 0.80 ** 2)))))   # (Q14 on two lines)
+    parts.append(c_array("ORB_HALO_LEN", "int16_t", hlen))
+    parts.append(c_array("ORB_HALO_AP", "int16_t", hap))
+    lines = ["static const int16_t ORB_HALO_G[100][4] = {"]
+    for r in hg:
+        lines.append("    {" + ", ".join(str(v) for v in r) + "},")
+    lines.append("};\n")
+    parts.append("\n".join(lines))
+    parts.append(c_array("ORB_HALO_OUT", "int16_t", hout))
+    parts.append(c_array("ORB_HALO_SEC", "uint8_t", [int(round(t)) for t in rt]))
+    parts.append(f"#define ORB_HALO_DAMP {int(round(32767 * (1 - math.exp(-2 * math.pi * 3000.0 / FS4))))}\n")
 
     # ---- the moon's ratios
     moons = [("1", 1.0), ("2", 2.0), ("3", 3.0), ("4", 4.0), ("5", 5.0), ("6", 6.0), ("7", 7.0), ("8", 8.0),

@@ -172,6 +172,7 @@ int main(int argc, char **argv)
         S.bg_prog = (uint8_t)(atoi(argv[3]) % ORB_NBGPROG);
         if (!S.bg_level) S.bg_level = 45;
         if (getenv("ORB_BGLEVEL")) S.bg_level = (uint8_t)atoi(getenv("ORB_BGLEVEL"));
+        if (getenv("ORB_HALO")) S.bg_halo = (uint8_t)atoi(getenv("ORB_HALO"));
         if (argc > 6 && !strcmp(argv[6], "alone")) {
             for (r = 0; r < ORB_NRING; r++) S.ring[r].mute = 1;
             S.snd[0].level = 0;
@@ -180,7 +181,7 @@ int main(int argc, char **argv)
         orb_play(&O, 1);
         run_ms((uint32_t)atoi(argv[4]) * 1000u);
         orb_play(&O, 0);
-        run_ms(4000);
+        run_ms(4000u + (S.bg_halo ? ORB_HALO_SEC[S.bg_halo % 100u] * 500u : 0u));   /* (HALO: its tail too) */
         write_wav(argv[5]);
     } else if (argc >= 3 && !strcmp(argv[1], "tour")) {
         uint32_t i, secs = argc > 3 ? (uint32_t)atoi(argv[3]) : 16u;

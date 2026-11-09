@@ -21,8 +21,8 @@
   systems at none but a ring's own re-attacks).
 - The budget (docs/RULES.md): the audio ISR under half of its 5.8 ms. The voice loop on the chip is ~110
   instructions a frame plain, ~310 with SLING, MOON, DUST, PIXEL, TIDE, BEAM and the send; the FX ~700 a frame with
-  the filter, NEBULA and HORIZON on, ~+250 (x86, callgrind) with the background radiation, BLOOM, the low cut and TIRED
-  LIGHT all on as well (nothing while they are off). Over 80 % the interrupt sheds the quietest voice (`orb_shed`). Count with
+  the filter, NEBULA and HORIZON on, ~+340 (x86, callgrind) with the background radiation, its HALO (~60 of it), BLOOM, the low
+  cut and TIRED LIGHT all on as well (nothing while they are off). Over 80 % the interrupt sheds the quietest voice (`orb_shed`). Count with
   callgrind on the host (`-Os`) or on the chip's own code (JieLi clang `-Os -c`, objdump). The app shows `CPU nn%` on
   the hint line.
 - Audio code: no float, no 64-bit division, no flash access in `orb_render`, no loop whose length a parameter sets,
