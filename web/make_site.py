@@ -2,23 +2,22 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 joakimskurk
 """ORBITRIX's site (GitHub Pages, https://joakimskurk.github.io/fm1orbitrix/): its page, ORBITRIX to play in the
-browser, the legend, the systems to hear, the installer.
+browser, the legend, a few little songs, the installer.
 
   index.html                  web/index.html with fm1pkg.js and fm1ota.js (SLOOP's, unchanged) and the metadata
-                              inlined: the installer (Web MIDI, Chrome or Edge), the demos
+                              inlined: the installer (Web MIDI, Chrome or Edge), the songs
   app/                        ORBITRIX to play: orbitrix.wasm (web/app/build.sh: the firmware's own code on
                               web/app/web_host.c), worklet.js (the audio thread), play.js (the FM-1 drawn)
   firmware/orbitrix-VER.fwsc  the package the page installs (its SHA-256 in the page: a damaged download is never
                               offered)
   film/legend.webp, .m4a      the legend of Astralica: an animation on a transparent night, and its sound
                               (tools/make_legend.py: the firmware's legend, filmed on the host)
-  audio/                      a few of the systems (tests/run_orb.sh's tour: the engine on the host), AAC, and each
-                              one's spectrum as a picture (WebP), low to high; audio/songs/ the little songs
-                              (orb_render song: the systems with chords, arranged)
+  audio/songs/                a few little songs (tests/run_orb.sh: orb_render song, the engine on the host), AAC,
+                              and each one's spectrum as a picture (WebP), low to high
   screens/                    the cat, the icon, the link preview, the pages' screens, the legend's poster
   .nojekyll                   (served as it is)
 
-  sh tests/run_orb.sh          (first: the tour)
+  sh tests/run_orb.sh          (first: the songs)
   python3 tools/make_legend.py (the legend)
   sh web/app/build.sh          (ORBITRIX for the browser)
   python3 web/make_site.py build/orbitrix.fwsc VERSION OUT_DIR
@@ -46,19 +45,10 @@ APP = {"build/web/orbitrix.wasm": "orbitrix.wasm", "web/app/worklet.js": "workle
 SCREENS = {"orbit": "screen_orbit", "keys": "screen_keys", "orrery": "screen_orrery", "horizon": "screen_horizon",
            "steps": "screen_steps", "sound": "screen_sound"}
 LEGEND = ["build/film/legend.webp", "build/film/legend.m4a", "build/film/legend.png"]   # tools/make_legend.py
-DEMOS = [   # a few of the systems (build/audio/tour/NN_name.wav), the most unlike each other
-    ("ASTRALICA", "The legend's own universe: a dark drone held on the sun, glass rings on 4:5:6:7, long echoes, a vast nebula."),
-    ("ZOOMIES", "A kitten's mad minute, house at 124: four on the floor, a squeak chasing at 3:2, a growl, a chord a bar."),
-    ("BOOP BOP", "Chiptune at 140, dry: a pixel arpeggio up and down the chord, a pixel bass, a kick and a zap."),
-    ("ALPHA CEN", "A triple star as a gamelan: two bells interlocking, a slow melody, a gong; the planets pull and shimmer."),
-    ("SGR A*", "Dub at the black hole, 72, one drop: a pluck skanking into echoes that tire a minor third each time."),
-    ("MULTIVERSE", "Her meow from universe to universe: each echo a fourth lower, bells at 7:4, the drone, no beat."),
-]
-SONGS = [   # build/audio/songs/NN_name.wav (orb_render song), arranged
+SONGS = [   # build/audio/songs/NN_name.wav (orb_render song), arranged: a few, the page kept calm
     ("PURRSEC", "Lo-fi: its chords, then the purr, the beat, the hats; a break where the toy piano sings the chords' own notes."),
     ("LUNA NOVA", "Bossa nova: the jazz chords alone, the bass, the rim and the shaker, the paw comping; the flute in the break."),
-    ("SNOWGLOBE", "A music box in twelve-eight: its chords over the sun, the sub, the bell turning, the toy, the stars."),
-    ("NOM NOM", "The planets eaten: the drone, chirps falling in from octaves under, a half-time thump, plops on 4:5:6:7."),
+    ("NOM NOM", "The legend's universe: the drone, chirps falling in from octaves under, a half-time thump, plops on 4:5:6:7."),
 ]
 SPEC_W, SPEC_H, SPEC_N = 1200, 160, 8192
 SPEC_LO, SPEC_HI, SPEC_DB = 40.0, 16000.0, 75.0
@@ -129,13 +119,6 @@ def main(pkg, version, out):
     for src in list(APP) + LEGEND:
         if not (ROOT / src).exists():
             raise SystemExit(f"{src}: missing (web/app/build.sh, tools/make_legend.py)")
-    def stem_of(name):                  # (orb_render's tour names: lower case, the rest _)
-        return "".join(c.lower() if c.isalnum() else "_" for c in name)[:15]
-    tours = {w.stem.split("_", 1)[1]: w for w in (ROOT / "build" / "audio" / "tour").glob("[0-9][0-9]_*.wav")}
-    missing = [t for t, _ in DEMOS if stem_of(t) not in tours]
-    if missing:
-        raise SystemExit(f"build/audio/tour: no render of {missing} (tests/run_orb.sh renders them)")
-    tour = [tours[stem_of(t)] for t, _ in DEMOS]
     songs = {w.stem.split("_", 1)[1].replace("_", " ").upper(): w
              for w in (ROOT / "build" / "audio" / "songs").glob("[0-9][0-9]_*.wav")}
     if set(songs) != {t for t, _ in SONGS}:
@@ -143,7 +126,7 @@ def main(pkg, version, out):
     name = f"orbitrix-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     if out.exists():
         shutil.rmtree(out)
-    for sub in ("firmware", "screens", "audio", "audio/songs", "app", "film"):
+    for sub in ("firmware", "screens", "audio/songs", "app", "film"):
         (out / sub).mkdir(parents=True)
     shutil.copy(pkg, out / "firmware" / name)
     for src, dst in APP.items():
@@ -156,14 +139,6 @@ def main(pkg, version, out):
     for dst, src in SCREENS.items():
         shutil.copy(ROOT / "docs" / "readme" / f"{src}.png", out / "screens" / f"{dst}.png")
     og_image(out / "screens" / "og.png")
-    demos = []
-    for wav, (title, about) in zip(tour, DEMOS):
-        x, fs = read_wav(wav)
-        stem = wav.stem
-        spectrum(x, fs, out / "audio" / f"{stem}.webp")
-        encode(wav, out / "audio" / f"{stem}.m4a")
-        demos.append({"id": stem, "title": title, "about": about, "src": f"audio/{stem}.m4a",
-                      "spectrum": f"audio/{stem}.webp", "secs": round(len(x) / fs, 1)})
     song_list = []
     for title, about in SONGS:
         wav = songs[title]
@@ -178,15 +153,15 @@ def main(pkg, version, out):
     lib = strip_module((HERE / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8"))
     html = (HERE / "index.html").read_text(encoding="utf-8")
-    for mark in ("/*LIB*/", "/*META*/", "/*DEMOS*/", "/*SONGS*/"):
+    for mark in ("/*LIB*/", "/*META*/", "/*SONGS*/"):
         if html.count(mark) != 1:
             raise SystemExit(f"web/index.html must hold {mark} once")
-    html = html.replace("/*LIB*/", lib).replace("/*META*/", meta).replace("/*DEMOS*/", json.dumps(demos))
+    html = html.replace("/*LIB*/", lib).replace("/*META*/", meta)
     html = html.replace("/*SONGS*/", json.dumps(song_list))
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / ".nojekyll").write_text("")
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
-    print(f"site: {out}: index.html ({len(html)} B), firmware/{name} ({len(raw)} B, {product}), {len(demos)} demos, {len(song_list)} songs, "
+    print(f"site: {out}: index.html ({len(html)} B), firmware/{name} ({len(raw)} B, {product}), {len(song_list)} songs, "
           f"ORBITRIX to play ({(out / 'app' / 'orbitrix.wasm').stat().st_size // 1024} KB), the legend, "
           f"{size // 1024} KB in all")
 

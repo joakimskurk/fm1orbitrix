@@ -41,7 +41,7 @@ for m in 0 1 2 3 4 5 6; do                               # SPIRAL DRIFT, each ma
 done
 build/orb/orb_render lib build/audio/lib                # every sound SOUND can pick, a beat or a phrase each
 mkdir -p build/audio/songs; rm -f build/audio/songs/*.wav   # little songs of the systems with chords (the page's)
-for s in "3 purrsec" "7 luna_nova" "10 snowglobe" "17 nom_nom"; do   # (the page's: a few, the most unlike)
+for s in "3 purrsec" "7 luna_nova" "17 nom_nom"; do   # (the page's: a few, kept calm)
     set -- $s; build/orb/orb_render song $1 build/audio/songs/$(printf %02d $1)_$2.wav
 done
 mkdir -p build/audio/chords                             # the background radiation's chords alone, each progression

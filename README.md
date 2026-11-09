@@ -306,7 +306,7 @@ your own risk.
 browser: `firmware/src/orbitrix.c`, unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`), its
 sound made in the audio thread (`web/app/worklet.js`), the panel drawn by `web/app/play.js`: the screen, the knobs,
 the buttons (SEL latches), the 27 keys, the computer's keyboard and a MIDI keyboard. Its settings and U1–U8 stay in
-the browser. The page also has the legend, a few songs and systems to hear (the most unlike), and the installer (Web MIDI, Chrome or
+the browser. The page also has the legend, a few little songs, and the installer (Web MIDI, Chrome or
 Edge). CI builds and publishes it from `main` (`web/make_site.py`).
 
 ```sh

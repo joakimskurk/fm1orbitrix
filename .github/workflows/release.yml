@@ -89,7 +89,7 @@ jobs:
           generate_release_notes: true
 
   # The page (GitHub Pages, https://joakimskurk.github.io/fm1orbitrix/): ORBITRIX to play in the browser (the
-  # firmware's own code, WebAssembly), the legend's film, the systems to hear, and the installer with the package this
+  # firmware's own code, WebAssembly), the legend's film, a few songs, and the installer with the package this
   # run built and tested. From main only; Pages takes its site from GitHub Actions (Settings -> Pages).
   site:
     needs: firmware

@@ -478,3 +478,10 @@ universe, each its own tempo and rhythm. Decided:
   held note: at a ring's level it drowned the rest; now each part within a few dB).
 - **The page**: six systems (ASTRALICA, ZOOMIES, BOOP BOP, ALPHA CEN, SGR A*, MULTIVERSE) and four songs (PURRSEC, LUNA
   NOVA, SNOWGLOBE, NOM NOM), picked to be as unlike each other as they come, in place of sixteen and eight.
+
+## D26 — The page, calmer (2026-11-09)
+
+The user: "first, calm the page down: take away these clips (CATWALK, SNOWGLOBE, ZOOMIES, STARDUST, MOON NAP, MILKY
+WAY), and the systems' sound demos too." The page now has three little songs, PURRSEC, LUNA NOVA and NOM NOM (the
+legend's universe; not in the user's list, so kept: say so), and no section of the systems; the site is ~6 MB.
+tests/run_orb.sh still renders every system's tour for build/audio (to hear here), only the songs go to the page.
