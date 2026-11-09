@@ -65,9 +65,9 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 .note { margin: 22px auto 0; max-width: 680px; font-size: 14px; color: var(--grey); border: 1px dashed var(--fdim); border-radius: 8px; padding: 8px 14px; }
 .box { background: var(--panel); border: 2px solid var(--fdim); border-radius: 10px; padding: 18px 20px; }
 
-/* ---- the FM-1: small and a cat. Its shell has ears and whiskers, its knobs little cat heads, PLAY a paw; the
- * screen at the firmware's own 240 pixels (crisp on any display), twice that when ZOOM is on */
-.fm1 { position: relative; max-width: 560px; margin: 26px auto 0; padding: 16px 16px 10px; border-radius: 28px;
+/* ---- the FM-1: a cat, not too big. Its shell has ears and whiskers, its knobs little cat heads, PLAY a paw; the
+ * screen at 360 pixels, drawn at three times the firmware's 240 (crisp on a high-density display), all the width with ZOOM */
+.fm1 { position: relative; max-width: 700px; margin: 26px auto 0; padding: 16px 16px 10px; border-radius: 28px;
   background: linear-gradient(180deg, #22164c, #140c30); border: 3px solid var(--frame);
   box-shadow: 0 0 0 4px #0a061a, 0 10px 40px #7042e833; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
 .fm1.active { border-color: var(--lime); }
@@ -79,10 +79,10 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 .fm1.active .ear { background: var(--lime); }
 .fm1-name { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font: 700 11px var(--px); letter-spacing: 0.1em;
   color: var(--ink); background: var(--lime); padding: 3px 12px; clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); }
-.fm1-top { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
-.screen { position: relative; width: 240px; aspect-ratio: 1; border-radius: 10px; padding: 6px; background: #05030e; border: 2px solid var(--fdim); }
-.fm1.zoom .fm1-top { grid-template-columns: 1fr; }
-.fm1.zoom .screen { width: min(480px, 100%); margin: 0 auto; }
+.fm1-top { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 16px; align-items: center; }
+.screen { position: relative; width: 100%; max-width: 360px; aspect-ratio: 1; border-radius: 10px; padding: 6px; background: #05030e; border: 2px solid var(--fdim); box-sizing: border-box; }
+.fm1.zoom .fm1-top { grid-template-columns: minmax(0, 1fr); }
+.fm1.zoom .screen { max-width: 660px; margin: 0 auto; }
 .screen::before, .screen::after { content: ""; position: absolute; top: 44%; width: 14px; height: 9px;   /* (her whiskers) */
   border-top: 2px solid var(--fdim); border-bottom: 2px solid var(--fdim); }
 .screen::before { left: -16px; transform: skewY(8deg); }
@@ -91,24 +91,24 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 #start { position: absolute; inset: 0; margin: auto; width: 140px; height: 46px; font: 700 15px var(--px); border-radius: 999px; cursor: pointer;
   background: var(--lime); color: var(--ink); border: 0; box-shadow: 0 0 0 4px #0a061a, 0 0 24px #c6ff1a88; }
 .ctrl { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.knobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 4px; justify-items: center; }
-.knob { display: flex; flex-direction: column; align-items: center; gap: 2px; font: 700 8px var(--px); color: var(--grey); letter-spacing: 0.03em; }
-.dial { --a: 0deg; width: 32px; height: 32px; border-radius: 50%; cursor: ns-resize; position: relative; outline: none; margin-top: 5px;
+.knobs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 6px; justify-items: center; }
+.knob { display: flex; flex-direction: column; align-items: center; gap: 3px; font: 700 10px var(--px); color: var(--grey); letter-spacing: 0.03em; }
+.dial { --a: 0deg; width: 38px; height: 38px; border-radius: 50%; cursor: ns-resize; position: relative; outline: none; margin-top: 5px;
   background: radial-gradient(circle at 35% 30%, #4a3790, #1e1248 72%); border: 2px solid var(--fdim); box-shadow: inset 0 -2px 4px #0006; touch-action: none; }
 .dial::before { content: ""; position: absolute; left: 1px; right: 1px; top: -7px; height: 9px; background: var(--fdim);   /* (its ears) */
   clip-path: polygon(0 100%, 14% 0, 34% 100%, 66% 100%, 86% 0, 100% 100%); }
-.dial::after { content: ""; position: absolute; left: 50%; top: 3px; width: 2px; height: 9px; margin-left: -1px; border-radius: 2px; background: var(--lime); transform-origin: 50% 13px; transform: rotate(var(--a)); }
+.dial::after { content: ""; position: absolute; left: 50%; top: 3px; width: 3px; height: 11px; margin-left: -1.5px; border-radius: 2px; background: var(--lime); transform-origin: 50% 16px; transform: rotate(var(--a)); }
 .dial:focus-visible, .dial:focus-visible::before { border-color: var(--lime); background-color: var(--lime); }
 .dial.vol::after { background: var(--yel); }
-.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-.b { font: 700 9px var(--px); color: var(--txt); background: #2a1a5e; border: 2px solid var(--fdim); border-radius: 999px; padding: 6px 2px; cursor: pointer; position: relative; touch-action: none; }
+.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.b { font: 700 11px var(--px); color: var(--txt); background: #2a1a5e; border: 2px solid var(--fdim); border-radius: 999px; padding: 8px 2px; cursor: pointer; position: relative; touch-action: none; }
 .b::before { content: ""; position: absolute; top: 3px; right: 7px; width: 4px; height: 4px; border-radius: 50%; background: #3a2a6a; }
 .b.lit::before { background: var(--lime); box-shadow: 0 0 5px var(--lime); }
 .b.down { background: #3a2480; border-color: var(--vio); }
 .b.latched { background: var(--mag); color: var(--ink); border-color: var(--mag); }
 .b-play { border-color: var(--lime); color: var(--lime); }
-.b-play svg { width: 9px; height: 9px; vertical-align: -1px; margin-right: 2px; fill: currentColor; }
-.fm1-keys { position: relative; height: 62px; margin-top: 12px; touch-action: none; }
+.b-play svg { width: 11px; height: 11px; vertical-align: -1px; margin-right: 2px; fill: currentColor; }
+.fm1-keys { position: relative; height: 84px; margin-top: 14px; touch-action: none; }
 .kw, .kb { position: absolute; top: 0; border: 0; padding: 0; cursor: pointer; }
 .kw { height: 100%; background: linear-gradient(#f4eeff, #ddd0f6); border: 1px solid #2a1c5c; border-radius: 0 0 9px 9px; }
 .kb { height: 58%; z-index: 1; background: linear-gradient(#3a2a78, #1a1040); border-radius: 0 0 6px 6px; border: 1px solid #000; }
@@ -117,18 +117,18 @@ header.hero { text-align: center; padding: 40px 0 10px; }
 .kw.lit, .kb.lit { background: linear-gradient(var(--lime), #8ec010); }
 .kw.down, .kb.down { filter: brightness(0.8); }
 .fm1-foot { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.fm1-foot button { font: 700 9px var(--px); background: none; color: var(--grey); border: 1px solid var(--fdim); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.fm1-foot button { font: 700 10px var(--px); background: none; color: var(--grey); border: 1px solid var(--fdim); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
 .fm1-foot button[aria-pressed="true"] { color: var(--lime); border-color: var(--lime); }
-#appstatus { margin: 10px auto 0; max-width: 560px; text-align: center; font: 700 12px var(--px); color: var(--lime); min-height: 20px; }
-details.howto { max-width: 560px; margin: 8px auto 0; font-size: 14px; color: var(--grey); }
+#appstatus { margin: 10px auto 0; max-width: 700px; text-align: center; font: 700 12px var(--px); color: var(--lime); min-height: 20px; }
+details.howto { max-width: 700px; margin: 8px auto 0; font-size: 14px; color: var(--grey); }
 details.howto summary { cursor: pointer; text-align: center; font: 700 12px var(--px); color: var(--vio); list-style: none; }
 details.howto summary::-webkit-details-marker { display: none; }
 details.howto[open] summary { margin-bottom: 8px; }
 .kmap { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .kmap > div { background: var(--panel); border: 1px solid var(--fdim); border-radius: 10px; padding: 8px 12px; }
 .kmap b { color: var(--txt); }
-@media (max-width: 560px) {
-  .fm1-top { grid-template-columns: 1fr; justify-items: center; }
+@media (max-width: 760px) {
+  .fm1-top { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .ctrl { width: 100%; }
 }
 
@@ -206,7 +206,7 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
   <span class="ear l" aria-hidden="true"></span><span class="ear r" aria-hidden="true"></span>
   <span class="fm1-name" aria-hidden="true">ORBITRIX</span>
   <div class="fm1-top">
-    <div class="screen"><canvas id="lcd" width="480" height="480" aria-label="ORBITRIX's screen"></canvas>
+    <div class="screen"><canvas id="lcd" width="720" height="720" aria-label="ORBITRIX's screen"></canvas>
       <button id="start" type="button">▶ Start</button></div>
     <div class="ctrl">
       <div class="knobs">

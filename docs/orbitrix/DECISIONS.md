@@ -495,3 +495,7 @@ pixel), ZOOM for twice that; the knobs, eight in two rows, little cat heads (two
 pills, PLAY a paw; the shell with a cat's ears (violet, pink inside, lime while it has the keys), whiskers by the
 screen and the lime ORBITRIX pill on top; a shorter keyboard; the how-to folded away ("How to play it"). The same
 hooks for play.js, so nothing in how it plays changed. Tried in Chromium at 1100 and 390 wide: no sideways scroll.
+- (The same evening) "Now it is so compact the UI is squeezed and unreadable": the middle, ~700 x 520. The screen at
+  360 pixels drawn at three times the firmware's 240 (one device pixel to the canvas's on a high-density display),
+  ZOOM to the whole width; the labels at 10 and 11 pixels, the knobs 38, the keys 84 high; the screen's column fixed
+  (an auto column took the canvas's own 720 pixels and pushed the controls off).
