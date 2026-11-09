@@ -1,0 +1,35 @@
+# ORBITRIX: every page, with the orrery playing and a chord on the keys (tests/run_host.sh tests/scripts/pages.txt)
+1700 btn 12
+2000 keys 0x4890
+2900 shot
+3100 btn 8
+3500 shot
+3700 btn 11
+3900 enc 0 1
+4300 shot
+4500 btn 11
+4900 shot
+5100 btn 6
+5100 enc 0 1
+5500 shot
+5700 btn 6
+6100 shot
+6300 btn 4
+6700 shot
+6900 btn 5
+7300 shot
+7500 btn 5
+7900 shot
+8100 btn 2
+8500 shot
+8700 btn 2
+9100 shot
+9300 btn 7
+9700 shot
+9900 btn 10
+10300 shot
+10400 keys 0
+10500 btn 8
+10600 enc 6 1
+11400 shot
+12000 end
