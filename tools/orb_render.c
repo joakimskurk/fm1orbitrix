@@ -241,7 +241,7 @@ int main(int argc, char **argv)
         }
         S.cut = 60; S.res = 50; S.drive = 30;
         S.macro[MAC_TIDE] = 99; S.macro[MAC_HORIZON] = 60; S.hretro = 30;
-        S.bg_level = 80; S.bg_glow = 80; S.bg_cut = 30; S.bg_aniso = 40; S.bloom = 80; S.tired = 6;   /* (the cosmic ones) */
+        S.bg_level = 80; S.bg_glow = 80; S.bg_cut = 30; S.bg_aniso = 40; S.bg_hiss = 40; S.bloom = 80; S.tired = 6;   /* (the cosmic ones) */
         orb_play(&O, 1);
         for (k = 0; k < 4u; k++) orb_note_on(&O, (uint8_t)(k + 1u), orb_key_pitch(&S, 50u + 4u * k, 0, 0), 100);
         for (k = 0; k < 200u; k++) { memset(blk, 0, sizeof blk); orb_render(&O, blk, 256); }

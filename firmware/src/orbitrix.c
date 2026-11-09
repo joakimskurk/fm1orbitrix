@@ -298,7 +298,7 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                     {"TIRED", W_SYS, F_TIRED, SO(tired), 0, ORB_NTIRED - 1}, P_NONE, P_NONE, P_NONE, P_BPM},
     [PG_BG] = {{"LEVEL", W_SYS, F_NUM, SO(bg_level), 0, 99}, {"GLOW", W_SYS, F_NUM, SO(bg_glow), 0, 99},
                {"SILK", W_SYS, F_NUM, SO(bg_silk), 0, 99}, {"TEMP", W_SYS, F_TEMP, SO(bg_temp), -2, 1},
-               {"BARYON", W_SYS, F_NUM, SO(bg_baryon), 0, 99}, {"ANISO", W_SYS, F_NUM, SO(bg_aniso), 0, 99},
+               {"HISS", W_SYS, F_NUM, SO(bg_hiss), 0, 99}, {"DRIFT", W_SYS, F_NUM, SO(bg_aniso), 0, 99},
                {"LOW CUT", W_SYS, F_LOWCUT, SO(bg_cut), 0, 99}, {"BLOOM", W_SYS, F_NUM, SO(bloom), 0, 99}, P_BPM},
     [PG_PAD] = {{"X", W_SYS, F_NUM, SO(ox), 0, 99}, {"Y", W_SYS, F_NUM, SO(oy), 0, 99},
                 {"RAD", W_SYS, F_NUM, SO(orad), 0, 50}, {"PERIOD", W_SYS, F_SYNC, SO(orate), 0, ORB_NSYNC - 1},

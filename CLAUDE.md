@@ -33,7 +33,7 @@
 - The page (`web/`, published by CI from `main` to GitHub Pages): the firmware compiled to WebAssembly
   (`web/app/build.sh`, `web_host.c`), `worklet.js`, `play.js`, `index.html`, `make_site.py`. The app runs as passes
   (`app_start`, `boot_pass`, `app_pass`): keep every loop in it a pass, never a wait. Try the page in Chromium
-  (Playwright, headless) after a change: Start, PLAY skips the legend, the screen and the lights.
+  (Playwright, headless) after a change: Start, PLAY skips the splash, the screen and the lights.
 - Only edit Dinghy's own files (`platform.c`, `gfx.c`, `hal/`, `loader/`, `tools/build.py`) when the task needs it,
   and list the departure in README.md.
 - Name no product or other firmware as a model or an inspiration, anywhere in the repository. Dinghy, Felucca, SLOOP

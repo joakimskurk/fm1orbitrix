@@ -134,7 +134,7 @@ high ones (Silk damping). ORBITRIX lays it under the music, a huge pad that cann
 
 | | |
 | --- | --- |
-| **BACKGROUND RADIATION** | GLO's page. Eight partials on the sun's harmonic series (in UTONAL, of the sun's third below), so they never beat; each panned and slowly turning, from every side. **SILK** damps the high peaks, **BARYON** lifts the odd over the even, **ANISO** sets its tiny fluctuations, **TEMP** its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** takes its lowest partials away (and what goes into the nebula). It swells in while the orrery plays and glides when the sun moves. **GLOW** feeds it into NEBULA. The page draws its map, warm and cold, and its peaks as they sound. |
+| **BACKGROUND RADIATION** | GLO's page: an ambient pad under it all. An open chord on one harmonic series, so nothing in it can clash: the root, fifths and octaves over four octaves and a ninth (C2 G2 C3 G3 C4 D4 G4 C5 on C), each voice panned and slowly turning, from every side. **DRIFT**: each voice breathes on its own, deeper the more, and wanders a few cents, so voices come and go and the chord turns inside it. **HISS**: the static it was first heard as (Penzias and Wilson, 1965, in a radio antenna), soft and wide. **SILK** softens its highs, **TEMP** is its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** takes its lowest voices away (and what goes into the nebula). It swells in on PLAY over seconds, cooling as it comes (from an octave above, down onto its note: the first light redshifting), fades on STOP, glides when the sun moves. **GLOW** feeds it into NEBULA. The page draws its map, warm and cold, and its voices as they sound. |
 | **BLOOM** | NEBULA's own light back into it: its lines' feedback up towards 0.985 and a little of its wet again through the diffusers. The tail gets far longer and denser at no cost (no new lines); the two never sum past 0.995, so it is stable. The lines now run hotter, rounded once, and saturate softly, so the tail's last 20 dB are heard instead of cut. When the sun moves, the nebula clears a moment, so the old chord's tail does not clash with the new. |
 | **TIRED LIGHT** | HORIZON's second row. Zwicky's 1929 idea, long given up, that light tires on its way and reddens with distance; here it is an echo: what goes round again is read slower than it was written, so each echo comes back a just interval lower than the last (z 0.07 a semitone … z 0.50 a fifth … z 1.00 an octave) and, through the echo's tone, dimmer: redder. |
 
@@ -227,7 +227,7 @@ The first two are to start from, a beat and a lullaby; the others are named afte
 | **GW150914** | 1:2 1:1 3:2 2:1 | the first merger heard: notes chirp up from octaves below and ring down; every second bar it slides a little into the horizon |
 | **ALPHA CEN** | 1:1 4:3 5:3 1:4 | a triple star: the rings pull hard on each other (TIDE), the three-body problem, tuned |
 | **SGR A*** | 1:2 2:3 1:3 3:4 | the black hole at the centre: deep, UTONAL; when the pad's point dips, everything slides in, redshifted and partly backwards |
-| **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation full (the odd peaks tall), the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
+| **AFTERGLOW** | 1:2 5:4 7:4 3:2 | the oldest light under everything: the background radiation full (breathing, its hiss), the nebula blooming, echoes that tire a fourth lower each time; glass and a music box in the overtone scale, boops, a sub; the keys a tidal bell |
 
 There are also eight places of your own, U1–U8.
 
@@ -243,7 +243,7 @@ ALGORITHM's value and the load) and K1–K4 as four boxes.
 | **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC; the keys as above) → TIME (tempo, swing, mutate, the lanes) |
 | **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
 | **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED) · BACKGROUND (LEVEL GLOW SILK TEMP · BARYON ANISO LOW CUT BLOOM) → ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED) · BACKGROUND (LEVEL GLOW SILK TEMP · HISS DRIFT LOW CUT BLOOM) → ORBIT PAD · KEYS (mode, tuning, sun, octave, gravity, MIDI channel) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: K (the keys), A, B, C, D: what the pages edit and the keys play |

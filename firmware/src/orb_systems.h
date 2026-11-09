@@ -203,12 +203,12 @@ static void orb_system_milky(orb_sys_t *s)
     s->dtime = 7; s->dfb = 45; s->ping = 1; s->dmix = 32; s->rmix = 55; s->rsize = 85; s->rdecay = 74;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 30);
-    s->bg_level = 46; s->bg_glow = 70; s->bg_silk = 40; s->bg_baryon = 30; s->bg_aniso = 30; s->bg_cut = 30;   /* under it all */
-    s->bloom = 45;
+    s->bg_level = 34; s->bg_glow = 88; s->bg_silk = 55; s->bg_hiss = 18; s->bg_aniso = 75; s->bg_cut = 30;   /* under it all */
+    s->bloom = 60;
 }
 
-/* AFTERGLOW: the oldest light, under everything. The background radiation full (its peaks the sun's harmonics, the odd
- * ones tall), the nebula blooming, echoes that tire, a fourth lower each time; slow orbits of glass at 5:4 and a music
+/* AFTERGLOW: the oldest light, under everything. The background radiation full (an open chord breathing, its hiss), the
+ * nebula blooming, echoes that tire, a fourth lower each time; slow orbits of glass at 5:4 and a music
  * box at 7:4 in the overtone scale, boops at 3:2, a sub at half speed; the keys a tidal bell */
 static void orb_system_afterglow(orb_sys_t *s)
 {
@@ -228,8 +228,8 @@ static void orb_system_afterglow(orb_sys_t *s)
     s->mutate = 12; s->var = 15;
     s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 60; s->rsize = 95; s->rdecay = 80; s->rdamp = 50;
     s->macro[MAC_GRAVITY] = 60; s->macro[MAC_ORBIT] = 20;
-    s->bg_level = 72; s->bg_glow = 85; s->bg_silk = 30; s->bg_baryon = 55; s->bg_aniso = 45; s->bg_cut = 35; s->bg_temp = -1;
-    s->bloom = 85; s->tired = 5;
+    s->bg_level = 52; s->bg_glow = 96; s->bg_silk = 50; s->bg_hiss = 28; s->bg_aniso = 85; s->bg_cut = 35; s->bg_temp = 0;
+    s->bloom = 90; s->tired = 5;
     orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 30);
     orb_mod_set(s, 1, SRC_CONJ, DST_MOON, 30);
 }

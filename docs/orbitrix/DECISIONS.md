@@ -322,3 +322,22 @@ the CMB cold spot and the "axis of evil" are its unexplained anomalies. Decided:
 - Kept for later, from the reading: the cold spot, the axis of evil (an alignment where none should be), Hawking
   radiation (a black hole's glow, hotter as it shrinks), dark matter's flat rotation curves, the gravitational-wave
   background pulsars hear, lensing's time delays (the Einstein cross's images hours apart).
+
+## D20 — The background radiation, ambient (2026-11-09)
+
+The user, hearing D19's pad: "an incredibly nasal drone; I imagined something much more ambient." It was: eight steady
+sines on harmonics 1..8 crowd the thirds into the middle octave (a formant: nasal), BARYON lifted the odd ones (hollow,
+a clarinet's), and nothing moved. Decided (the user: "bring in ideas you have"):
+
+- **An open chord** on one harmonic series (of the sun two octaves down: 2 3 4 6 8 9 12 16, C2 G2 C3 G3 C4 D4 G4 C5 on
+  C; UTONAL of the sun's third below): fifths, octaves and a ninth over four octaves, no crowded thirds; still nothing in
+  it can clash (tested: 0.999 of its energy on the chord, its drift on). A gentle hump, the middle voices fullest; SILK
+  softer to begin with.
+- **DRIFT** (was ANISO): each voice breathes on its own (a new depth every ~3 s, one voice in turn, ~1.5 s to get
+  there), at 99 coming and going entirely, so the chord turns inside itself; and each wanders a few cents (+-3.4 at 99,
+  slowly), a shimmer, not a beat you notice.
+- **HISS** (in BARYON's place): the static the background was first heard as, in Penzias and Wilson's antenna (1965):
+  noise between ~250 Hz and ~1.5 kHz, a different one each side, under its level.
+- **Slower**: ~3 s in, ~3 s out. And an idea of my own: **cooling**: swelling in from silence it starts an octave up
+  and comes down onto its note in ~2 s (the first light redshifting as the universe cools).
+- MILKY WAY and AFTERGLOW: less of it dry, more into the nebula, more DRIFT, a little HISS.

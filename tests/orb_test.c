@@ -368,28 +368,31 @@ static void test_cosmic(void)
     orb_system(2, &S);                      /* (HARMONICES, its rings quiet) */
     for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
     S.tuning = 1; S.sun = 0; S.rmix = 0; S.dmix = 0; S.cut = 99; S.res = 0; S.fmode = 0;
-    S.bg_level = 99; S.bg_glow = 0; S.bg_silk = 20; S.bg_baryon = 40; S.bg_aniso = 60; S.bg_cut = 0; S.bg_temp = 0;
+    S.bg_level = 99; S.bg_glow = 0; S.bg_silk = 20; S.bg_hiss = 0; S.bg_aniso = 60; S.bg_cut = 0; S.bg_temp = 0;
     memset(S.mod, 0, sizeof S.mod);
     orb_init(&O, &S, &MEM);
     orb_play(&O, 1);
-    for (b = 0; b < (uint32_t)(6.0 * 44100 / 256); b++) { memset(out, 0, sizeof out); orb_render(&O, out, 256); }
+    for (b = 0; b < (uint32_t)(10.0 * 44100 / 256); b++) { memset(out, 0, sizeof out); orb_render(&O, out, 256); }
     for (i = 0; i < 8192u; i += 256u) {
         memset(out, 0, sizeof out);
         orb_render(&O, out, 256);
         for (k = 0; k < 256u; k++) x[i + k] = (float)out[2u * k];
     }
-    {
-        double f0 = 440.0 * pow(2.0, (48 - 69) / 12.0), tot = 0, harm = 0, bin = 44100.0 / 8192.0;
+    {   /* the open chord: of C3 / 4, harmonics 2 3 4 6 8 9 12 16 (within 2 bins: its drift a few cents) */
+        static const int H[8] = {2, 3, 4, 6, 8, 9, 12, 16};
+        double f0 = 440.0 * pow(2.0, (48 - 69) / 12.0) / 4.0, tot = 0, harm = 0, bin = 44100.0 / 8192.0;
         static float w[8192];
-        int kk;
+        int kk, h;
         for (i = 0; i < 8192u; i++) w[i] = x[i] * (float)(0.5 - 0.5 * cos(2 * M_PI * i / 8192.0));
         for (kk = 1; kk < 400; kk++) {      /* up to 2.1 kHz */
-            double m = dft_mag(w, 8192, kk), f = kk * bin, n = floor(f / f0 + 0.5);
+            double m = dft_mag(w, 8192, kk), f = kk * bin;
+            int on = 0;
+            for (h = 0; h < 8; h++) if (fabs(f - H[h] * f0) <= 2 * bin) on = 1;
             tot += m * m;
-            if (n >= 1 && n <= 8 && fabs(f - n * f0) <= 4 * bin) harm += m * m;
+            if (on) harm += m * m;
         }
-        printf("background radiation: %.4f of its energy on the sun's harmonics 1..8\n", harm / tot);
-        CHECK(harm / tot > 0.995, "background radiation: %.4f harmonic", harm / tot);
+        printf("background radiation: %.4f of its energy on its chord (one harmonic series)\n", harm / tot);
+        CHECK(harm / tot > 0.99, "background radiation: %.4f on its chord", harm / tot);
         CHECK(tot > 1e3, "background radiation: silent");
     }
     /* NEBULA, all the way: size, decay, BLOOM, no damping, the pad glowing into it; then off: it must die away */
