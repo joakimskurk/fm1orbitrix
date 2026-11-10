@@ -138,7 +138,7 @@ The user saw a couple of glitches in the legend's film, and wanted "press play t
 
 ## D13 — The page, with ORBITRIX to play on it (2026-11-09)
 
-The user: a page, with a version on it that can be tried. Decided, as RoboSeq's and FM-1 Clock's pages do: the
+The user: a page, with a version on it that can be tried. Decided: the
 firmware itself, `orbitrix.c` unchanged, compiled to WebAssembly on a web FM-1 (`web/app/web_host.c`, no C library),
 its sound made in an AudioWorklet (`worklet.js`), whose quanta run the main loop for the milliseconds they are worth:
 the sound is the time base, as the audio interrupt is on the FM-1.
@@ -146,7 +146,7 @@ the sound is the time base, as the audio interrupt is on the FM-1.
 - For that the app runs as passes: `app_start`, `boot_pass` (the story, the splash), `app_pass` (the main loop's
   body). On the FM-1 and the host they run in a loop, as before (the screens checked pixel for pixel: unchanged but
   for PLAY now skipping the splash); on the page `app_main` is one pass a call.
-- The web FM-1 adds to RoboSeq's: buttons held and let go (SEL is a layer), the keys' two light layers (lit, and the
+- The web FM-1 has: buttons held and let go (SEL is a layer), the keys' two light layers (lit, and the
   sun's glow), MIDI straight into the firmware (velocity, CC 1, a clock), and the store: the settings and U1..U8,
   kept in the browser. On the page SEL latches (a mouse cannot hold it and turn a knob), and Shift holds it.
 - The engine's memory is plain memory there (no `.pool` section: its zeros would be in the file): 313 KB, 109 KB as
@@ -590,3 +590,14 @@ interface so it is intuitive the whole way." Decided:
   the white keys never going down.
 - The top line shows REC plainly (lit recording, blinking armed or counting in); the REC light the same. Note names on
   the KEYS page and a FOLLOWing step's are the nearest (a just fourth, 4.98 semitones, was shown as the third below).
+
+## D32 — A tutorial on the page; no other firmware named (2026-11-10)
+
+The user: "take them out" (the names of other firmwares in the page's code and notes, against the rule), "and give
+the page a collapsible tutorial." The names are gone from web/ (make_site.py, play.js, web_host.c, worklet.js,
+build.sh, index.html), from gfx.c's comment (a departure from Dinghy's file, listed in README) and from D13. The page
+has, under its FM-1 and closed till it is opened (a link in the paragraph above opens it), "a little song in ten
+steps": PLAY, asking (a held button), a beat, a sound, playing along IN KEY, recording with the count-in, keeping or
+undoing the take, a CATCH, something new (CUTE, PRESETS), the space and SAVE; each with the firmware's own screen
+(two new ones, REC's count-in and recording: tests/scripts/tutorial.txt, through tools/readme_screens.sh). Tried in
+Chromium at 1100 and 390 wide: every picture loads, no sideways scroll, the FM-1 still plays.

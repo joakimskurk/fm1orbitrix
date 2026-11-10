@@ -4,7 +4,7 @@
 // lights and the FM-1's controls: the knobs (drag, scroll or the arrow keys), the buttons (held while pressed; SEL
 // latches, so a mouse can turn a knob with it held), the 27 keys (click or touch, several at once), the computer's
 // keyboard, and a MIDI keyboard straight into the firmware (velocity, a clock). Nothing loads before Start (a browser
-// plays sound only after a click). After RoboSeq's web/app/play.js.
+// plays sound only after a click).
 const $ = (id) => document.getElementById(id);
 const fm1 = $('fm1');
 if (fm1) {

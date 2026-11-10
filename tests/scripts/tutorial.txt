@@ -1,0 +1,17 @@
+# ORBITRIX: the page's tutorial's REC screens (tools/readme_screens.sh): KITTEN stopped, REC waits, PLAY counts a bar
+# in (its first figure), then a melody into D as it records
+2000 btn 12
+2300 btn 12
+2600 btn 13
+3000 btn 12
+3200 shot
+5600 keys 0x80
+5700 keys 0
+5900 keys 0x800
+6000 keys 0
+6200 keys 0x4000
+6300 keys 0
+6600 keys 0x10000
+6700 keys 0
+7000 shot
+7100 end

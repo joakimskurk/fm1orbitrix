@@ -23,8 +23,8 @@ browser, the legend, a few little songs, the installer.
   python3 web/make_site.py build/orbitrix.fwsc VERSION OUT_DIR
 
 The package must be ORBITRIX's (its identity FM-1_967..) with its update loader in it (which the installer talks to).
-The audio is encoded by ffmpeg. After RoboSeq's and Star Distroyer's web/make_site.py, after SLOOP's (Copyright (C)
-2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments; isod89).
+The audio is encoded by ffmpeg. The installer is SLOOP's (Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton
+Instruments; isod89).
 """
 import hashlib
 import json
@@ -43,7 +43,8 @@ ROOT = HERE.parent
 BLOCKS, BLK, KEEP = 20, 0x30, 0x2F
 APP = {"build/web/orbitrix.wasm": "orbitrix.wasm", "web/app/worklet.js": "worklet.js", "web/app/play.js": "play.js"}
 SCREENS = {"orbit": "screen_orbit", "keys": "screen_keys", "orrery": "screen_orrery", "horizon": "screen_horizon",
-           "steps": "screen_steps", "sound": "screen_sound"}
+           "steps": "screen_steps", "sound": "screen_sound", "help": "screen_help", "countin": "screen_countin",
+           "rec": "screen_rec", "cute": "screen_cute", "space": "screen_space"}   # (how it works; the tutorial)
 LEGEND = ["build/film/legend.webp", "build/film/legend.m4a", "build/film/legend.png"]   # tools/make_legend.py
 SONGS = [   # build/audio/songs/NN_name.wav (orb_render song), arranged: a few, the page kept calm
     ("PURRSEC", "Lo-fi: its chords, then the purr, the beat, the hats; a break where the toy piano sings the chords' own notes."),

@@ -2,8 +2,7 @@
 // Copyright (C) 2026 joakimskurk
 // ORBITRIX in a browser: the firmware (orbitrix.wasm, web/app/build.sh) in the audio thread. Its sound is its time
 // base, as the audio interrupt is on the FM-1: each quantum asks it for its frames, and it runs its main loop for the
-// milliseconds they are worth. The screen, the lights and the store (the settings, U1..U8) go to the page. After
-// RoboSeq's and FM-1 Clock's web/app/worklet.js.
+// milliseconds they are worth. The screen, the lights and the store (the settings, U1..U8) go to the page.
 const FS = 44100;                                // the firmware's rate; another context rate is resampled (linear)
 
 class Orbitrix extends AudioWorkletProcessor {

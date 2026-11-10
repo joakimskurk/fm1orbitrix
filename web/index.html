@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <!-- Copyright (C) 2026 joakimskurk. The installer: SLOOP's protocol (fm1ota.js, fm1pkg.js, Copyright (C) 2026 Leo
-     Kuroshita (@kurogedelic), Hügelton Instruments), as RoboSeq's and Star Distroyer's pages carry it.
+     Kuroshita (@kurogedelic), Hügelton Instruments).
      web/make_site.py builds the site from this page: it fills in LIB (the installer's modules), META and SONGS. -->
 <html lang="en">
 <head>
@@ -124,6 +124,23 @@ details.howto { max-width: 700px; margin: 8px auto 0; font-size: 14px; color: va
 details.howto summary { cursor: pointer; text-align: center; font: 700 12px var(--px); color: var(--vio); list-style: none; }
 details.howto summary::-webkit-details-marker { display: none; }
 details.howto[open] summary { margin-bottom: 8px; }
+details.tutorial { max-width: 700px; margin: 14px auto 0; }
+details.tutorial > summary { list-style: none; cursor: pointer; width: max-content; max-width: 100%; box-sizing: border-box;
+  margin: 0 auto; padding: 8px 18px; text-align: center;
+  border-radius: 999px; background: var(--lime); color: var(--ink); font: 700 13px var(--px); }
+details.tutorial > summary::-webkit-details-marker { display: none; }
+details.tutorial[open] > summary { margin-bottom: 12px; }
+.tut-intro { font-size: 14px; color: var(--grey); text-align: center; margin: 0 0 12px; }
+ol.tut { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 10px; }
+ol.tut > li { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: start; background: var(--panel);
+  border: 1px solid var(--fdim); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--grey); }
+ol.tut > li.noimg { grid-template-columns: 1fr; }
+ol.tut > li img { width: 120px; height: 120px; border-radius: 4px; border: 1px solid var(--fdim); }   /* (480 px: a quarter, smooth) */
+ol.tut h3 { margin: 0 0 4px; font: 700 13px var(--px); color: var(--yel); }
+ol.tut h3::before { counter-increment: step; content: counter(step) "  "; color: var(--lime); }
+ol.tut p { margin: 0; }
+ol.tut b { color: var(--txt); }
+@media (max-width: 480px) { ol.tut > li { grid-template-columns: 80px 1fr; } ol.tut > li img { width: 80px; height: 80px; } }
 .kmap { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .kmap > div { background: var(--panel); border: 1px solid var(--fdim); border-radius: 10px; padding: 8px 12px; }
 .kmap b { color: var(--txt); }
@@ -201,7 +218,8 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
 
 <h2 id="play">Play it here</h2>
 <p>The firmware itself, the same C as on the FM-1, on a little web FM-1. Press Start, then <b>PLAY</b>: KITTEN is
-  waiting. <b>PRESETS</b> turns to the others; <b>SEL</b> + <b>HOME</b> makes a new one in a mood.</p>
+  waiting. <b>PRESETS</b> turns to the others; <b>SEL</b> + <b>HOME</b> makes a new one in a mood. New to it? Open the
+  <a href="#tutorial">tutorial</a> under it.</p>
 <div class="fm1" id="fm1">
   <span class="ear l" aria-hidden="true"></span><span class="ear r" aria-hidden="true"></span>
   <span class="fm1-name" aria-hidden="true">ORBITRIX</span>
@@ -241,6 +259,46 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
   </div>
 </div>
 <p id="appstatus" role="status">Press Start: the firmware loads when you do.</p>
+<details class="tutorial" id="tutorial"><summary>▶ Tutorial: a little song in ten steps</summary>
+<p class="tut-intro">Ten minutes, on the FM-1 above (or your own). Lost at any point? <b>Hold any button a second</b>:
+  the screen says what it does. On this page, <kbd>Shift</kbd> (or a click on SEL) is SEL, <kbd>Space</kbd> PLAY,
+  <kbd>Enter</kbd> REC, <kbd>Esc</kbd> HOME.</p>
+<ol class="tut">
+  <li><img src="screens/orrery.png" alt="ORRERY: four tracks round Astralica"><div><h3>Start, and PLAY</h3>
+    <p>Press <b>Start</b>, then <b>PLAY</b>: KITTEN plays, four tracks going round Astralica, each its own colour (A–D).
+      On <b>HOME</b> the knobs K1–K4 set how many hits each has; with <b>SEL</b> held, how loud.</p></div></li>
+  <li><img src="screens/help.png" alt="A card: what HOME does"><div><h3>Ask it</h3>
+    <p>Hold <b>HOME</b> a second: a card says what it does. Every button has one; hold <b>SEL</b> alone and you get all
+      its combinations. It starts <b>SIMPLE</b>, the friendly pages only, so there is little to get lost in.</p></div></li>
+  <li><img src="screens/steps.png" alt="STEPS: the track's ring and its steps on the keys"><div><h3>A beat</h3>
+    <p><b>SEQ</b> opens STEPS. The lower black keys pick the track, the white keys are its 16 steps (a tap: rest,
+      hit, accent). The black <b>D#</b> is <b>IDEA</b>: a new pattern as the sound wants one, coming on the next bar.
+      The top <b>F#</b> undoes it.</p></div></li>
+  <li><img src="screens/sound.png" alt="SOUND: the track's sound by name"><div><h3>A sound</h3>
+    <p><b>EDIT</b> opens SOUND: turn <b>K1</b> through thirty sounds by name (BOOP, PURR, GLASS, BELL, STAR, MEW …).
+      K2 is its tone, K3 its decay, K4 its level. <b>SELECT</b> moves to another track.</p></div></li>
+  <li class="noimg"><div><h3>Play along</h3>
+    <p>The keys play the track in focus (the chip at the top), or the keys' own sound (K). In KITTEN they play
+      <b>IN KEY</b>: the white keys are the scale, C is the sun, and no key is wrong.</p></div></li>
+  <li><img src="screens/countin.png" alt="REC's count-in: a big 4"><div><h3>Record a melody</h3>
+    <p>Stop, and tap <b>REC</b>: it waits (REC blinks at the top). Press <b>PLAY</b>: it counts a bar in, 4 3 2 1, then
+      what you play is written into the track, on the nearest step, the very note you hear. Or skip the count: the
+      first key starts it all.</p></div></li>
+  <li><img src="screens/rec.png" alt="Recording: REC lit at the top"><div><h3>Keep it, or take it back</h3>
+    <p>It goes round: play over it, lap after lap. <b>PLAY</b> stops it and keeps the take. Not happy? <b>SEL + OCT−</b>
+      undoes the whole take (again: it comes back).</p></div></li>
+  <li class="noimg"><div><h3>Catch what you just played</h3>
+    <p>Played something lovely without REC? <b>Hold REC</b> half a second: the last lap of what you played is caught
+      into the track.</p></div></li>
+  <li><img src="screens/cute.png" alt="CUTE: Astralica in the mood"><div><h3>Something new</h3>
+    <p>Press <b>HOME</b> again: CUTE. <b>SEL + HOME</b> makes a whole new patch in the mood (SLEEPY, PLAYFUL, SPARKLY,
+      ZOOMIES: K1), on the next bar, everything in tune with itself. Or turn <b>PRESETS</b> for the twenty systems:
+      MILKY WAY is a lullaby.</p></div></li>
+  <li><img src="screens/space.png" alt="SPACE: the echoes and the nebula"><div><h3>Space, and keep it</h3>
+    <p><b>FX</b> opens SPACE: the echoes and the nebula; with SEL, <b>K2</b> is its DECAY, up to two minutes. <b>SAVE</b>,
+      PRESETS to pick U1–U8, <b>SAVE</b> again keeps it. Ready for more? <b>SEL + SAVE</b> wakes the deep pages.</p></div></li>
+</ol>
+</details>
 <details class="howto"><summary>How to play it ▾</summary>
 <div class="kmap">
   <div><b>The computer's keyboard</b>, once you have clicked the FM-1: white keys <kbd>Z</kbd>…<kbd>/</kbd> and
@@ -301,10 +359,10 @@ footer { margin: 60px 0 40px; padding-top: 18px; border-top: 1px solid var(--fdi
     <p>Four rings step at ratios to a 16th (1:1, 5:4, 3:2, 7:4 …) on a clock that makes them meet exactly. Where they
       meet, the hits are accented. Logic between them (AND, NOT, XOR, CONJ), mutation, spirals.</p></div></div>
   <div class="card"><img src="screens/steps.png" alt="STEPS: the track's ring, its hits as paws, the keys below"><div><h3>A groove in a minute</h3>
-    <p>Pick a track with a black key, tap its steps on the white ones, or ask for an IDEA: a kick on the beat, a snare's
-      backbeat, hats between, a bass on the root, a melody on the chord's tones. UNDO takes it back.</p></div></div>
+    <p>Pick a track with a black key, tap its steps on the white ones, or ask for an IDEA: a pulse on the beat, hats
+      between, a bass on the chord's root, a melody on its notes, coming on the next bar. UNDO takes it back.</p></div></div>
   <div class="card"><img src="screens/sound.png" alt="SOUND: the track's sound by name"><div><h3>Sounds by name</h3>
-    <p>Thirty, from BOOM, PAT and TICK to BOOP, SQUEAK, PURR, PAW, TOY, STAR, MEW and COMET, each balanced and in its own
+    <p>Thirty, from BOOP, SQUEAK and PURR to PAW, TOY, GLASS, STAR, MEW and COMET, each balanced and in its own
       register; TONE, DECAY and LEVEL under them, and the whole orbit beneath that.</p></div></div>
   <div class="card"><img src="screens/horizon.png" alt="HORIZON: a black hole"><div><h3>The strange part</h3>
     <p>TIDE: the planets pull on each other (FM between the voices, on the sun's harmonics). INSPIRAL: merger chirps.
@@ -370,6 +428,12 @@ $("zoom").addEventListener("click", () => {
   const on = !$("fm1").classList.toggle("zoom") ? false : true;
   $("zoom").setAttribute("aria-pressed", String(on));
 });
+
+/* ---- the tutorial: a link to it (or #tutorial in the address) opens it */
+const openTut = () => { if (location.hash === "#tutorial") $("tutorial").open = true; };
+document.querySelectorAll('a[href="#tutorial"]').forEach((a) => a.addEventListener("click", () => { $("tutorial").open = true; }));
+window.addEventListener("hashchange", openTut);
+openTut();
 
 /* ---- the songs: a player each, its spectrum the seek bar */
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;

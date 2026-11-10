@@ -3,7 +3,7 @@
 # Copyright (C) 2026 joakimskurk
 # ORBITRIX for the browser: firmware/src/orbitrix.c, unchanged, compiled to WebAssembly on web/app/web_host.c (the
 # page's FM-1) instead of the chip: build/web/orbitrix.wasm, no imports, no C library. clang with the wasm32 target
-# and wasm-ld (lld): apt install clang lld. As RoboSeq's and FM-1 Clock's web/app/build.sh.
+# and wasm-ld (lld): apt install clang lld.
 #
 #   sh web/app/build.sh [OUT]
 set -e

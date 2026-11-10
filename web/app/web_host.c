@@ -2,9 +2,8 @@
 /* Copyright (C) 2026 joakimskurk */
 /* ORBITRIX in a browser: an FM-1 for the page (web/app/), as tests/host.c is one for a computer. platform.c includes
  * this file instead of tests/host.c when DINGHY_WEB is set (with DINGHY_HOST: the app's host branches). The
- * firmware's own code runs unchanged on it, compiled to WebAssembly (web/app/build.sh), with no C library. After
- * RoboSeq's and FM-1 Clock's web/app/web_host.c; ORBITRIX's: buttons held (SEL is a layer), the key lights' two
- * layers, MIDI into the firmware, the settings and all eight places of its own kept.
+ * firmware's own code runs unchanged on it, compiled to WebAssembly (web/app/build.sh), with no C library: buttons
+ * held (SEL is a layer), the key lights' two layers, MIDI into the firmware, the settings and all eight places kept.
  *
  *   web_init()                  the app's start (app_main: a pass a call, DINGHY_WEB)
  *   web_run(n)                  n stereo frames of its sound into web_out (L R L R, +-32767): the app's main loop runs

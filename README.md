@@ -350,7 +350,7 @@ python3 web/make_site.py build/orbitrix.fwsc dev build/site    # after tests/run
 
 Departures from Dinghy's own files: `platform.c` includes `web/app/web_host.c` instead of `tests/host.c` when
 `DINGHY_WEB` is set; `orbitrix.c` runs its start, the story, the splash and its main loop as passes, so the page can
-run one a millisecond.
+run one a millisecond; `gfx.c` names no other firmware in a comment.
 
 ## Where things are
 
