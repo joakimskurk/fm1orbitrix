@@ -410,6 +410,33 @@ static void test_follow(void)
     CHECK(keys > 1000 && !kbad, "chord keys: %u of %u outside the chord", kbad, keys);
 }
 
+/* IN KEY keys: every key, every tuning, every sun: a note of the tuning; C the sun; the white keys never go down */
+static void test_inkey(void)
+{
+    uint32_t t, sun, note, keys = 0, out = 0, down = 0, cs = 0;
+    orb_system(0, &S);
+    S.keymode = KM_INKEY;
+    for (t = 0; t < ORB_NTUNING; t++)
+        for (sun = 0; sun < 12u; sun++) {
+            int32_t last = INT32_MIN, base;
+            S.tuning = (uint8_t)t; S.sun = (uint8_t)sun;
+            base = (60 + (int32_t)sun - (sun > 6u ? 12 : 0)) * 256;
+            orb_init(&O, &S, &MEM);
+            for (note = 36; note < 97; note++) {
+                int32_t p = orb_key_pitch_o(&O, note, 0, 0), rel = ((p - base) % 3072 + 3072) % 3072, i, ok = 0;
+                static const uint8_t BLK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+                for (i = 0; i < (int32_t)ORB_SCALE_N[t]; i++) if (ORB_SCALE[t][i] == rel) ok = 1;
+                keys++;
+                if (!ok) out++;
+                if (note % 12u == 0u && rel != 0) cs++;
+                if (!BLK[note % 12u]) { if (p < last) down++; last = p; }
+            }
+        }
+    printf("in key: %u keys in every tuning and sun: %u outside the tuning, %u C not the sun, %u white keys going down\n",
+           keys, out, cs, down);
+    CHECK(keys > 3000 && !out && !cs && !down, "in key: %u outside, %u C not the sun, %u down", out, cs, down);
+}
+
 /* REC's notes: on a FOLLOWing ring, a step REC wrote (ORB_ON_FIX) plays the tuning's note it was given whatever chord
  * comes, MUTATE leaves it, and a step REC marks to skip (the key played it just now) is not played once, then is */
 static void test_recfix(void)
@@ -723,6 +750,7 @@ int main(void)
     test_cosmic();
     test_follow();
     test_recfix();
+    test_inkey();
     test_cute();
     test_systems();
     if (fails) { printf("orb_test: %d FAILED\n", fails); return 1; }

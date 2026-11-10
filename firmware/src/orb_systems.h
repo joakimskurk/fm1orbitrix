@@ -213,7 +213,7 @@ static void orb_system_kitten(orb_sys_t *s)
     orb_rdef_t B = {1, 1, 16, 2, 4, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x3};
     orb_rdef_t C = {1, 1, 16, 8, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0xAA};
     orb_rdef_t D = {1, 1, 16, 6, 0, 0, DIR_FWD, 0, 0, 0, md, 6, 0x1};
-    s->tuning = 0; s->sun = 5; s->bpm = 104; s->swing = 16;
+    s->tuning = 0; s->sun = 5; s->bpm = 104; s->swing = 16; s->keymode = KM_INKEY;   /* (the keys: none wrong) */
     s->bg_prog = 0;                         /* (its bass sings 7/4: under it, the sun's own chord fits) */
     s->snd[0] = SND_PAW; s->snd[0].oct = 0; s->snd[0].level = 74;
     orb_put(s, ORB_A, LIB_BOOP, 60);        /* (the beat a boop: root, fifth, third, fifth) */
@@ -236,7 +236,7 @@ static void orb_system_milky(orb_sys_t *s)
     orb_rdef_t B = {1, 1, 16, 5, 2, 0, DIR_FWD, 0, 0, 85, mb, 5, 0x1};
     orb_rdef_t C = {3, 2, 24, 7, 0, 0, DIR_FWD, 0, 0, 90, mc, 7, 0x1};
     orb_rdef_t D = {1, 2, 8, 3, 0, 0, DIR_FWD, 0, 0, 0, md, 3, 0x1};
-    s->tuning = 3; s->sun = 7; s->bpm = 86; s->swing = 22;
+    s->tuning = 3; s->sun = 7; s->bpm = 86; s->swing = 22; s->keymode = KM_INKEY;
     s->snd[0] = SND_MEW; s->snd[0].level = 58;   /* (a chord of meows adds up) */
     orb_put(s, ORB_A, LIB_GLASS, 44); s->snd[ORB_A].oct = 1;   /* (one and three: glass) */
     s->snd[2] = SND_BOOP; s->snd[2].level = 72;
@@ -493,7 +493,7 @@ static void orb_system_alphacen(orb_sys_t *s)
 {
     static const int8_t polos[] = {0, 1, 2, 1, 0, 1, 3, 2}, sangsih[] = {2, 3, 4, 3, 2, 3, 5, 4},
                         bal[] = {0, 2, 4, 3, 2, 1, 2, 0}, gong[] = {0, 2};
-    s->tuning = 3; s->sun = 2; s->bpm = 100;
+    s->tuning = 3; s->sun = 2; s->bpm = 100; s->keymode = KM_INKEY;
     orb_put(s, ORB_KEYS, LIB_BELL, 56);
     orb_put(s, ORB_A, LIB_BELL, 50); s->snd[ORB_A].pan = 40;
     orb_put(s, ORB_B, LIB_GLASS, 52); s->snd[ORB_B].pan = 60;

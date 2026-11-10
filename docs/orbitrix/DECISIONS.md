@@ -555,3 +555,38 @@ highs a pass whatever the length, so the middle could not ring more than 20 or 3
   longer (DECAY 58 .. 99: grooves 15 .. 25 s, the floating ones a minute or two). CUTE's moods: a pulse in place of
   the kick, the drums whispering, longer spaces. The legend keeps its own space (6.6 s: DECAY 45 under the new law), as
   it was filmed.
+
+## D31 — Intuitive all the way (2026-11-10)
+
+The user, shown what makes the simple FM-1 firmwares simple (a looper's REC, catching what was just played, help on a
+held button, few pages, changes on the bar, the white keys in key, a count-in): "build all of it, and shape the
+interface so it is intuitive the whole way." Decided:
+
+- **REC is a looper.** A tap (it acts on the release: holding it is a CATCH). Playing: the keys write at once. Stopped:
+  it waits (the top line's REC blinks, "ARMED"), and the first key starts the orrery and the take (the ring plays that
+  first note on its first step, so it is not heard twice), or PLAY counts a bar in (4 3 2 1, big; heard, not written)
+  and then it records. Stopping ends the take. A take is one gesture for UNDO, on every track it wrote on. (Stopped
+  REC no longer writes step by step: STEPS's keys do that, one tap a step.) While REC is on, STEPS's black keys' tools
+  rest (their icons go), every key plays.
+- **CATCH** (REC held half a second): every key played while the orrery goes is kept (the last 64) with the step of
+  each ring it was nearest; holding REC writes the focused ring's last lap of them into it, as REC would have (the
+  nearest note of the tuning, kept as played), one gesture for UNDO. Nothing to catch: the REC card says how.
+- **UNDO everywhere: SEL + OCT−**, the last gesture (a take or a catch: every track it wrote on); again, redo. STEPS's
+  UNDO key stays the focused track's.
+- **Help cards**: any button held a second (SEL alone 1.2 s, with nothing else done) shows a card in plain words, the
+  page's controls and the button's SEL combinations, till it is let go (a knob turned takes it away). Every page also
+  says what it is for on the hint line for a few seconds after it comes (the load and ALGORITHM after).
+- **SIMPLE** (as it comes; SET_VER 8, so the settings start again): each button opens its friendly page only (HOME the
+  orrery and CUTE, SEQ STEPS, EDIT SOUND, FX SPACE, GLO BACKGROUND, ARP KEYS); ENV and LFO show a card: the deep pages
+  sleep, SEL + SAVE wakes them (DEEP), and again puts them to sleep. The host scripts that visit the deep pages start
+  with SEL + SAVE.
+- **On the bar**: while it plays, a system from PRESETS, a CUTE one, an IDEA and a MOOD wait for just before the next
+  bar (a 64th), the hint line saying what is coming ("ON THE ONE: MILKY WAY"); a new system or a CUTE one starts the
+  orrery from the top. Stopped, at once.
+- **IN KEY keys** (KM_INKEY, engine): the white keys the scale going up with C the sun, each the tuning's note nearest
+  the major scale's (JUST's just major scale; OTONAL and UTONAL seven of their eight; PENTA's five, a note twice now
+  and then), a black key the white one under it an octave up: no key is wrong and every octave stays where it is.
+  KITTEN, MILKY WAY and ALPHA CEN play their keys IN KEY. Tested: every key, tuning and sun in the tuning, C the sun,
+  the white keys never going down.
+- The top line shows REC plainly (lit recording, blinking armed or counting in); the REC light the same. Note names on
+  the KEYS page and a FOLLOWing step's are the nearest (a just fourth, 4.98 semitones, was shown as the third below).

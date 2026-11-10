@@ -1,6 +1,9 @@
-# ORBITRIX: every page, with the orrery playing and a chord on the keys (tests/run_host.sh tests/scripts/pages.txt)
+# ORBITRIX: every page, with the orrery playing and a chord on the keys (tests/run_host.sh tests/scripts/pages.txt) (SEL+SAVE first: DEEP, every page)
 2000 btn 12
 2000 keys 0x4890
+2010 btndown 3
+2040 btn 9
+2070 btnup 3
 2900 shot
 3100 btn 8
 3500 shot

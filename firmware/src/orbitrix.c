@@ -195,8 +195,9 @@ static char *put_deg(char *p, int32_t deg)
 }
 
 /* ---- settings kept over a power-off */
-#define SET_VER 7u                              /* (7: twenty systems, U1.. moved: the settings start again) */
-static struct { uint8_t oct, ch, sysi, ver; } set = {0, 0, 0, SET_VER};
+#define SET_VER 8u                              /* (8: SIMPLE: the settings start again) */
+static struct { uint8_t oct, ch, sysi, ver, simple, rsv[3]; } set = {0, 0, 0, SET_VER, 1, {0, 0, 0}};   /* simple: the
+                                                 * friendly pages only (SEL+SAVE: the deep ones too) */
 static uint32_t set_dirty, set_t;
 static uint32_t drawn_bar;                      /* (the bar drawn for: ~0 draws it again; defined with the screens') */
 static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
@@ -204,7 +205,7 @@ static void set_touch(void) { set_dirty = 1; set_t = fm1_ms; }
 /* ---- UNDO: each ring's pattern as it was before the last gesture on it (an IDEA, a CLEAR, LEN HITS ROT, steps): one
  * level, and UNDO again is REDO. A gesture: changes to that ring with under 1.5 s between them */
 static struct { uint8_t on[ORB_NSTEP]; int8_t dg[ORB_NSTEP]; uint8_t len, hits, rot, ok, follow; int8_t deg; } undo[ORB_NRING];
-static uint32_t undo_t[ORB_NRING], undo_redo[ORB_NRING];
+static uint32_t undo_t[ORB_NRING], undo_redo[ORB_NRING], undo_last;   /* undo_last: the rings of the last gesture */
 static void undo_take(uint32_t r, int fresh)
 {
     const orb_ring_t *g = &sys.ring[r];
@@ -216,8 +217,9 @@ static void undo_take(uint32_t r, int fresh)
         undo_redo[r] = 0;
     }
     undo_t[r] = fm1_ms;
+    undo_last = 1u << r;
 }
-static void undo_forget(void) { uint32_t r; for (r = 0; r < ORB_NRING; r++) undo[r].ok = 0; }
+static void undo_forget(void) { uint32_t r; for (r = 0; r < ORB_NRING; r++) undo[r].ok = 0; undo_last = 0; }
 
 /* ---- the pages and their values */
 enum { PG_ORRERY, PG_MACRO, PG_RING, PG_TIME, PG_SOUND, PG_ORBIT, PG_BODY, PG_COSMOS, PG_ENV, PG_MOD, PG_LFO, PG_FILTER,
@@ -335,7 +337,8 @@ static char *put_note_of(char *p, uint32_t r, int32_t deg)
 {
     if (!sys.ring[r % ORB_NRING].follow) return put_deg(p, deg);
     {
-        int32_t pc = (((int32_t)(sys.sun % 12u) * 256 + orb_chord_tone(orb_chord_at(&sys, eng.T), deg)) / 256 % 12 + 12) % 12;
+        int32_t v = (int32_t)(sys.sun % 12u) * 256 + orb_chord_tone(orb_chord_at(&sys, eng.T), deg) + 128;   /* (nearest) */
+        int32_t pc = ((v >= 0 ? v / 256 : -((255 - v) / 256)) % 12 + 12) % 12;
         p = put_i(put_s(p, "#"), deg, 0);
         *p++ = ' ';
         return put_s(p, NOTE_NAME[pc]);
@@ -376,11 +379,17 @@ static void lib_pick(uint32_t li)
     if (eng.playing) return;
     if (focus) orb_part_on(&eng, (uint8_t)focus, (36 + (int32_t)(sys.sun % 12u)) * 256, 100, 30);
     else {
-        orb_note_on(&eng, 99, orb_key_pitch_o(&eng, sys.keymode == KM_HARMONIC ? 7u : 60u + sys.sun % 12u, 0, 0), 100);
+        orb_note_on(&eng, 99, orb_key_pitch_o(&eng, sys.keymode == KM_HARMONIC ? 7u : sys.keymode == KM_INKEY ? 60u : 60u + sys.sun % 12u, 0, 0), 100);
         preview_t = fm1_ms + 350u;
     }
 }
 static void mood_turn(uint32_t m);
+#define BAR (16u * ORB_TPS)                     /* a bar of ticks */
+enum { JOB_NONE, JOB_SYS, JOB_IDEA, JOB_CUTE, JOB_MOOD };   /* (what waits for the bar: see job_run) */
+static uint32_t job, job_arg;
+static uint32_t countin;                        /* REC's count-in: 2 till PLAY has restarted it, 1 its bar, 0 done */
+static void job_at_bar(uint32_t j, uint32_t a);
+static void job_label(char *s);
 static void say(const char *s);
 static void pd_set(const pd_t *d, int32_t v)
 {
@@ -398,7 +407,7 @@ static void pd_set(const pd_t *d, int32_t v)
     if (d->fmt == F_TRIG) { *p = (uint8_t)((*p & ~3u) | (uint32_t)v); return; }
     if (d->fmt == F_HOLD) { *p = (uint8_t)(v ? (*p | SF_HOLD) : (*p & ~SF_HOLD)); return; }
     if (d->fmt == F_LIB) { lib_pick((uint32_t)v); return; }
-    if (d->fmt == F_MOOD) { mood_turn((uint32_t)v); drawn_bar = ~0u; return; }
+    if (d->fmt == F_MOOD) { sys.mood = (uint8_t)v; job_at_bar(JOB_MOOD, (uint32_t)v); drawn_bar = ~0u; return; }   /* (on the bar) */
     if (d->where == W_RING && d->off == RO(follow)) {   /* FOLLOW: its notes kept where they were */
         orb_follow_set(&sys, ring_focus(), (uint32_t)v);
         orb_pattern_edited(&eng, ring_focus());
@@ -441,7 +450,7 @@ static void pd_text(const pd_t *d, char *s)
     case F_DEG: put_note_of(s, ring_focus(), v); break;
     case F_TUNING: put_s(s, ORB_TUNING_NAME[v % ORB_NTUNING]); break;
     case F_NOTE: put_s(s, NOTE_NAME[v % 12]); break;
-    case F_KMODE: put_s(s, v == KM_HARMONIC ? "HARMON" : v == KM_CHORD ? "CHORD" : "SOLAR"); break;
+    case F_KMODE: put_s(s, v == KM_HARMONIC ? "HARMON" : v == KM_CHORD ? "CHORD" : v == KM_INKEY ? "IN KEY" : "SOLAR"); break;
     case F_MRATIO: put_s(s, ORB_MRATIO_NAME[v % ORB_NMOON]); break;
     case F_DT: put_s(s, ORB_DT_NAME[v % ORB_NDT]); break;
     case F_SYNC: put_s(s, ORB_SYNC_NAME[v % ORB_NSYNC]); break;
@@ -614,7 +623,13 @@ static void cat_draw_q8(int32_t ax, int32_t ay, uint32_t s, uint32_t acx, uint32
 static void cat_draw_small(int32_t cx, int32_t cy, uint32_t s);
 static int32_t part_level(uint32_t p);
 static uint8_t tour[4], tour_n;                 /* the pages of the button pressed last (the hint line, a moment) */
-static uint32_t tour_t;
+static uint32_t tour_t, hint_t;                 /* ... and then, till hint_t, what the page is for, in plain words */
+static const char *const PAGE_HINT[NPAGE] = {
+    "K: HITS  SEL+K: LEVELS  PRESETS", "EIGHT MACROS  SEL: FOUR MORE", "WHITE: STEPS  BLACK: TRACKS",
+    "TEMPO SWING  SEL: GATE HOLD", "K1: A SOUND BY NAME", "THE ORBIT: ITS SHAPE, ITS MOON", "FALL, COLOUR, PIXEL",
+    "TIDE, INSPIRAL, BEAM", "ATTACK DECAY SUSTAIN RELEASE", "SOURCE > DEST  K4: THE SLOT", "TWO LFOS  SEL: SYNC",
+    "CUT RES MODE DRIVE", "ECHO, NEBULA  SEL: DECAY", "THE BLACK HOLE  SEL: TIRED", "THE CHORDS UNDER IT ALL",
+    "THE ORBIT PAD: X Y RAD", "HOW THE KEYS PLAY: K1", "SEL+HOME: A WHOLE NEW ONE"};
 /* STEPS: the black keys (F# G# A# C# below: the track; D#: an IDEA; F# G# A# C# above: mute; D#: CLEAR; F#: UNDO) */
 static const uint8_t BLACK_KEY[11] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
 enum { BK_A, BK_B, BK_C, BK_D, BK_IDEA, BK_MA, BK_MB, BK_MC, BK_MD, BK_CLEAR, BK_UNDO };
@@ -643,6 +658,12 @@ static void draw_bar(void)                      /* the top line: the page, the f
         char *p = put_s(s, "SAVE> ");
         sys_label(ORB_NSYSTEM + save_to, p);
         tx(x + 8, 3, &FONT_S, s, C_MAG, C_BG);
+    } else if (rec) {                           /* REC: lit while it records, blinking while it waits */
+        int on = eng.playing && !countin ? 1 : (int)((fm1_ms >> 9) & 1u);
+        const char *t = countin ? "COUNT" : !eng.playing ? "ARMED" : orb_lib_name(&sys.snd[focus]);
+        pill(x + 6, 3, 30, 17, on ? C_MAG : C_FDIM);
+        txc(x + 21, 3, &FONT_S, "REC", on ? C_INK : C_MAG, on ? C_MAG : C_FDIM);
+        if (x + 42 + text_w(&FONT_S, t) < 240 - 76) tx(x + 42, 3, &FONT_S, t, C_MAG, C_BG);
     } else {
         int32_t rw;                             /* (the right side: the sun's note, the tempo, her head, PLAY) */
         char t[12], *q = put_s(t, NOTE_NAME[sys.sun % 12u]);
@@ -665,8 +686,7 @@ static void draw_bar(void)                      /* the top line: the page, the f
             for (k = 0; k < 7; k++) cv_rect(229 + k, 5 + k / 2 + (k & 1), 1, 12 - 2 * (k / 2) - 2 * (k & 1), C_LIME);
         }
     }
-    if (rec) cv_rect(2, 20, x, 2, C_MAG);
-    cv_rect(0, 21, 240, 1, C_FDIM);
+    cv_rect(0, 21, 240, 1, rec ? C_MAG : C_FDIM);
     cv_blit(0, 0);
 }
 
@@ -699,6 +719,7 @@ static void draw_hint(void)                     /* the line above the knobs: ALG
     const pd_t *d = &PD[page][8];
     cv_begin(240, 16, C_BG);
     if (msg_t && fm1_ms < msg_t) txc(120, 0, &FONT_S, msg, C_YEL, C_BG);
+    else if (job) { job_label(s); txc(120, 0, &FONT_S, s, C_YEL, C_BG); }   /* (waiting for the bar) */
     else if (tour_t && fm1_ms < tour_t && tour_n > 1u) {   /* this button's pages, this one lit */
         uint32_t i;
         int32_t w = 0, x;
@@ -708,7 +729,8 @@ static void draw_hint(void)                     /* the line above the knobs: ALG
             if (i) { cv_rect(x + 3, 7, 3, 2, C_FDIM); x += 10; }
             x = tx(x, 0, &FONT_S, PAGE_NAME[tour[i]], tour[i] == page ? C_LIME : C_DIMT, C_BG);
         }
-    } else {
+    } else if (fm1_ms < hint_t) txc(120, 0, &FONT_S, PAGE_HINT[page], C_TXT, C_BG);   /* (what the page is for) */
+    else {
         if (d->where != W_NONE || d->fmt == F_SLOT) {
             p = put_s(p, "ALG ");
             p = put_s(p, d->name);
@@ -1039,6 +1061,7 @@ static void draw_ring(void)
     for (i = 0; i < 11u; i++) {
         int32_t x = 2 + (int32_t)(BLACK_AFTER[i] + 1u) * 15 - 7, y = 104;
         uint16_t bg = C_PANEL;
+        if (rec) { pill(x, y, 13, 17, C_PANEL); cv_rect(x + 5, y + 7, 3, 3, C_MAG); continue; }   /* (REC: they play) */
         if (i <= BK_D) {
             uint16_t tc = RINGC[i + 1u];
             int sel = focus == ORB_A + i;
@@ -1455,17 +1478,18 @@ static void draw_keys_page(void)
         for (i = 0; i < 16u; i++) if (WK[i] == k) { white = 1; w = i; }
         if (white) { x = 2 + (int32_t)w * 15; kw = 14; ky = 60; kh = 80; }
         else { x = 2 + (int32_t)w * 15 + 10; kw = 10; ky = 60; kh = 48; }
-        c = (note % 12u) == sys.sun % 12u ? C_YEL : white ? C_TXT : C_GREY;
+        c = (note % 12u) == (sys.keymode == KM_INKEY ? 0u : sys.sun % 12u) ? C_YEL : white ? C_TXT : C_GREY;
         if (!white) continue;
         cv_rect(x, ky, kw, kh, dim565(c, 12));
         if (lit >> k & 1u) spr2(ICON_PAW, 5, 5, x + kw / 2 - 5, ky + kh - 32, C_MAG);
         if (sys.keymode == KM_HARMONIC) {
             put_u(s, ORB_WHITE_H[k]);
             txc(x + kw / 2, ky + kh - 18, &FONT_S, s, C_INK, dim565(c, 12));
-        } else if (sys.keymode == KM_CHORD) {   /* each white key the chord's note it plays now; its bass lime */
-            put_s(s, NOTE_NAME[(p / 256) % 12]);
+        } else if (sys.keymode == KM_CHORD || sys.keymode == KM_INKEY) {   /* each white key the note it plays now;
+                                                 * CHORD: its bass lime */
+            put_s(s, NOTE_NAME[((p + 128) / 256) % 12]);   /* (the nearest: a just fourth is 4.98) */
             s[1] = 0;
-            if (chord_bass_key(note + 12u * (uint32_t)keyoct)) cv_rect(x + 2, ky + 2, kw - 4, 6, C_LIME);
+            if (sys.keymode == KM_CHORD && chord_bass_key(note + 12u * (uint32_t)keyoct)) cv_rect(x + 2, ky + 2, kw - 4, 6, C_LIME);
             txc(x + kw / 2, ky + kh - 18, &FONT_S, s, C_INK, dim565(c, 12));
         } else if (dev) {
             int32_t h = dev / 3;                /* 1/256 semitone: ~1 px a cent */
@@ -1479,13 +1503,13 @@ static void draw_keys_page(void)
         for (i = 0; i < 16u; i++) if (WK[i] == k) { white = 1; w = i; }
         if (white) continue;
         x = 2 + (int32_t)w * 15 + 10;
-        cv_rect(x, 60, 10, 48, (note % 12u) == sys.sun % 12u ? C_YEL : C_FDIM);
+        cv_rect(x, 60, 10, 48, sys.keymode != KM_INKEY && (note % 12u) == sys.sun % 12u ? C_YEL : C_FDIM);
         if (lit >> k & 1u) spr2(ICON_PAW, 5, 5, x, 94, C_TXT);
         if (sys.keymode == KM_HARMONIC) {
             char s[4];
             put_u(s, ORB_WHITE_H[k]);
             tx(x - 2, 86, &FONT_S, s, C_TXT, C_FDIM);
-        } else if (sys.keymode == KM_CHORD) {
+        } else if (sys.keymode == KM_CHORD || sys.keymode == KM_INKEY) {
         } else if (dev) {
             int32_t h = dev / 3;
             cv_rect(x + 2, 40 - (h > 0 ? h : 0), 6, h > 0 ? h : -h, dev > 0 ? C_CYAN : C_MAG);
@@ -1493,7 +1517,8 @@ static void draw_keys_page(void)
     }
     cv_rect(2, 40, 236, 1, C_FDIM);
     tx(4, 2, &FONT_S, sys.keymode == KM_HARMONIC ? "HARMONICS OF THE SUN" : sys.keymode == KM_CHORD ?
-       "THE CHORD'S NOTES: NONE WRONG" : "CENTS OFF EQUAL TEMPERED", C_GREY, C_BG);
+       "THE CHORD'S NOTES: NONE WRONG" : sys.keymode == KM_INKEY ? "C IS THE SUN: NONE WRONG" :
+       "CENTS OFF EQUAL TEMPERED", C_GREY, C_BG);
     cv_blit(0, 24);
 }
 
@@ -1621,8 +1646,120 @@ static void draw_horizon(void)
 }
 
 static void draw_cute(void);
+/* ---- HELP: a button held a second, a card says what it does (SEL held alone, a little longer); a card for a moment
+ * (DEEP pages asleep, nothing to catch). The cards are plain words, seven lines at most */
+typedef struct { const char *title, *text; } card_t;
+static const card_t CARD_HOME = {"HOME", "YOUR FOUR TRACKS GOING ROUND\nK1-K4: HOW MANY HITS EACH\nSEL+K1-K4: HOW LOUD EACH\n"
+    "PRESETS: ANOTHER SYSTEM\nHOME AGAIN: CUTE (A MOOD)\nSEL+HOME: A WHOLE NEW ONE"};
+static const card_t CARD_SEQ = {"STEPS", "WHITE KEYS: THE 16 STEPS\nBLACK: TRACK A-D, IDEA,\n  MUTES, CLEAR, UNDO\n"
+    "HOLD A STEP, TURN K1: ITS NOTE\nOCT- OCT+: STEPS 17-64\nSEL+SEQ: MUTE THE TRACK"};
+static const card_t CARD_EDIT = {"SOUND", "THE FOCUSED TRACK'S SOUND\nK1: A SOUND BY NAME (30)\nK2 TONE  K3 DECAY  K4 LEVEL\n"
+    "SEL: OCT PAN SPACE WOBBLE\nSELECT: ANOTHER TRACK\nDEEP: ORBIT, BODY, COSMOS"};
+static const card_t CARD_FX = {"SPACE", "ECHOES AND THE NEBULA\nK1 ECHO TIME  K2 ITS REPEATS\nK3 SIZE  K4 HOW MUCH\n"
+    "SEL+K2: DECAY, UP TO 2 MIN\nSEL+K3: DAMP, ITS COLOUR\nDEEP: FILTER MAP, HORIZON"};
+static const card_t CARD_GLO = {"BACKGROUND", "CHORDS UNDER IT ALL\nK1 HOW LOUD  K2 WHICH CHORDS\nK3 HOW OFTEN  K4 HALO\n"
+    "  (THEIR OWN SPACE)\nSEL+GLO: THE CHORDS OUT, IN\nDEEP: THE ORBIT PAD"};
+static const card_t CARD_ARP = {"KEYS", "HOW THE KEYS PLAY\nK1: CHORD, IN KEY, SOLAR,\n  HARMONIC (NONE WRONG: THE\n"
+    "  FIRST TWO)  K2 TUNING\nK3 THE SUN  K4 OCTAVE\nSEL+A KEY: THE SUN MOVES"};
+static const card_t CARD_ENV = {"ENV", "THE FOCUSED TRACK'S SHAPE\nK1-K4: ATTACK DECAY\n  SUSTAIN RELEASE\n"
+    "SEL: ITS ORBIT'S OWN ENVELOPE\n  AND THE VELOCITY"};
+static const card_t CARD_LFO = {"MOD", "WHAT MOVES WHAT\nK1 SOURCE  K2 DESTINATION\nK3 HOW MUCH  K4 THE SLOT (8)\n"
+    "AGAIN: THE TWO LFOS"};
+static const card_t CARD_PLAY = {"PLAY", "THE ORRERY GOES, AND STOPS\nWITH REC ON: IT COUNTS A\n  BAR IN, THEN RECORDS\n"
+    "STOPPING ENDS THE TAKE\nSEL+OCT-: UNDO IT"};
+static const card_t CARD_REC = {"REC", "TAP: THE KEYS WRITE INTO THE\n  TRACK (STOPPED: A KEY OR\n  PLAY STARTS IT)\n"
+    "HOLD: CATCH WHAT YOU JUST\n  PLAYED, ITS LAST LAP\nSEL+OCT-: UNDO THE TAKE"};
+static const card_t CARD_SAVE = {"SAVE", "PRESETS: WHICH PLACE, U1-U8\nSAVE AGAIN: KEEP IT THERE\n"
+    "ANYTHING ELSE: NOT SAVED\nSEL+SAVE: SIMPLE OR DEEP"};
+static const card_t CARD_OCT = {"OCTAVE", "THE KEYS AN OCTAVE DOWN, UP\nON STEPS: STEPS 1-16 .. 49-64\n"
+    "SEL+OCT-: UNDO (AGAIN: REDO)"};
+static const card_t CARD_SEL = {"SEL", "HELD: THE KNOBS' PINK ROW\nSEL+HOME: A WHOLE NEW ONE\nSEL+SEQ: MUTE THE TRACK\n"
+    "SEL+GLO: THE CHORDS OUT, IN\nSEL+SAVE: SIMPLE OR DEEP\nSEL+OCT-: UNDO\nSEL+A KEY: THE SUN MOVES"};
+static const card_t CARD_ASLEEP = {"DEEP PAGES", "THEY ARE ASLEEP: SIMPLE\nSEL+SAVE WAKES THEM\n  (AND AGAIN: SIMPLE)\n"
+    "HOLD ANY BUTTON: WHAT IT DOES"};
+static uint32_t btn_down_t[32], sel_busy, enc_turned;   /* when each button went down; SEL used with something */
+static const card_t *card;                      /* the card on the screen (0: none) */
+static uint32_t card_btn, card_until;           /* the button it is held for (32: none: till card_until) */
+static void card_show(const card_t *c, uint32_t btn, uint32_t ms)
+{
+    card = c; card_btn = btn; card_until = ms ? fm1_ms + ms : 0u;
+    main_dirty = 1;
+}
+static void card_hide(void) { if (card) { card = 0; main_dirty = 1; } }
+static const card_t *card_for(uint32_t b)
+{
+    if (b == BTN_HOME) return &CARD_HOME;
+    if (b == BTN_SEQ) return &CARD_SEQ;
+    if (b == BTN_EDIT) return &CARD_EDIT;
+    if (b == BTN_FX) return &CARD_FX;
+    if (b == BTN_GLO) return &CARD_GLO;
+    if (b == BTN_ARP) return &CARD_ARP;
+    if (b == BTN_ENV) return set.simple ? &CARD_ASLEEP : &CARD_ENV;
+    if (b == BTN_LFO) return set.simple ? &CARD_ASLEEP : &CARD_LFO;
+    if (b == BTN_PLAY) return &CARD_PLAY;
+    if (b == BTN_SAVE) return &CARD_SAVE;
+    if (b == BTN_OCT_DOWN || b == BTN_OCT_UP) return &CARD_OCT;
+    if (b == BTN_SEL) return &CARD_SEL;
+    return 0;
+}
+static void draw_card(void)
+{
+    const char *t = card->text;
+    char line[40];
+    int32_t y = 34, w = text_w(&FONT_S, card->title) + 12, first = 1;
+    cv_begin(240, 144, C_BG);
+    frame(3, 4, 234, 138, C_FRAME);
+    pill(10, 9, w, 17, C_LIME);
+    ears(15, 10 + w - 6, 6, C_LIME);
+    tx(16, 9, &FONT_S, card->title, C_INK, C_LIME);
+    tx(w + 18, 9, &FONT_S, "HELP", C_DIMT, C_BG);
+    while (*t && y < 136) {
+        uint32_t n = 0;
+        while (*t && *t != '\n' && n < sizeof line - 1u) line[n++] = *t++;
+        line[n] = 0;
+        if (*t == '\n') t++;
+        tx(12, y, &FONT_S, line, first ? C_TXT : line[0] == ' ' ? C_GREY : C_TXT, C_BG);
+        first = 0;
+        y += 15;
+    }
+    cv_blit(0, 24);
+}
+
+/* ---- changes on the bar: playing, a new system, a CUTE one, an IDEA, a MOOD wait for the next one (just before it),
+ * so the music never stumbles; stopped, they come at once. A new system or a CUTE one starts the orrery from the top */
+static void job_label(char *s)
+{
+    char *p = put_s(s, "ON THE ONE: ");
+    if (job == JOB_SYS) sys_label(job_arg, p);
+    else if (job == JOB_CUTE) put_s(put_s(p, "A NEW "), ORB_MOOD_NAME[sys.mood % ORB_NMOOD]);
+    else if (job == JOB_IDEA) put_s(put_s(p, "AN IDEA FOR "), ORB_PART_NAME[ORB_A + job_arg % ORB_NRING]);
+    else put_s(put_s(p, "MOOD "), ORB_MOOD_NAME[job_arg % ORB_NMOOD]);
+}
+
+/* the count-in: four, three, two, one, big (3 x 5 pixel figures, 14 a pixel) */
+static void draw_countin(void)
+{
+    static const uint8_t FIG[4][5] = {{2, 6, 2, 2, 7}, {6, 1, 2, 4, 7}, {6, 1, 6, 1, 6}, {5, 5, 7, 1, 1}};   /* 1 2 3 4 */
+    uint32_t beat = countin == 1u && eng.T < BAR ? eng.T / (4u * ORB_TPS) : 0u, f = 3u - (beat > 3u ? 3u : beat), i, j;
+    char s[24], *q;
+    cv_begin(240, 144, C_BG);
+    stars(240, 144, 31, 9);
+    for (j = 0; j < 5u; j++)
+        for (i = 0; i < 3u; i++)
+            if (FIG[f][j] >> (2u - i) & 1u) cv_rect(99 + (int32_t)i * 14, 10 + (int32_t)j * 14, 13, 13, C_MAG);
+    q = put_s(s, "REC INTO ");
+    q = put_s(q, ORB_PART_NAME[focus]);
+    *q++ = ' ';
+    put_s(q, orb_lib_name(&sys.snd[focus]));
+    txc(120, 92, &FONT_S, s, C_TXT, C_BG);
+    txc(120, 110, &FONT_S, "IT STARTS ON THE ONE", C_GREY, C_BG);
+    cv_blit(0, 24);
+}
+
 static void draw_main(void)
 {
+    if (card) { draw_card(); return; }
+    if (countin && rec) { draw_countin(); return; }
     switch (page) {
     case PG_CUTE: draw_cute(); break;
     case PG_ORRERY: draw_orrery(); break;
@@ -2126,7 +2263,8 @@ static int intro_pass(void)                     /* a pass; 0: over */
 
 /* ---- MIDI in (the main loop, and app_idle while the screen draws) */
 static uint32_t idle_ok, clk_n, clk_t0, clk_bpm, clk_run, clk_last;
-static int32_t rec_key(int32_t p);
+static int32_t rec_key(int32_t p, int *voice);
+static void hist_add(int32_t p);
 static void midi_in(void)
 {
     uint8_t st, d1, d2;
@@ -2155,9 +2293,11 @@ static void midi_in(void)
             int32_t k = (int32_t)d1 - 53 - 12 * (int8_t)set.oct;
             int32_t p = sys.keymode == KM_HARMONIC && k >= 0 && k < 27 ? orb_key_pitch(&sys, (uint32_t)k, (int8_t)set.oct, 0)
                                                                          : orb_key_pitch_o(&eng, d1, 0, 0);
+            int voice = 1;
             if (focus) p -= 24 * 256;
-            if (rec && focus) p = rec_key(p);   /* (it plays the note written) */
-            orb_note_on_part(&eng, (uint8_t)(128u + d1), p, d2, focus);
+            if (rec && focus) p = rec_key(p, &voice);   /* (it plays the note written) */
+            else if (eng.playing) hist_add(focus ? p : p - 24 * 256);
+            if (voice) orb_note_on_part(&eng, (uint8_t)(128u + d1), p, d2, focus);
             (void)src;
         } else if (ty == 0x80u || ty == 0x90u) orb_note_off(&eng, (uint8_t)(128u + d1));
         else if (ty == 0xB0u && d1 == 1u) eng.modw = (int32_t)d2 * 258;
@@ -2189,6 +2329,8 @@ static void goto_pages(const uint8_t *pg, uint32_t n)
     for (i = 0; i < n; i++) tour[i] = pg[i];
     tour_n = (uint8_t)n;
     tour_t = fm1_ms + 1600u;
+    hint_t = fm1_ms + (n > 1u ? 1600u : 0u) + 3500u;
+    card_hide();
     main_dirty = knobs_dirty = hint_dirty = 1;
     drawn_bar = ~0u;
 }
@@ -2199,40 +2341,104 @@ static void goto_page3(uint32_t a, uint32_t b, uint32_t c)
 }
 static void goto_page(uint32_t a, uint32_t b) { goto_page3(a, b, a); }
 
-/* REC: a key played into the focused ring. Where: playing, the step nearest it (the one now, or the next when that is
- * nearer: it then does not play it again this time round); stopped, the next step. What: the tuning's note nearest the
- * one played, kept (ORB_ON_FIX: a FOLLOWing ring's other notes move with the chords, this one stays the note played).
- * Its pitch is returned and the key plays it: what is heard is what is written, the track's sound, its octave.
+/* REC, a looper: REC on while it plays, the keys write into the focused ring at once; REC on while it is stopped, it
+ * waits (ARMED): the first key starts the orrery and the take (the ring plays that note on its first step), or PLAY
+ * counts a bar in first (COUNT: heard, not written). Where a key goes: the step nearest it (the one now, or the next
+ * when that is nearer: it is then not played again this time round). What: the tuning's note nearest the one played,
+ * kept as played (ORB_ON_FIX: a FOLLOWing ring's other notes move with the chords, this one stays). Its pitch is
+ * returned and the key plays it (*voice: whether the key sounds itself), so what is heard is what is written, in the
+ * track's sound and octave. A take, from REC on till it goes off (or the orrery stops), is one gesture for UNDO.
  * p: the pitch played (1/256 semitone) */
-static uint32_t rec_pos;
+static uint32_t take_mask;                      /* the rings this take wrote into */
 static int32_t rec_note(uint32_t r, int32_t d)  /* the pitch a ring's REC step of degree d plays (the tuning's) */
 {
     return (36 + (int32_t)(sys.sun % 12u)) * 256 + orb_degree(&sys, sys.ring[r].deg + d);
 }
-static int32_t rec_key(int32_t p)
+static int32_t rec_nearest(uint32_t r, int32_t p)   /* the degree whose note is nearest p (a tie: the lower) */
 {
-    uint32_t r = ring_focus(), len, at;
-    orb_ring_t *g = &sys.ring[r];
     int32_t d, best = 0, bd = 1 << 30;
-    len = g->len < 1u ? 1u : g->len > ORB_NSTEP ? ORB_NSTEP : g->len;
-    if (eng.playing) {
-        uint32_t idx, nx, k, f = ring_where(r, len, &idx, &nx, &k);
-        at = idx;
-        if (f >= 32768u && nx != idx) { at = nx; eng.rs[r].skip = (uint8_t)((k + 1u) % 255u + 1u); }
-    } else
-        at = rec_pos % len;
-    for (d = -14; d <= 21; d++) {               /* the nearest note it has (a tie: the lower) */
+    for (d = -14; d <= 21; d++) {
         int32_t e = rec_note(r, d) - p;
         if (e < 0) e = -e;
         if (e < bd) { bd = e; best = d; }
     }
-    undo_take(r, 0);
+    return best;
+}
+static uint32_t ring_len(uint32_t r) { uint32_t l = sys.ring[r].len; return l < 1u ? 1u : l > ORB_NSTEP ? ORB_NSTEP : l; }
+static void rec_write(uint32_t r, uint32_t at, int32_t d)   /* a note into a step, kept as played; the take's UNDO */
+{
+    orb_ring_t *g = &sys.ring[r];
+    if (!(take_mask >> r & 1u)) { undo_take(r, 1); take_mask |= 1u << r; }   /* (the ring as it was before the take) */
+    undo_last = take_mask;
     g->on[at] = (uint8_t)((g->on[at] & 3u ? g->on[at] & 3u : 1u) | ORB_ON_FIX);
-    g->dg[at] = (int8_t)best;
-    if (!eng.playing) rec_pos = (at + 1u) % len;
-    orb_pattern_edited(&eng, r);
+    g->dg[at] = (int8_t)d;
+}
+static int32_t rec_key(int32_t p, int *voice)
+{
+    uint32_t r = ring_focus(), len = ring_len(r), at;
+    int32_t best = rec_nearest(r, p);
+    *voice = 1;
+    if (countin) return p;                      /* (the count-in: heard, not written) */
+    if (!eng.playing) {                         /* ARMED: this key starts it all */
+        at = sys.ring[r].dir % ORB_NDIR == DIR_REV ? len - 1u : 0u;
+        rec_write(r, at, best);
+        orb_pattern_edited(&eng, r);
+        orb_play(&eng, 1);                      /* (the ring plays the note on its first step, now) */
+        *voice = 0;
+        cat_happy();
+        drawn_bar = ~0u;
+    } else {
+        uint32_t idx, nx, k, f = ring_where(r, len, &idx, &nx, &k);
+        at = idx;
+        if (f >= 32768u && nx != idx) { at = nx; eng.rs[r].skip = (uint8_t)((k + 1u) % 255u + 1u); }
+        rec_write(r, at, best);
+        orb_pattern_edited(&eng, r);
+    }
     main_dirty = 1;
     return rec_note(r, best);
+}
+
+/* CATCH (hold REC): what was just played, without REC. Each key played while the orrery goes is kept a while (the
+ * last 64), with the step of each ring it was nearest; holding REC writes the focused ring's last lap of them into
+ * it, each as REC would have, as one gesture for UNDO */
+#define NHIST 64u
+static struct { int32_t p; uint32_t k[ORB_NRING]; uint8_t at[ORB_NRING]; } hist[NHIST];
+static uint32_t hist_n;
+static void hist_add(int32_t p)                 /* p: the pitch where a ring plays it */
+{
+    uint32_t r, i = hist_n++ % NHIST;
+    hist[i].p = p;
+    for (r = 0; r < ORB_NRING; r++) {
+        uint32_t idx, nx, k, f = ring_where(r, ring_len(r), &idx, &nx, &k);
+        int nxt = f >= 32768u && nx != idx;
+        hist[i].at[r] = (uint8_t)(nxt ? nx : idx);
+        hist[i].k[r] = nxt ? k + 1u : k;
+    }
+}
+static uint32_t rec_track(void);
+static void catch_keys(void)
+{
+    uint32_t r = focus ? ring_focus() : rec_track() - 1u, len = ring_len(r), now = eng.rs[r].k, i, n = 0, first;
+    char s[32], *q;
+    take_mask = 0;
+    first = hist_n > NHIST ? hist_n - NHIST : 0u;
+    for (i = first; i < hist_n; i++) {
+        uint32_t j = i % NHIST, hk = hist[j].k[r];
+        if (hk > now + 1u || now + 1u - hk > len) continue;   /* (the ring's last lap only) */
+        rec_write(r, hist[j].at[r] % len, rec_nearest(r, hist[j].p));
+        n++;
+    }
+    hist_n = 0;
+    take_mask = 0;
+    if (!n) { say("NOTHING TO CATCH YET"); card_show(&CARD_REC, 32u, 4000u); return; }   /* (and how) */
+    orb_pattern_edited(&eng, r);
+    q = put_u(put_s(s, "CAUGHT "), n);
+    q = put_s(put_s(q, " INTO "), ORB_PART_NAME[ORB_A + r]);
+    *q++ = ' ';
+    put_s(q, orb_lib_name(&sys.snd[ORB_A + r]));
+    say(s);
+    cat_happy(); love_t = fm1_ms;
+    main_dirty = 1;
 }
 /* REC from the KEYS: the track it writes into, the one with a tune (a melody, a lead, a voice, a pad, else a bass), not
  * a drum's (all drums: A) */
@@ -2362,7 +2568,7 @@ static void step_key(int32_t f)
         focus = ORB_A + (uint32_t)f;
         put_s(p, orb_lib_name(&sys.snd[focus]));
         drawn_bar = ~0u; knobs_dirty = 1;
-    } else if (f == BK_IDEA) { idea(r); put_s(p, "AN IDEA, nya~"); cat_happy(); love_t = fm1_ms; }
+    } else if (f == BK_IDEA) { job_at_bar(JOB_IDEA, r); main_dirty = 1; return; }   /* (on the bar: it says so) */
     else if (f <= BK_MD) {
         orb_ring_t *g = &sys.ring[f - BK_MA];
         g->mute = !g->mute;
@@ -2384,6 +2590,7 @@ static void handle_keys(void)
         uint32_t note = (uint32_t)(53 + (int32_t)k + 12 * oct);
         if (down >> k & 1u) {
             if (isel()) {                       /* SEL + a key: the sun moves */
+                sel_busy = 1;
                 sys.sun = (uint8_t)(note % 12u);
                 drawn_bar = ~0u; main_dirty = knobs_dirty = 1;
                 say("THE SUN MOVES");
@@ -2400,11 +2607,13 @@ static void handle_keys(void)
             }
             {   /* the keys play the focus: KEYS, or a track's sound where its ring plays it (the keys' C4 is its root) */
                 int32_t p = orb_key_pitch_o(&eng, sys.keymode == KM_HARMONIC ? k : note, oct, 0);
+                int voice = 1;
                 if (focus) p -= 24 * 256;
-                if (rec && focus) p = rec_key(p);   /* (it plays the note written: the one heard) */
-                held_id[k] = (uint8_t)(k + 1u);
+                if (rec && focus) p = rec_key(p, &voice);   /* (it plays the note written: the one heard) */
+                else if (eng.playing) hist_add(focus ? p : p - 24 * 256);   /* (for a CATCH) */
+                held_id[k] = voice ? (uint8_t)(k + 1u) : 0u;
                 mew_t = fm1_ms; mew_n++;
-                orb_note_on_part(&eng, held_id[k], p, 100, focus);
+                if (voice) orb_note_on_part(&eng, held_id[k], p, 100, focus);
                 midi_send(0x90u | (set.ch ? set.ch - 1u : 0u), note & 127u, 100);
             }
         }
@@ -2438,6 +2647,7 @@ static void handle_encoders(void)
     static const uint8_t ENC[4] = {ENC_KNOB1, ENC_KNOB2, ENC_KNOB3, ENC_KNOB4};
     for (k = 0; k < 4u; k++) {
         if ((e = fm1_enc_take(ENC[k])) == 0) continue;
+        enc_turned = 1;
         if (page == PG_RING && k == 0u && held_step != 0xFFu) {   /* a held step: its degree */
             orb_ring_t *g = &sys.ring[ring_focus()];
             if (held_step < ORB_NSTEP) {
@@ -2468,6 +2678,7 @@ static void handle_encoders(void)
     }
     if ((e = fm1_enc_take(ENC_ALGORITHM)) != 0) {
         const pd_t *d = &PD[page][8];
+        enc_turned = 1;
         if (d->where != W_NONE || d->fmt == F_SLOT) {
             pd_set(d, pd_get(d) + e);
             hint_dirty = knobs_dirty = main_dirty = 1;
@@ -2475,6 +2686,7 @@ static void handle_encoders(void)
         }
     }
     if ((e = fm1_enc_take(ENC_SELECT)) != 0) { /* the focus */
+        enc_turned = 1;
         int32_t f = (int32_t)focus + (e > 0 ? 1 : -1);
         focus = (uint32_t)(f < 0 ? 4 : f > 4 ? 0 : f);
         if (page == PG_RING && !focus) focus = e > 0 ? 1u : 4u;   /* (RING: a ring) */
@@ -2482,6 +2694,7 @@ static void handle_encoders(void)
     }
     if ((e = fm1_enc_take(ENC_PRESETS)) != 0) {
         int32_t i;
+        enc_turned = 1;
         if (save_mode) {
             i = (int32_t)save_to + e;
             save_to = (uint32_t)(i < 0 ? 0 : i > (int32_t)NBLOB - 1 ? (int32_t)NBLOB - 1 : i);
@@ -2500,17 +2713,132 @@ static void handle_encoders(void)
     }
 }
 
+static void idea(uint32_t r);
+static void job_run(void)
+{
+    uint32_t j = job, a = job_arg, restart = 0;
+    char s[32];
+    job = 0;
+    if (j == JOB_SYS) { system_load(a); restart = 1; }
+    else if (j == JOB_CUTE) { cute_new(); restart = 1; }
+    else if (j == JOB_MOOD) mood_turn(a);
+    else if (j == JOB_IDEA) {
+        idea(a % ORB_NRING);
+        put_s(put_s(s, ORB_PART_NAME[ORB_A + a % ORB_NRING]), " AN IDEA, nya~");
+        say(s);
+        cat_happy(); love_t = fm1_ms;
+    }
+    if (restart && eng.playing) orb_play(&eng, 1);   /* (a new one from the top, on the one) */
+    drawn_bar = ~0u; knobs_dirty = main_dirty = hint_dirty = 1;
+}
+static void job_at_bar(uint32_t j, uint32_t a)  /* stopped: now; playing: just before the next bar */
+{
+    job = j; job_arg = a;
+    if (!eng.playing) job_run();
+    else hint_dirty = 1;
+}
+
+/* REC on and off (a tap; it waits for the release, as holding it is a CATCH) */
+static void rec_toggle(void)
+{
+    char s[36], *q;
+    rec = !rec;
+    countin = 0;
+    if (rec) {
+        take_mask = 0;
+        if (!focus) { focus = rec_track(); knobs_dirty = 1; }
+        q = put_s(put_s(s, "REC INTO "), ORB_PART_NAME[focus]);
+        *q++ = ' ';
+        q = put_s(q, orb_lib_name(&sys.snd[focus]));
+        if (!eng.playing) put_s(q, ": A KEY STARTS");
+        orb_pattern_edited(&eng, ring_focus());   /* (the lap as written: MUTATE waits while it records) */
+    } else {
+        put_s(s, take_mask ? "REC OFF: THE TAKE IS KEPT" : "REC OFF");
+        take_mask = 0;
+    }
+    say(s);
+    drawn_bar = ~0u; main_dirty = 1;
+}
+/* SEL+OCT-: the last gesture undone, whatever the page (a take or a CATCH: all it wrote, on every track); again: redone */
+static void undo_all(void)
+{
+    uint32_t r, m = undo_last ? undo_last : 1u << ring_focus(), n = 0, un = 0;
+    char s[32], *q;
+    for (r = 0; r < ORB_NRING; r++) if (m >> r & 1u && undo[r].ok) { ring_undo(r); n++; un = undo_redo[r]; }
+    if (!n) { say("NOTHING TO UNDO"); return; }
+    undo_last = m;
+    q = put_s(s, un ? "UNDONE:" : "REDONE:");
+    for (r = 0; r < ORB_NRING; r++) if (m >> r & 1u) { *q++ = ' '; *q++ = (char)('A' + r); }
+    *q = 0;
+    say(s);
+    main_dirty = knobs_dirty = 1;
+}
+/* SIMPLE: the friendly pages only, the first of each button's (HOME: the orrery and CUTE); the deep ones asleep */
+static int simple_page(uint32_t pg)
+{
+    return pg == PG_ORRERY || pg == PG_CUTE || pg == PG_RING || pg == PG_SOUND || pg == PG_SPACE || pg == PG_BG ||
+           pg == PG_KEYS;
+}
+static void go_button(uint32_t btn)             /* a button's pages: the first, then round them (SIMPLE: its simple ones) */
+{
+    static const uint8_t HOMEP[3] = {PG_ORRERY, PG_MACRO, PG_CUTE}, SEQP[2] = {PG_RING, PG_TIME},
+        EDITP[4] = {PG_SOUND, PG_ORBIT, PG_BODY, PG_COSMOS}, ENVP[1] = {PG_ENV}, LFOP[2] = {PG_MOD, PG_LFO},
+        FXP[3] = {PG_FILTER, PG_SPACE, PG_HORIZON}, GLOP[2] = {PG_BG, PG_PAD}, KEYP[1] = {PG_KEYS};
+    const uint8_t *pg = HOMEP;
+    uint8_t own[4];
+    uint32_t n = 3, i, k = 0;
+    if (btn == BTN_SEQ) pg = SEQP, n = 2;
+    else if (btn == BTN_EDIT) pg = EDITP, n = 4;
+    else if (btn == BTN_ENV) pg = ENVP, n = 1;
+    else if (btn == BTN_LFO) pg = LFOP, n = 2;
+    else if (btn == BTN_FX) pg = FXP, n = 3;
+    else if (btn == BTN_GLO) pg = GLOP, n = 2;
+    else if (btn == BTN_ARP) pg = KEYP, n = 1;
+    if (set.simple) {
+        for (i = 0; i < n; i++) if (simple_page(pg[i])) own[k++] = pg[i];
+        if (!k) { card_show(&CARD_ASLEEP, 32u, 3500u); return; }
+        pg = own; n = k;
+    }
+    goto_pages(pg, n);
+}
+
 static void handle_buttons(void)
 {
-    uint32_t rel, b = fm1_input_edges(&rel);
-    static uint32_t sel_was;
-    if (isel() != sel_was) { sel_was = isel(); knobs_dirty = 1; main_dirty = 1; }
+    uint32_t rel, b = fm1_input_edges(&rel), held = fm1_in.buttons, i;
+    static uint32_t sel_was, rec_down, rec_down_t, rec_done;
+    if (isel() != sel_was) {
+        sel_was = isel(); knobs_dirty = 1; main_dirty = 1;
+        if (sel_was) { btn_down_t[BTN_SEL] = fm1_ms; sel_busy = 0; }
+    }
     if (rel & (1u << BTN_SEL)) knobs_dirty = 1;
+    for (i = 0; i < 32u; i++) if (b >> i & 1u) btn_down_t[i] = fm1_ms;
+    if (b & ~(1u << BTN_SEL)) { if (isel()) sel_busy = 1; if (card && card_btn >= 32u) card_hide(); }
+    /* HELP: a button held a second (SEL alone, 1.2 s): its card, till it is let go */
+    if (card && card_btn < 32u && !(held >> card_btn & 1u)) card_hide();
+    if (card && card_btn >= 32u && card_until && fm1_ms >= card_until) card_hide();
+    if (!card)
+        for (i = 0; i < 32u; i++) {
+            const card_t *c;
+            if (!(held >> i & 1u) || i == BTN_REC) continue;
+            if (i == BTN_SEL ? sel_busy || fm1_ms - btn_down_t[i] < 1200u : fm1_ms - btn_down_t[i] < 900u) continue;
+            if ((c = card_for(i)) != 0) { card_show(c, i, 0); break; }
+        }
+    /* REC: a tap (on its release) turns it on, and off; held half a second while it is off: a CATCH. (Its press first:
+     * a quick tap brings both in one pass) */
+    if (b & (1u << BTN_REC)) {
+        if (rec) rec_toggle();                  /* (on: off at once) */
+        else { rec_down = 1; rec_down_t = fm1_ms; rec_done = 0; }
+    }
+    if (rec_down && (held >> BTN_REC & 1u) && !rec_done && fm1_ms - rec_down_t >= 500u) {
+        rec_done = 1;
+        catch_keys();
+    }
+    if (rec_down && (rel >> BTN_REC & 1u)) { rec_down = 0; if (!rec_done) rec_toggle(); }
     if (!b) return;
     if (save_mode && !(b & (1u << BTN_SAVE)) && !(b & (1u << BTN_SEL))) { save_mode = 0; say("NOT SAVED"); drawn_bar = ~0u; }
     if (b & (1u << BTN_HOME)) {
-        if (isel()) { cute_new(); goto_page3(PG_CUTE, PG_CUTE, PG_CUTE); drawn_bar = ~0u; main_dirty = knobs_dirty = 1; }   /* SEL+HOME: a new one */
-        else goto_page3(PG_ORRERY, PG_MACRO, PG_CUTE);
+        if (isel()) { job_at_bar(JOB_CUTE, 0); goto_page3(PG_CUTE, PG_CUTE, PG_CUTE); drawn_bar = ~0u; main_dirty = knobs_dirty = 1; }   /* SEL+HOME: a new one */
+        else go_button(BTN_HOME);
     }
     if (b & (1u << BTN_SEQ)) {
         if (isel()) {
@@ -2519,54 +2847,60 @@ static void handle_buttons(void)
             say(g->mute ? "MUTED" : "UNMUTED");
             main_dirty = knobs_dirty = 1;
         } else {
-            goto_page(PG_RING, PG_TIME);
+            go_button(BTN_SEQ);
             if (!focus) focus = ORB_A;
         }
     }
-    if (b & (1u << BTN_EDIT)) { static const uint8_t E[4] = {PG_SOUND, PG_ORBIT, PG_BODY, PG_COSMOS}; goto_pages(E, 4); }
-    if (b & (1u << BTN_ENV)) goto_page(PG_ENV, PG_ENV);
-    if (b & (1u << BTN_LFO)) goto_page(PG_MOD, PG_LFO);
-    if (b & (1u << BTN_FX)) goto_page3(PG_FILTER, PG_SPACE, PG_HORIZON);
+    if (b & (1u << BTN_EDIT)) go_button(BTN_EDIT);
+    if (b & (1u << BTN_ENV)) go_button(BTN_ENV);
+    if (b & (1u << BTN_LFO)) go_button(BTN_LFO);
+    if (b & (1u << BTN_FX)) go_button(BTN_FX);
     if (b & (1u << BTN_GLO)) {
         if (isel()) {                           /* SEL+GLO: the chords out (they fade), and in again */
             sys.bg_out = !sys.bg_out;
             say(sys.bg_out ? "BACKGROUND: OUT" : sys.bg_level ? "BACKGROUND: IN" : "BACKGROUND: IN (LEVEL 0)");
             main_dirty = 1;
         } else
-            goto_page(PG_BG, PG_PAD);
+            go_button(BTN_GLO);
     }
-    if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
-    if (b & (1u << BTN_PLAY)) { if (!eng.playing) cat_happy(); orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
-    if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the KEYS: into the one with a tune) */
-        char s[32], *q;
-        rec = !rec; rec_pos = 0;
-        if (rec && !focus) { focus = rec_track(); knobs_dirty = 1; }
-        if (rec) {
-            q = put_s(put_s(s, "REC INTO "), ORB_PART_NAME[focus]);
-            *q++ = ' ';
-            put_s(q, orb_lib_name(&sys.snd[focus]));
-            orb_pattern_edited(&eng, ring_focus());   /* (the lap as written: MUTATE waits while it records) */
-        } else
-            put_s(s, "REC OFF");
-        say(s);
+    if (b & (1u << BTN_ARP)) go_button(BTN_ARP);
+    if (b & (1u << BTN_PLAY)) {                 /* PLAY; with REC on, stopped: a bar's count-in first; playing: the take ends */
+        if (eng.playing) {
+            orb_play(&eng, 0);
+            if (rec) { rec = 0; say(take_mask ? "TAKE KEPT  SEL+OCT-: UNDO" : "REC OFF"); take_mask = 0; }
+            countin = 0;
+        } else {
+            cat_happy();
+            hist_n = 0;
+            orb_play(&eng, 1);
+            if (rec) { countin = 2; say("A BAR TO COUNT IN"); }
+        }
         drawn_bar = ~0u; main_dirty = 1;
     }
     if (b & (1u << BTN_OCT_DOWN)) {
-        if (page == PG_RING) { if (step_page) step_page--; main_dirty = 1; }
+        if (isel()) undo_all();                 /* SEL+OCT-: UNDO */
+        else if (page == PG_RING) { if (step_page) step_page--; main_dirty = 1; }
         else if ((int8_t)set.oct > -3) { set.oct = (uint8_t)((int8_t)set.oct - 1); set_touch(); knobs_dirty = 1; }
     }
     if (b & (1u << BTN_OCT_UP)) {
         if (page == PG_RING) { if (step_page < 3u) step_page++; main_dirty = 1; }
         else if ((int8_t)set.oct < 3) { set.oct = (uint8_t)((int8_t)set.oct + 1); set_touch(); knobs_dirty = 1; }
     }
-    if (b & (1u << BTN_SAVE)) {
+    if ((b & (1u << BTN_SAVE)) && isel()) {     /* SEL+SAVE: SIMPLE or DEEP */
+        set.simple = !set.simple;
+        set_touch();
+        say(set.simple ? "SIMPLE: THE FRIENDLY PAGES" : "DEEP: EVERY PAGE AWAKE");
+        if (set.simple && !simple_page(page)) go_button(BTN_HOME);
+        save_mode = 0;
+        drawn_bar = ~0u;
+    } else if (b & (1u << BTN_SAVE)) {
         if (!save_mode) {
             save_mode = 1;
             save_to = sysi >= ORB_NSYSTEM ? sysi - ORB_NSYSTEM : 0u;
             say("PRESETS: WHERE  SAVE: STORE");
         } else {
-            uint32_t i;
-            for (i = 0; i < 11u; i++) sys.name[i] = 0;
+            uint32_t i2;
+            for (i2 = 0; i2 < 11u; i2++) sys.name[i2] = 0;
             sys.name[0] = 'U'; sys.name[1] = (char)('1' + save_to);
             orb_all_off(&eng);
             if (blob_save(save_to, &sys, sizeof sys) == 0) { sysi = ORB_NSYSTEM + save_to; set.sysi = (uint8_t)sysi; made = 0; set_touch(); say("SAVED, mrrp!"); cat_happy(); }
@@ -2592,7 +2926,7 @@ static void leds(void)
     fm1_led_key(BTN_GLO, page == PG_BG || page == PG_PAD);
     fm1_led_key(BTN_ARP, page == PG_KEYS);
     fm1_led_key(BTN_PLAY, eng.playing ? (eng.T % (4u * ORB_TPS)) < ORB_TPS * 3u : 0);
-    fm1_led_key(BTN_REC, rec && ((fm1_ms >> 8) & 1u));
+    fm1_led_key(BTN_REC, rec && (eng.playing && !countin ? 1u : (fm1_ms >> 7) & 1u));
     fm1_led_key(BTN_SAVE, save_mode && ((fm1_ms >> 7) & 1u));
     fm1_led_key(BTN_OCT_DOWN, page == PG_RING ? step_page > 0u : oct < 0);
     fm1_led_key(BTN_OCT_UP, page == PG_RING ? step_page < 3u : oct > 0);
@@ -2622,7 +2956,8 @@ static void leds(void)
         uint32_t note = (uint32_t)(53 + (int32_t)k + 12 * oct);
         fm1_led_key(KEY_LED(k), lit >> k & 1u);
         fm1_led_key_glow(KEY_LED(k), sys.keymode == KM_HARMONIC ? white_index(k) == 0 :
-                         sys.keymode == KM_CHORD ? chord_bass_key(note) : note % 12u == sys.sun % 12u);
+                         sys.keymode == KM_CHORD ? chord_bass_key(note) : sys.keymode == KM_INKEY ? note % 12u == 0u :
+                         note % 12u == sys.sun % 12u);
     }
 }
 
@@ -2631,7 +2966,7 @@ static void app_start(void)
 {
     if (settings_load(&set, sizeof set) || set.ver != SET_VER || (int8_t)set.oct < -3 || (int8_t)set.oct > 3 || set.ch > 16u ||
         set.sysi >= NSYS)
-        set.oct = 0, set.ch = 0, set.sysi = 0, set.ver = SET_VER;
+        set.oct = 0, set.ch = 0, set.sysi = 0, set.ver = SET_VER, set.simple = 1;
     orb_system(0, &sys);                        /* (the splash is silent; boot_finish loads the system to play) */
     orb_init(&eng, &sys, &orb_mem);
 #ifdef ORB_LEGEND
@@ -2671,15 +3006,19 @@ static void app_pass(void)                      /* one pass of the main loop */
     handle_encoders();
     handle_keys();
     midi_in();
+    if (enc_turned) { enc_turned = 0; if (isel()) sel_busy = 1; card_hide(); }   /* (a knob turned: the card goes) */
     eng.novary = rec && focus ? 1u << ring_focus() : 0u;   /* (REC: that ring plays as written, no MUTATE) */
+    if (job && (!eng.playing || eng.T % BAR >= BAR - ORB_TPS / 4u)) job_run();   /* (on the bar: just before it) */
+    if (countin == 2u && eng.playing && eng.T < BAR) countin = 1;   /* (PLAY has restarted it: its first bar counts) */
+    if (countin == 1u && eng.T >= BAR) { countin = 0; say("REC: GO, nya~"); drawn_bar = ~0u; main_dirty = 1; }
     if (clk_run && fm1_ms - clk_last > 2000u) clk_run = 0;
     {   /* each track's last hit (the screens' flashes, the mute keys' wink) */
         uint32_t r;
         for (r = 0; r < ORB_NRING; r++) if (eng.rs[r].flash != flash_seen[r]) { flash_seen[r] = eng.rs[r].flash; flash_t[r] = fm1_ms; }
     }
     if (preview_t && fm1_ms >= preview_t) { orb_note_off(&eng, 99); preview_t = 0; }
-    if (sys_pending != 0xFFu && fm1_ms - sys_pend_t > 450u) {   /* PRESETS: loaded once it rests */
-        system_load(sys_pending);
+    if (sys_pending != 0xFFu && fm1_ms - sys_pend_t > 450u) {   /* PRESETS: loaded once it rests (playing: on the bar) */
+        job_at_bar(JOB_SYS, sys_pending);
         sys_pending = 0xFFu;
         drawn_bar = ~0u; knobs_dirty = main_dirty = hint_dirty = 1;
     }
@@ -2688,10 +3027,12 @@ static void app_pass(void)                      /* one pass of the main loop */
     {
         uint32_t bar = page | focus << 4 | sysi << 8 | sys.sun << 13 | (uint32_t)sys.bpm << 17 | eng.playing << 25 |
                        rec << 26 | save_mode << 27 | save_to << 28;
+        if (rec) bar ^= ((countin ? 2u : 0u) | (eng.playing && !countin ? 0u : (fm1_ms >> 9) & 1u)) << 30;   /* (it blinks) */
         if (bar != drawn_bar) { drawn_bar = bar; draw_bar(); }
     }
     if (knobs_dirty) { knobs_dirty = 0; draw_knobs(); }
-    if ((page_animated() && fm1_ms - t_main >= 40u) || main_dirty) { main_dirty = 0; t_main = fm1_ms; draw_main(); }
+    if (((page_animated() && !card) || countin) && fm1_ms - t_main >= 40u) main_dirty = 1;
+    if (main_dirty) { main_dirty = 0; t_main = fm1_ms; draw_main(); }
     if (msg_seq != msg_drawn) { msg_drawn = msg_seq; hint_dirty = 1; }
     if (hint_dirty || (msg_t && fm1_ms >= msg_t) || fm1_ms - t_hint > 500u) {
         if (msg_t && fm1_ms >= msg_t) msg_t = 0;

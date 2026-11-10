@@ -40,7 +40,8 @@ enum { DIR_FWD, DIR_REV, DIR_PING, DIR_SPIRAL, DIR_RND, ORB_NDIR };
 enum { LOG_FREE, LOG_AND, LOG_NOT, LOG_XOR, LOG_CONJ, ORB_NLOGIC };
 enum { MAC_CHAOS, MAC_SPECTRAL, MAC_GRAVITY, MAC_FRACT, MAC_ORBIT, MAC_TIDE, MAC_HORIZON, ORB_NMACRO };
 #define ORB_ON_FIX 4u                       /* (a step's on: REC's note, see orb_ring_t) */
-enum { KM_SOLAR, KM_HARMONIC, KM_CHORD, ORB_NKM };   /* KM_CHORD: every key a note of the chord now */
+enum { KM_SOLAR, KM_HARMONIC, KM_CHORD, KM_INKEY, ORB_NKM };   /* KM_CHORD: every key a note of the chord now;
+                                                                * KM_INKEY: the white keys the scale, from the sun */
 enum { LS_SINE, LS_TRI, LS_SAW, LS_SQR, LS_SH, LS_DRIFT, ORB_NLSHAPE };
 enum { SRC_OFF, SRC_LFO1, SRC_LFO2, SRC_ORBX, SRC_ORBY, SRC_RND, SRC_STEP, SRC_CONJ, SRC_VEL, SRC_MODW, SRC_AFT, ORB_NSRC };
 enum { DST_ECC, DST_SLING, DST_ANG, DST_SPR, DST_MOON, DST_DUST, DST_PIXEL, DST_PITCH, DST_CUT, DST_RES, DST_MODE,
@@ -370,11 +371,27 @@ static int32_t orb_key_chord(const orb_sys_t *s, uint32_t T, uint32_t note)
     int32_t w = 7 * ((int32_t)note / 12) + WP[note % 12u] - 35, sun = (int32_t)(s->sun % 12u);
     return (60 + sun - (sun > 6 ? 12 : 0)) * 256 + orb_chord_tone(orb_chord_at(s, T), w) + (BK[note % 12u] ? 3072 : 0);
 }
+/* IN KEY keys: the white keys the scale going up, C4 the sun (about C4): each the tuning's note nearest the major
+ * scale's (JUST: the just major scale; OTONAL, UTONAL: their own seven of eight; PENTA: a note twice now and then), a
+ * black key the white one under it an octave up: no key is wrong, and every octave is where it was. note: MIDI */
+static int32_t orb_key_inkey(const orb_sys_t *s, uint32_t note)
+{
+    static const uint8_t WP[12] = {0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6}, BK[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+    static const int16_t MAJ[7] = {0, 512, 1024, 1280, 1792, 2304, 2816};
+    uint32_t t = s->tuning < ORB_NTUNING ? s->tuning : 0u, n = ORB_SCALE_N[t], i;
+    int32_t w = 7 * ((int32_t)note / 12) + WP[note % 12u] - 35, o = w >= 0 ? w / 7 : -((6 - w) / 7), d = w - 7 * o;
+    int32_t best = 0, bd = 1 << 30, sun = (int32_t)(s->sun % 12u);
+    for (i = 0; i <= n && i <= 12u; i++) {      /* (the octave's notes and the next one's root) */
+        int32_t q = i < n ? ORB_SCALE[t][i] : 3072, e = q > MAJ[d] ? q - MAJ[d] : MAJ[d] - q;
+        if (e < bd) { bd = e; best = q; }
+    }
+    return (60 + sun - (sun > 6 ? 12 : 0)) * 256 + o * 3072 + best + (BK[note % 12u] ? 3072 : 0);
+}
 /* a key's pitch as the engine plays it now (CHORD needs the bar: the others are orb_key_pitch's) */
 static int32_t orb_key_pitch_o(const orb_t *o, uint32_t note, int32_t keyoct, int32_t *et)
 {
-    if (o->sys->keymode == KM_CHORD) {
-        int32_t p = orb_key_chord(o->sys, o->T, note);
+    if (o->sys->keymode == KM_CHORD || o->sys->keymode == KM_INKEY) {
+        int32_t p = o->sys->keymode == KM_CHORD ? orb_key_chord(o->sys, o->T, note) : orb_key_inkey(o->sys, note);
         if (et) *et = p;
         return p;
     }
@@ -962,7 +979,7 @@ static void orb_restart(orb_t *o)          /* the clock from the top: every ring
     o->Tf = 0;
     for (r = 0; r < ORB_NRING; r++) {
         orb_rstate_t *R = &o->rs[r];
-        R->base = 0; R->next = 0; R->k = 0; R->pos = 0; R->spin = 0; R->rat_left = 0; R->lit = 0;
+        R->base = 0; R->next = 0; R->k = 0; R->pos = 0; R->spin = 0; R->rat_left = 0; R->lit = 0; R->skip = 0;
         R->vm[0] = R->vm[1] = 0;            /* (the first lap as written) */
         R->last_p = INT32_MIN;
     }

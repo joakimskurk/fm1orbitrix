@@ -11,7 +11,8 @@
   The laws live in `tools/gen_tables.py`: change them there and rerun it, never edit `orb_tables.h`.
 - After every engine change: `tests/run_orb.sh` (tests, the same under ASan/UBSan, renders, spectrograms, bench). After
   an app change: `tests/run_host.sh tests/scripts/pages.txt`, `edit.txt`, `cosmos.txt`, `splash.txt` and `groove.txt`
-  (KITTEN made into a groove: STEPS' black keys, IDEA, UNDO, SOUND, REC), and look at the screens;
+  (KITTEN made into a groove: STEPS' black keys, IDEA, UNDO, SOUND, REC), and look at the screens (it starts SIMPLE:
+  a script for the deep pages presses SEL+SAVE first; what lands on the bar needs a bar's wait);
   `tools/readme_screens.sh` remakes the README's. Then `./build.sh` (stops at a `FAIL` line: never read only its `ok` lines) and, with the packages built (SMK-37 first,
   the FM-1 last), `tests/run_tests.sh`.
 - The legend of Astralica (`intro_*()` in orbitrix.c, its system `orb_intro_system`) is the page's, not the FM-1's: it

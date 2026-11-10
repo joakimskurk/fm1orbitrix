@@ -1,5 +1,5 @@
 # ORBITRIX: making a groove from KITTEN (tests/run_host.sh tests/scripts/groove.txt). PLAY; STEPS: B by its black key,
-# a step tapped, D an IDEA, UNDO and REDO, mute C; SOUND: B gets another sound; the keys play B; REC writes a key into D
+# a step tapped, D an IDEA (it comes on the bar), UNDO and REDO, mute C; SOUND: B gets another sound; the keys play B; stopped, REC waits and a key starts it, written into D
 2000 btn 12
 2300 btn 11
 2400 keys 0x8
@@ -11,31 +11,31 @@
 3100 keys 0
 3200 keys 0x400
 3300 keys 0
-3500 shot
-3600 keys 0x2000000
-3700 keys 0
-3800 shot
-3900 keys 0x2000000
-4000 keys 0
-4100 keys 0x20000
-4200 keys 0
-4400 shot
-4500 keys 0x8
-4600 keys 0
-4700 btn 6
-4800 enc 2 3
+4900 shot
+5000 keys 0x2000000
+5100 keys 0
 5200 shot
-5300 keys 0x80
+5300 keys 0x2000000
+5400 keys 0
+5500 keys 0x20000
 5600 keys 0
-5800 btn 8
-6200 shot
-6400 btn 12
-6900 shot
-7000 enc 0 -1
-7100 enc 0 -1
-7200 btn 13
-7300 keys 0x80
-7400 keys 0
-7600 btn 13
-8000 shot
-8500 end
+5800 shot
+5900 keys 0x8
+6000 keys 0
+6100 btn 6
+6200 enc 2 3
+6600 shot
+6700 keys 0x80
+7000 keys 0
+7200 btn 8
+7600 shot
+7800 btn 12
+8300 shot
+8400 enc 0 -1
+8500 enc 0 -1
+8600 btn 13
+8700 keys 0x80
+8800 keys 0
+9000 btn 13
+9400 shot
+9900 end

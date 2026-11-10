@@ -113,11 +113,12 @@ if (fm1) {
     if (!node || !active || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'Shift') { if (!selShift) { selShift = true; selSet(); } return; }
     if (e.code in CODE) { e.preventDefault(); if (!e.repeat) press(CODE[e.code], true); }
-    else if (e.code in BTNKEY) { e.preventDefault(); if (!e.repeat) send({ type: 'btn', id: BTNKEY[e.code] }); }
+    else if (e.code in BTNKEY) { e.preventDefault(); if (!e.repeat) send({ type: 'down', id: BTNKEY[e.code] }); }
   });
   document.addEventListener('keyup', (e) => {
     if (e.key === 'Shift' && selShift) { selShift = false; selSet(); }
     if (e.code in CODE) press(CODE[e.code], false);
+    if (e.code in BTNKEY && node) send({ type: 'up', id: BTNKEY[e.code] });   // (held: REC catches, a card helps)
   });
   window.addEventListener('blur', () => { for (let k = 0; k < 27; k++) if (held & (1 << k)) press(k, false); if (selShift) { selShift = false; selSet(); } });
 

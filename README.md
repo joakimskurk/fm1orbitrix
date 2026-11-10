@@ -52,11 +52,14 @@ The voice is a planet on an ellipse, and what you hear is where it is.
 4. The keys play the **focus**, the chip at the top: a track's sound (where its ring plays it) or, as K, the keys' own.
    **REC** writes what you play into the track (from K, into the track with a tune, which it names): the key plays
    the note written, so what you hear is what you get, on the step nearest your key; on every page while it is on.
-   **SELECT** turns the focus.
+   Stopped, REC waits: the first key starts it all (or PLAY, after a bar's count-in). Played something good without
+   REC? **Hold REC**: it is caught. **SEL + OCT−** undoes a take. **SELECT** turns the focus.
 5. **HOME**: K1–K4 set each track's hits; with SEL, their levels. **SAVE**, **SAVE** keeps it in U1.
 
-Each button's pages show on the hint line as you press it, this one lit: **EDIT** is SOUND → ORBIT → BODY → COSMOS,
-from the friendly to the deep. For a lullaby, turn **PRESETS** once: **MILKY WAY**.
+Not sure what a button does? **Hold it a second.** It comes SIMPLE, the friendly pages only; **SEL + SAVE** wakes the
+deep ones (EDIT is then SOUND → ORBIT → BODY → COSMOS, from the friendly to the deep). For a lullaby, turn
+**PRESETS** once: **MILKY WAY**. KITTEN, MILKY WAY and ALPHA CEN play their keys **IN KEY**: the white keys the scale,
+C the sun, none wrong.
 
 ## Astralica, at home
 
@@ -250,6 +253,12 @@ There are also eight places of your own, U1–U8.
   bass and its neighbours, a melody walking its notes).
 - **CHORD keys** (KEYS' MODE): every white key a note of the chord sounding now (C4 its bass, going up), a black key the
   one under it an octave up; the KEYS page names what each key plays, its bass lit. Nothing on the keyboard is wrong.
+- **IN KEY keys** (KEYS' MODE): the white keys the scale, C the sun, going up as on any keyboard (each the tuning's
+  own note nearest the major scale's), a black key the one under it an octave up. Nothing wrong here either, and the
+  melody you play stays put when the chords change.
+- **What you play is what it keeps**: REC writes the note you hear, kept as played even on a track that follows the
+  chords; hold REC to catch what you just played; anything that changes the music while it plays (a system, CUTE, an
+  IDEA, a MOOD) waits for the next bar.
 
 <p align="center">
   <img src="docs/readme/screen_cute.png" width="240" alt="CUTE: Astralica in the mood, her kittens round her, the mood's name, SEL+HOME: A NEW ONE">
@@ -257,31 +266,51 @@ There are also eight places of your own, U1–U8.
 
 ## The controls
 
-Every page is laid out the same way. The top line holds the page, the focus (K for the keys, or A–D), the system,
-the sun with Astralica's head, and the tempo. Then come the picture, the hint line (a message, a button's pages, or
+Every page is laid out the same way. The top line holds the page, the focus (K for the keys, or A–D), the system
+(or REC, lit while it records, blinking while it waits), the sun with Astralica's head, and the tempo. Then come the
+picture, the hint line (a message, a button's pages, what the page is for in plain words, what waits for the bar, or
 ALGORITHM's value and the load) and K1–K4 as four boxes.
+
+- **Hold any button a second** and a card says what it does (hold SEL alone a little longer: every SEL combination).
+- **SIMPLE** (as it comes): each button opens its friendly page only, HOME the orrery and CUTE, SEQ STEPS, EDIT SOUND,
+  FX SPACE, GLO BACKGROUND, ARP KEYS; ENV and LFO are asleep. **SEL + SAVE** wakes every page (DEEP), and again puts
+  them to sleep.
+- **On the bar:** while it plays, a new system (PRESETS), a CUTE one, an IDEA and a MOOD wait for the next bar, just
+  before it (the hint line says what is coming), so the music never stumbles; a new system or a CUTE one starts the
+  orrery from the top.
+- **UNDO everywhere: SEL + OCT−** undoes the last gesture (a take or a catch: all it wrote, on every track it wrote on);
+  again, it is redone.
+
+<p align="center">
+  <img src="docs/readme/screen_help.png" width="240" alt="Holding HOME: a card says what it does">
+</p>
 
 | Control | What it does |
 | --- | --- |
-| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their levels) → MACROS (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) → CUTE (MOOD CHORDS HALO BPM · CHORD LV CHANGE SWING KEYS) |
-| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC · ALGORITHM: FOLLOW; the keys as above) → TIME (tempo, swing, mutate, the lanes · ALGORITHM: HOLD, a note held till the ring's next hit: a drone) |
-| **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
-| **ENV** · **LFO** | the envelopes · MOD → LFO |
-| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED BLOOM) · BACKGROUND (LEVEL CHORDS CHANGE HALO · SILK WIDTH LOW CUT TEMP · ALGORITHM: GLOW) → ORBIT PAD · KEYS (mode: SOLAR, HARMONIC or CHORD; tuning, sun, octave, gravity, MIDI channel) |
+| **HOME** | ORRERY (K1–K4: the hits of A–D; SEL: their levels) → MACROS (DEEP) (CHAOS SPECTRAL GRAVITY ORBIT · FRACT TIDE HORIZON MUTATE) → CUTE (MOOD CHORDS HALO BPM · CHORD LV CHANGE SWING KEYS) |
+| **SEQ** | STEPS (SPEED LEN HITS ROT · NOTE DIR PROB LOGIC · ALGORITHM: FOLLOW; the keys as above) → TIME (DEEP) (tempo, swing, mutate, the lanes · ALGORITHM: HOLD, a note held till the ring's next hit: a drone) |
+| **EDIT** | SOUND (SOUND TONE DECAY LEVEL · OCT PAN SPACE WOBBLE) → (DEEP:) ORBIT (ECC SLING ANG SPR · PREC MOON RATIO DUST) → BODY (FALL COLOR PIXEL · LEVEL PAN SEND OCT) → COSMOS (TIDE INSPIRAL INSP-T BEAM) |
+| **ENV** · **LFO** | (DEEP) the envelopes · MOD → LFO |
+| **FX** · **GLO** · **ARP** | FILTER MAP → SPACE → HORIZON (DEPTH SHIFT RETRO GRAIN · TIRED BLOOM; SIMPLE: SPACE only) · BACKGROUND (LEVEL CHORDS CHANGE HALO · SILK WIDTH LOW CUT TEMP · ALGORITHM: GLOW) → ORBIT PAD (DEEP) · KEYS (mode: CHORD, every key a note of the chord now; IN KEY, the white keys the scale with C the sun, a black key the white one under it an octave up; SOLAR; HARMONIC; tuning, sun, octave, gravity, MIDI channel) |
 | **K1–K4**, **SEL** held | the four values; the second row (the names turn magenta) |
 | **ALGORITHM** | the page's extra, on the hint line (mostly the tempo) |
 | **SELECT** | the focus: K (the keys), A, B, C, D: what the pages edit and the keys play |
-| **PRESETS** | the system, loaded once it rests; in SAVE, the place |
-| **PLAY** · **REC** | the orrery · the keys write into the focused track |
+| **PRESETS** | the system, loaded once it rests (playing: on the next bar); in SAVE, the place |
+| **PLAY** | the orrery; with REC waiting, a bar's count-in (4 3 2 1 on the screen), then it records; stopping ends the take |
+| **REC** (a tap) | the keys write into the focused track (from K: the track with a tune, named): playing, at once; stopped, it waits, and the first key starts the orrery and the take. Every key on every page plays and writes, the note you hear is the note written, on the nearest step; MUTATE leaves the track alone while it records |
+| **REC** (held) | CATCH: what you just played, without REC, into the focused track (its last lap) |
+| **SEL + OCT−** | UNDO the last gesture, whatever the page (again: REDO) |
+| **SEL + SAVE** | SIMPLE or DEEP |
 | **SAVE**, SAVE | store the system in U1–U8 |
 | **SEL + a key** | the sun moves there |
+| a button **held** | a card: what it does |
 | **SEL + HOME** | a new patch in the mood (CUTE) |
 | **SEL + SEQ** | the focused track muted or not |
 | **SEL + GLO** | the background radiation's chords out (they fade) and in again |
 | **OCT− OCT+** | the keys' octave; on STEPS, which 16 steps the white keys show |
 | **STEPS' keys** | white: the steps (a tap goes rest → hit → accent; hold one and turn K1 for its note); black: tracks, IDEA, mutes, CLEAR, UNDO |
 
-**MIDI:** notes play the focus (USB and the TRS jack, OMNI or a channel), and REC writes them; CC 1 is MODW,
+**MIDI:** notes play the focus (USB and the TRS jack, OMNI or a channel), and REC writes them (and CATCH keeps them); CC 1 is MODW,
 channel pressure AFT. A clock sets the tempo, and START and STOP run the orrery.
 
 ## Build it

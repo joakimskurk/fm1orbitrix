@@ -1,48 +1,54 @@
 # ORBITRIX: the README's screens (tests/run_host.sh tests/scripts/readme.txt, then tools/readme_screens.sh). KITTEN:
 # HOME, STEPS (D), TIME, SOUND (D); then HARMONICES: MACROS, ORBIT (C), ENV, MOD, FILTER MAP, SPACE, ORBIT PAD, KEYS;
-# then AFTERGLOW: BACKGROUND; then a new SPARKLY one: CUTE
+# then AFTERGLOW: BACKGROUND; then a new SPARKLY one: CUTE; HOME held: its card. (SEL+SAVE first: DEEP, every page)
 2000 btn 12
-2700 shot
-2800 btn 11
-2900 keys 0x100
-3000 keys 0
-3600 shot
-3700 btn 11
+2010 btndown 3
+2040 btn 9
+2070 btnup 3
 4300 shot
-4400 btn 6
-5000 shot
-5100 enc 6 2
-5800 btn 8
-5900 btn 8
-6500 shot
-6600 enc 0 -1
-6700 btn 6
-6800 btn 6
-7400 shot
-7500 btn 4
-8000 shot
-8100 btn 5
-8600 shot
-8700 btn 2
-9200 shot
-9300 btn 2
-9800 shot
-9900 btn 7
-9950 btn 7
-10400 shot
-10500 btn 10
-10500 keys 0x4890
-11000 shot
-11100 keys 0
-11200 enc 6 12
-11800 btn 7
-16000 shot
-16100 btn 8
-16200 btn 8
-16300 btn 8
-16400 enc 2 2
-16500 btndown 3
-16550 btn 8
-16650 btnup 3
-18800 shot
-18900 end
+4400 btn 11
+4500 keys 0x100
+4600 keys 0
+5200 shot
+5300 btn 11
+5900 shot
+6000 btn 6
+6600 shot
+6700 enc 6 2
+9900 btn 8
+10000 btn 8
+10600 shot
+10700 enc 0 -1
+10800 btn 6
+10900 btn 6
+11500 shot
+11600 btn 4
+12100 shot
+12200 btn 5
+12700 shot
+12800 btn 2
+13300 shot
+13400 btn 2
+13900 shot
+14000 btn 7
+14050 btn 7
+14500 shot
+14600 btn 10
+14600 keys 0x4890
+15100 shot
+15200 keys 0
+15300 enc 6 12
+15900 btn 7
+20100 shot
+20200 btn 8
+20300 btn 8
+20400 btn 8
+20500 enc 2 2
+20600 btndown 3
+20650 btn 8
+20750 btnup 3
+24400 shot
+24600 btndown 8
+25700 shot
+25800 btnup 8
+25900 end

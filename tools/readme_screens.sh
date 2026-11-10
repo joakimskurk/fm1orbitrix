@@ -6,8 +6,8 @@ set -e
 cd "$(dirname "$0")/.."
 rm -f build/host/orbitrix-*.png
 sh tests/run_host.sh tests/scripts/readme.txt > /dev/null
-for p in 2700:orrery 3600:steps 4300:time 5000:sound 6500:macros 7400:orbit 8000:env 8600:mod 9200:filter 9800:space \
-         10400:pad 11000:keys 16000:bg 18800:cute; do
+for p in 4300:orrery 5200:steps 5900:time 6600:sound 10600:macros 11500:orbit 12100:env 12700:mod 13300:filter 13900:space \
+         14500:pad 15100:keys 20100:bg 24400:cute 25700:help; do
     cp "build/host/orbitrix-${p%%:*}.png" "docs/readme/screen_${p##*:}.png"
 done
 rm -f build/host/orbitrix-*.png
