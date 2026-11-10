@@ -499,3 +499,59 @@ hooks for play.js, so nothing in how it plays changed. Tried in Chromium at 1100
   360 pixels drawn at three times the firmware's 240 (one device pixel to the canvas's on a high-density display),
   ZOOM to the whole width; the labels at 10 and 11 pixels, the knobs 38, the keys 84 high; the screen's column fixed
   (an auto column took the canvas's own 720 pixels and pushed the controls off).
+
+## D28 — The orrery's planets, never jumping (2026-11-10)
+
+The user: "the orrery glitches a lot: the markers going round jump in every direction; it is hard to make music."
+The planet glided from its step towards the next one forward, by the unswung grid, and when a step came late (SWING,
+HUM: every other step of most systems) it was past its time and snapped back to its step, then on: back and forth on
+every swung step; a ring going back, PING's turns and a SPIRAL's laps glided forward and then jumped. Now
+(ring_where): from when its step played to when the next one plays (the swing in it), toward the step the ring really
+goes to next, the way it goes (two at a SPIRAL's new lap, glided too); RND, which cannot be known, lands. The ring's
+state is read again if the interrupt stepped it in between. Measured on the host, every system, every drawn frame:
+before, up to 55 jumps in 300 frames (back by up to 1.4 steps); now none.
+
+## D29 — REC: what is heard is what is written (2026-11-10)
+
+The user: "instruments change in REC, and what I record is often in another note or octave than I played." Four
+causes: REC from the KEYS wrote into A, which in KITTEN and nine more systems was the kick (the keys turned into it);
+on STEPS the black keys picked the track (a melody with a sharp in it changed the track); a FOLLOWing ring (every
+pitched ring of the set) read the scale degree REC wrote as a chord note (the 4th degree played as the 4th chord note:
+an octave and more off); and MUTATE moved the notes again a lap later. Now:
+
+- REC from the KEYS picks the track with a tune (a melody, a lead, a voice, a pad, else the bass; never a drum) and
+  says which, with its sound: "REC INTO D PURR". While REC is on, every key on every page plays and writes (STEPS's
+  step keys and black keys wait till REC is off).
+- The note written is the tuning's nearest to the one played, and the key plays that note: what is heard is what is
+  written, in the track's sound and octave. A FOLLOWing ring keeps it as played (ORB_ON_FIX on its step: the tuning's
+  degree, not the chord's), while its other notes go on following the chords; FOLLOW switched keeps it where it is;
+  MUTATE leaves it.
+- Playing, the step nearest the key (the one now, or the next when that is nearer: it is then skipped once, so the note
+  is not heard twice); MUTATE waits on the ring being recorded (eng.novary). Stopped, the next step, as before.
+- Tested (orb_test "rec"): fixed notes on a FOLLOWing ring at MUTATE 99 all as written, the skip; and on the host, keys
+  recorded into every system: every recorded step played back as played, none doubled.
+
+## D30 — A space two minutes long, and no kick (2026-11-10)
+
+The user: "I wish the reverb were far more extreme in length, if there is CPU for it; the kick must go entirely then,
+and drums in general out or very low." The length costs nothing (the same lines, a feedback nearer 1), but it was not
+the feedback that kept the tail short: the lines are 16 bits, and two roundings toward zero a pass (the damping's pole,
+and the write) wore a bit off every pass, so a tail died ~10 s in whatever DECAY said; and DAMP took as much of the
+highs a pass whatever the length, so the middle could not ring more than 20 or 30 s. Decided:
+
+- **DECAY** is seconds now (tools/gen_tables.py, ORB_NEB_*): 0.6 s to two minutes to -60 dB, a power of 200 (66 is
+  20 s, 80 43 s, 90 74 s), the same whatever SIZE (a smaller nebula's lines go round more often: their feedback is
+  nearer 1 by as much). A long tail builds up (its energy goes as 1 / (1 - g^2)): it is fed less, half the build-up in
+  dB past a 5 s one. The page shows the seconds.
+- **The loop**: the damping is orb_pole (it lands on its input: no bit lost a frame); the write's rounding carried
+  into the line's next write while it is loud (above 16: below, nothing carried, so it still ends); DAMP is the tail's
+  colour, its (1 - a) / a shrunk with the square root of how much less a pass loses (the highs' length a share of the
+  lows'). Measured, a loud chord at DECAY 99: about 0.7 dB a second (90 s), at 80 about 35 s; before, 16 s and 11 s. The
+  cost: ~50 x86 instructions a frame (the carry ~26).
+- **HALO** goes to two minutes too (3 s .. 120 s).
+- **The set**: no kick anywhere. Where a kick was (KITTEN, MILKY WAY, PURRSEC, ZOOMIES, CATWALK, SGR A*, BOOP BOP,
+  STARDUST, PULSAR, NOM NOM) a pitched pulse on the same rhythm: a boop, glass, a bell, a paw, a bloop, on the chord's
+  notes; snares and hats whisper (orb_hush: a quarter of their level, -12 dB, and nothing into the space); the spaces
+  longer (DECAY 58 .. 99: grooves 15 .. 25 s, the floating ones a minute or two). CUTE's moods: a pulse in place of
+  the kick, the drums whispering, longer spaces. The legend keeps its own space (6.6 s: DECAY 45 under the new law), as
+  it was filmed.

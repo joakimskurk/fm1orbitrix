@@ -228,7 +228,7 @@ static const char *const PAGE_NAME[NPAGE] = {"ORRERY", "MACROS", "STEPS", "TIME"
 enum { W_SYS, W_SND, W_RING, W_RA, W_RB, W_RC, W_RD, W_MOD, W_SET, W_SA, W_SB, W_SC, W_SD, W_NONE };   /* (W_SA..: A..D's sound) */
 enum { F_NUM, F_SIGNED, F_TIME, F_RATIO, F_DIR, F_LOGIC, F_DEG, F_TUNING, F_NOTE, F_KMODE, F_MRATIO, F_DT, F_SYNC,
        F_SHAPE, F_SRC, F_DST, F_OCT, F_BPM, F_ONOFF, F_PAN, F_LRATE0, F_LRATE1, F_TRIG, F_CH, F_SLOT, F_PCT,
-       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE, F_HALO, F_MOOD, F_HOLD };
+       F_INSP, F_GRAIN, F_SEMI, F_LIB, F_TEMP, F_LOWCUT, F_TIRED, F_BGPROG, F_CHANGE, F_HALO, F_MOOD, F_HOLD, F_RDEC };
 typedef struct {
     const char *name;
     uint8_t where, fmt;
@@ -294,7 +294,7 @@ static const pd_t PD[NPAGE][9] = {   /* K1..K4, SEL K1..K4, ALGORITHM */
                    P_NONE, P_NONE, P_NONE, P_NONE, P_BPM},
     [PG_SPACE] = {{"TIME", W_SYS, F_DT, SO(dtime), 0, ORB_NDT - 1}, {"FDBK", W_SYS, F_NUM, SO(dfb), 0, 99},
                   {"SIZE", W_SYS, F_NUM, SO(rsize), 0, 99}, {"NEBULA", W_SYS, F_NUM, SO(rmix), 0, 99},
-                  {"TONE", W_SYS, F_NUM, SO(dtone), 0, 99}, {"DECAY", W_SYS, F_NUM, SO(rdecay), 0, 99},
+                  {"TONE", W_SYS, F_NUM, SO(dtone), 0, 99}, {"DECAY", W_SYS, F_RDEC, SO(rdecay), 0, 99},
                   {"DAMP", W_SYS, F_NUM, SO(rdamp), 0, 99}, {"ECHO", W_SYS, F_NUM, SO(dmix), 0, 99},
                   {"PING", W_SYS, F_ONOFF, SO(ping), 0, 1}},
     [PG_HORIZON] = {{"DEPTH", W_SYS, F_PCT, SO(macro[MAC_HORIZON]), 0, 99}, {"SHIFT", W_SYS, F_SEMI, SO(hshift), -24, 24},
@@ -470,6 +470,13 @@ static void pd_text(const pd_t *d, char *s)
     case F_BGPROG: put_s(s, ORB_BGPROG_NAME[(uint32_t)v % ORB_NBGPROG]); break;
     case F_CHANGE: put_s(put_u(s, 1u << ((uint32_t)v & 3u)), v ? " BARS" : " BAR"); break;
     case F_HALO: if (v) put_s(put_u(s, ORB_HALO_SEC[(uint32_t)v % 100u]), " s"); else put_s(s, "DRY"); break;
+    case F_RDEC: {                              /* NEBULA's tail, to -60 dB */
+        uint32_t ts = ORB_NEB_TS[(uint32_t)v % 100u];
+        char *q = put_u(s, ts / 10u);
+        if (ts < 100u) { *q++ = '.'; q = put_u(q, ts % 10u); }
+        put_s(q, " s");
+        break;
+    }
     case F_MOOD: put_s(s, ORB_MOOD_NAME[(uint32_t)v % ORB_NMOOD]); break;
     case F_BPM: case F_PCT: case F_NUM: default: put_i(s, v, 0); break;
     }
@@ -723,12 +730,45 @@ static void draw_hint(void)                     /* the line above the knobs: ALG
 /* the orrery: the four rings around the sun, the planets on them, conjunctions; the lanes at the right */
 static uint32_t flash_seen[ORB_NRING], flash_t[ORB_NRING], conj_seen, conj_t;
 
-static uint32_t ring_progress(uint32_t r)       /* 0..65535 of the current step's way (the planet glides) */
+/* where a ring is now: its step (*idx), the next it goes to (*nx: the way it goes, back, PING's turns, SPIRAL's laps;
+ * RND: itself, it cannot be known), how far from the one to the other (0..65535: from when the step played to when
+ * the next plays, swing and HUM in it), and its step count (*k). Read again if the interrupt stepped it meanwhile */
+static uint32_t ring_where(uint32_t r, uint32_t len, uint32_t *idx, uint32_t *nx, uint32_t *k)
 {
     const orb_rstate_t *R = &eng.rs[r];
-    uint32_t st = orb_step_ticks(&sys.ring[r]), el = eng.T - (R->base - st);
-    if (!eng.playing || el > st) return 0;
-    return el * 65535u / st;
+    const orb_ring_t *g = &sys.ring[r];
+    uint32_t kk, cur, base, next, pos, spin, tries = 0, st = orb_step_ticks(g), from, el, span;
+    uint32_t sw = (uint32_t)orb_clamp(sys.swing, 0, 99);
+    do { kk = R->k; cur = R->cur; base = R->base; next = R->next; pos = R->pos; spin = R->spin; }
+    while (kk != R->k && ++tries < 3u);
+    if (cur >= len) cur = 0;
+    if (pos >= len) pos = 0;
+    switch (g->dir % ORB_NDIR) {
+    case DIR_REV: *nx = len - 1u - pos; break;
+    case DIR_PING: { uint32_t per = len > 1u ? 2u * len - 2u : 1u, q = kk % per; *nx = q < len ? q : per - q; break; }
+    case DIR_SPIRAL: *nx = (pos + spin) % len; break;
+    case DIR_RND: *nx = cur; break;
+    default: *nx = pos; break;
+    }
+    *idx = cur;
+    *k = kk;
+    from = base - st + ((kk - 1u) & 1u ? st * sw / 200u : 0u);   /* when this step played (but its HUM) */
+    el = eng.T - from;
+    span = next - from;
+    if ((int32_t)el <= 0 || span == 0u || span > 64u * st) return 0;
+    return el >= span ? 65535u : (uint32_t)(((uint64_t)el * 65535u) / span);
+}
+
+/* the planet's place on its ring, a phase (2^32 a turn): from its step, when it played, gliding to the next by the
+ * time that one plays, the way the ring goes; where the ring jumps (RND) it does not glide but lands */
+static uint32_t planet_phase(uint32_t r, uint32_t len)
+{
+    uint32_t idx, nx, k, f = ring_where(r, len, &idx, &nx, &k), fw = (nx + len - idx) % len, ph, way;
+    ph = 0xC0000000u + (uint32_t)(((uint64_t)idx << 32) / len);
+    way = (uint32_t)((((uint64_t)1u << 32) / len * f) >> 16);
+    if (fw && fw <= 2u && fw * 2u <= len) return ph + way * fw;   /* (a SPIRAL's new lap goes on two: it glides them) */
+    if (fw && len - fw <= 2u && (len - fw) * 2u < len) return ph - way * (len - fw);
+    return ph;                                  /* (it jumps: it lands there when it steps) */
 }
 static void draw_orrery(void)
 {
@@ -746,7 +786,7 @@ static void draw_orrery(void)
         for (i = 0; i < len; i++) {
             uint32_t ph = 0xC0000000u + (uint32_t)(((uint64_t)i << 32) / len);
             int32_t x = cx + icos(ph, rad), y = cy + isin(ph, rad);
-            uint32_t on = orb_step_on(&eng, r, i, 0);   /* (as this lap plays it: MUTATE's changes hollow) */
+            uint32_t on = orb_step_on(&eng, r, i, 0) & 3u;   /* (as this lap plays it: MUTATE's changes hollow) */
             if (on) {
                 uint16_t cc = g->mute ? dim565(c, 5) : (on == 2u ? mix565(c, C_TXT, 8) : c);
                 if (on == 2u && len <= 32u) spr(SPR_HEART, 5, 5, x - 2, y - 2, cc);   /* an accent: a heart */
@@ -756,9 +796,7 @@ static void draw_orrery(void)
                 cv_pset(x, y, dim565(c, 6));
         }
         if (eng.playing) {                      /* the planet: between its last step and the next */
-            const orb_rstate_t *R = &eng.rs[r];
-            uint32_t idx = R->cur, ph = 0xC0000000u + (uint32_t)(((uint64_t)idx << 32) / len)
-                         + (uint32_t)(((uint64_t)ring_progress(r) << 16) / len);
+            uint32_t ph = planet_phase(r, len);
             int32_t x = cx + icos(ph, rad), y = cy + isin(ph, rad), big = fm1_ms - flash_t[r] < 120u;
             if (big) disc(x, y, 5, dim565(c, 6));
             kitty(x, y, big ? C_TXT : c);       /* the planets are her kittens */
@@ -955,8 +993,8 @@ static void draw_ring(void)
         int32_t x = cx + icos(ph, rad), y = cy + isin(ph, rad);
         if (i / 16u == step_page) cv_pset(cx + icos(ph, R + 9), cy + isin(ph, R + 9), C_LIME);
         if (g->on[i]) {
-            uint16_t pc = g->on[i] == 2u ? C_TXT : c;
-            if (len <= 32u) spr(g->on[i] == 2u ? SPR_HEART : ICON_PAW, 5, 5, x - 2, y - 2, pc);   /* a paw; an accent a heart */
+            uint16_t pc = (g->on[i] & 3u) == 2u ? C_TXT : c;
+            if (len <= 32u) spr((g->on[i] & 3u) == 2u ? SPR_HEART : ICON_PAW, 5, 5, x - 2, y - 2, pc);   /* a paw; an accent a heart */
             else cv_rect(x - 1, y - 1, 3, 3, pc);
         } else
             cv_rect(x, y, 1, 1, dim565(c, 8));
@@ -992,7 +1030,7 @@ static void draw_ring(void)
     }
     /* the keys: the white ones the steps of this page, the black ones: A B C D, IDEA, mute A B C D, CLEAR, UNDO */
     for (i = 0; i < 16u; i++) {
-        uint32_t st = step_page * 16u + i, on = st < g->len ? g->on[st] : 0u;
+        uint32_t st = step_page * 16u + i, on = st < g->len ? g->on[st] & 3u : 0u;
         int32_t x = 2 + (int32_t)i * 15, play = eng.playing && st == eng.rs[r].cur;
         if (st >= g->len) { cv_rect(x, 124, 14, 19, dim565(C_FDIM, 6)); continue; }
         cv_rect(x, 124, 14, 19, on == 2u ? C_TXT : on ? c : dim565(C_GREY, 4));
@@ -1078,7 +1116,7 @@ static void draw_time(void)
             if (x >= x0 + W) break;
             if (g->on[idx]) {
                 int32_t h = 8 + orb_clamp(g->dg[idx], -4, 8);
-                cv_rect(x, y + 22 - h, (int32_t)(st * (uint32_t)W / (16u * ORB_TPS)) > 4 ? 4 : 3, h, g->mute ? C_FDIM : g->on[idx] == 2u ? C_TXT : c);
+                cv_rect(x, y + 22 - h, (int32_t)(st * (uint32_t)W / (16u * ORB_TPS)) > 4 ? 4 : 3, h, g->mute ? C_FDIM : (g->on[idx] & 3u) == 2u ? C_TXT : c);
             } else
                 cv_rect(x, y + 21, 2, 1, dim565(c, 4));
         }
@@ -2088,7 +2126,7 @@ static int intro_pass(void)                     /* a pass; 0: over */
 
 /* ---- MIDI in (the main loop, and app_idle while the screen draws) */
 static uint32_t idle_ok, clk_n, clk_t0, clk_bpm, clk_run, clk_last;
-static void rec_key(int32_t p);
+static int32_t rec_key(int32_t p);
 static void midi_in(void)
 {
     uint8_t st, d1, d2;
@@ -2118,8 +2156,8 @@ static void midi_in(void)
             int32_t p = sys.keymode == KM_HARMONIC && k >= 0 && k < 27 ? orb_key_pitch(&sys, (uint32_t)k, (int8_t)set.oct, 0)
                                                                          : orb_key_pitch_o(&eng, d1, 0, 0);
             if (focus) p -= 24 * 256;
+            if (rec && focus) p = rec_key(p);   /* (it plays the note written) */
             orb_note_on_part(&eng, (uint8_t)(128u + d1), p, d2, focus);
-            if (rec && focus) rec_key(p);
             (void)src;
         } else if (ty == 0x80u || ty == 0x90u) orb_note_off(&eng, (uint8_t)(128u + d1));
         else if (ty == 0xB0u && d1 == 1u) eng.modw = (int32_t)d2 * 258;
@@ -2161,32 +2199,52 @@ static void goto_page3(uint32_t a, uint32_t b, uint32_t c)
 }
 static void goto_page(uint32_t a, uint32_t b) { goto_page3(a, b, a); }
 
-/* REC: a key played into the focused ring, at its step (playing) or the next (stopped). p: the pitch played (1/256
- * semitone), the keys playing the ring's sound where the ring plays it, so the step is the note heard */
+/* REC: a key played into the focused ring. Where: playing, the step nearest it (the one now, or the next when that is
+ * nearer: it then does not play it again this time round); stopped, the next step. What: the tuning's note nearest the
+ * one played, kept (ORB_ON_FIX: a FOLLOWing ring's other notes move with the chords, this one stays the note played).
+ * Its pitch is returned and the key plays it: what is heard is what is written, the track's sound, its octave.
+ * p: the pitch played (1/256 semitone) */
 static uint32_t rec_pos;
-static void rec_key(int32_t p)
+static int32_t rec_note(uint32_t r, int32_t d)  /* the pitch a ring's REC step of degree d plays (the tuning's) */
 {
-    uint32_t r = ring_focus(), t = sys.tuning % ORB_NTUNING, n = ORB_SCALE_N[t], i, best = 0;
+    return (36 + (int32_t)(sys.sun % 12u)) * 256 + orb_degree(&sys, sys.ring[r].deg + d);
+}
+static int32_t rec_key(int32_t p)
+{
+    uint32_t r = ring_focus(), len, at;
     orb_ring_t *g = &sys.ring[r];
-    int32_t rel = p - (36 + (int32_t)(sys.sun % 12u)) * 256, oct, pos, bd = 1 << 30;
-    oct = rel >= 0 ? rel / 3072 : -((3071 - rel) / 3072);
-    pos = rel - oct * 3072;
-    for (i = 0; i < n; i++) {                   /* the nearest degree */
-        int32_t d = ORB_SCALE[t][i] - pos;
-        if (d < 0) d = -d;
-        if (d < bd) { bd = d; best = i; }
+    int32_t d, best = 0, bd = 1 << 30;
+    len = g->len < 1u ? 1u : g->len > ORB_NSTEP ? ORB_NSTEP : g->len;
+    if (eng.playing) {
+        uint32_t idx, nx, k, f = ring_where(r, len, &idx, &nx, &k);
+        at = idx;
+        if (f >= 32768u && nx != idx) { at = nx; eng.rs[r].skip = (uint8_t)((k + 1u) % 255u + 1u); }
+    } else
+        at = rec_pos % len;
+    for (d = -14; d <= 21; d++) {               /* the nearest note it has (a tie: the lower) */
+        int32_t e = rec_note(r, d) - p;
+        if (e < 0) e = -e;
+        if (e < bd) { bd = e; best = d; }
     }
-    if (3072 - pos < bd) { oct++; best = 0; }   /* (the next octave's root nearer) */
     undo_take(r, 0);
-    {
-        uint32_t len = g->len ? g->len : 1u, at = eng.playing ? eng.rs[r].cur : rec_pos % len;
-        int32_t deg = oct * (int32_t)n + (int32_t)best - g->deg;
-        g->on[at] = g->on[at] ? g->on[at] : 1u;
-        g->dg[at] = (int8_t)orb_clamp(deg, -14, 21);
-        if (!eng.playing) rec_pos = (at + 1u) % len;
-    }
+    g->on[at] = (uint8_t)((g->on[at] & 3u ? g->on[at] & 3u : 1u) | ORB_ON_FIX);
+    g->dg[at] = (int8_t)best;
+    if (!eng.playing) rec_pos = (at + 1u) % len;
     orb_pattern_edited(&eng, r);
     main_dirty = 1;
+    return rec_note(r, best);
+}
+/* REC from the KEYS: the track it writes into, the one with a tune (a melody, a lead, a voice, a pad, else a bass), not
+ * a drum's (all drums: A) */
+static uint32_t rec_track(void)
+{
+    static const uint8_t PREF[ORB_NLK] = {0, 0, 0, 1, 2, 4, 3, 4, 4};   /* KICK SNARE HAT PERC BASS MELODY PAD LEAD VOICE */
+    uint32_t r, best = 0, bs = 0;
+    for (r = 0; r < ORB_NRING; r++) {
+        uint32_t kd = orb_lib_kind(&sys.snd[ORB_A + r]), sc = kd < ORB_NLK ? PREF[kd] : 0u;
+        if (sc > bs) { bs = sc; best = r; }
+    }
+    return ORB_A + best;
 }
 
 /* ---- IDEA: a fresh pattern for a ring, as its sound wants it: a kick on the beat, a snare's backbeat, hats between;
@@ -2332,7 +2390,8 @@ static void handle_keys(void)
                 held_id[k] = 0;
                 continue;
             }
-            if (page == PG_RING) {              /* the steps on the white keys; the black ones: tracks, IDEA, mutes .. */
+            if (page == PG_RING && !rec) {      /* the steps on the white keys; the black ones: tracks, IDEA, mutes ..
+                                                 * (REC: all the keys play, and write, the track) */
                 int32_t wi = white_index(k);
                 held_id[k] = 0;
                 if (wi >= 0) { held_step = step_page * 16u + (uint32_t)wi; held_used = 0; }
@@ -2342,11 +2401,11 @@ static void handle_keys(void)
             {   /* the keys play the focus: KEYS, or a track's sound where its ring plays it (the keys' C4 is its root) */
                 int32_t p = orb_key_pitch_o(&eng, sys.keymode == KM_HARMONIC ? k : note, oct, 0);
                 if (focus) p -= 24 * 256;
+                if (rec && focus) p = rec_key(p);   /* (it plays the note written: the one heard) */
                 held_id[k] = (uint8_t)(k + 1u);
                 mew_t = fm1_ms; mew_n++;
                 orb_note_on_part(&eng, held_id[k], p, 100, focus);
                 midi_send(0x90u | (set.ch ? set.ch - 1u : 0u), note & 127u, 100);
-                if (rec && focus) rec_key(p);
             }
         }
         if (up >> k & 1u) {
@@ -2355,8 +2414,9 @@ static void handle_keys(void)
                 orb_ring_t *g = &sys.ring[ring_focus()];
                 if (!held_used && held_step < g->len) {   /* a tap: rest -> hit -> accent -> rest */
                     undo_take(ring_focus(), 0);
+                    uint32_t nv = ((g->on[held_step] & 3u) + 1u) % 3u;
                     if (!g->on[held_step]) love_t = fm1_ms;
-                    g->on[held_step] = (uint8_t)((g->on[held_step] + 1u) % 3u);
+                    g->on[held_step] = (uint8_t)(nv ? nv | (g->on[held_step] & ORB_ON_FIX) : 0u);   /* (REC's note kept) */
                     orb_pattern_edited(&eng, ring_focus());
                     main_dirty = 1;
                 }
@@ -2387,8 +2447,10 @@ static void handle_encoders(void)
                 orb_pattern_edited(&eng, ring_focus());
                 held_used = 1;
                 {
-                    char s[24], *p = put_s(s, g->follow ? "STEP NOTE " : "STEP DEG ");
-                    put_note_of(p, ring_focus(), g->deg + g->dg[held_step]);
+                    int fx = (g->on[held_step] & ORB_ON_FIX) != 0;
+                    char s[24], *p = put_s(s, g->follow && !fx ? "STEP NOTE " : "STEP DEG ");
+                    if (fx) put_deg(p, g->deg + g->dg[held_step]);
+                    else put_note_of(p, ring_focus(), g->deg + g->dg[held_step]);
                     say(s);
                 }
                 main_dirty = hint_dirty = 1;
@@ -2475,11 +2537,17 @@ static void handle_buttons(void)
     }
     if (b & (1u << BTN_ARP)) goto_page(PG_KEYS, PG_KEYS);
     if (b & (1u << BTN_PLAY)) { if (!eng.playing) cat_happy(); orb_play(&eng, !eng.playing); drawn_bar = ~0u; }
-    if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the keys: into A) */
-        char s[28];
+    if (b & (1u << BTN_REC)) {                  /* REC: the keys into the focused track (the KEYS: into the one with a tune) */
+        char s[32], *q;
         rec = !rec; rec_pos = 0;
-        if (rec && !focus) { focus = ORB_A; knobs_dirty = 1; }
-        put_s(put_s(s, rec ? "REC: KEYS INTO " : "REC OFF"), rec ? ORB_PART_NAME[focus] : "");
+        if (rec && !focus) { focus = rec_track(); knobs_dirty = 1; }
+        if (rec) {
+            q = put_s(put_s(s, "REC INTO "), ORB_PART_NAME[focus]);
+            *q++ = ' ';
+            put_s(q, orb_lib_name(&sys.snd[focus]));
+            orb_pattern_edited(&eng, ring_focus());   /* (the lap as written: MUTATE waits while it records) */
+        } else
+            put_s(s, "REC OFF");
         say(s);
         drawn_bar = ~0u; main_dirty = 1;
     }
@@ -2603,6 +2671,7 @@ static void app_pass(void)                      /* one pass of the main loop */
     handle_encoders();
     handle_keys();
     midi_in();
+    eng.novary = rec && focus ? 1u << ring_focus() : 0u;   /* (REC: that ring plays as written, no MUTATE) */
     if (clk_run && fm1_ms - clk_last > 2000u) clk_run = 0;
     {   /* each track's last hit (the screens' flashes, the mute keys' wink) */
         uint32_t r;

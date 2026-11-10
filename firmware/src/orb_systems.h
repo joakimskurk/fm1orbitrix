@@ -180,6 +180,8 @@ static void orb_mod_set(orb_sys_t *s, uint32_t k, uint8_t src, uint8_t dst, int8
     s->mod[k].src = src; s->mod[k].dst = dst; s->mod[k].amt = amt;
 }
 
+static void orb_hush(orb_snd_t *d);       /* (the drums whisper: after the library) */
+
 #define ORB_NSYSTEM 20u
 static const char *const ORB_SYSTEM_NAME[ORB_NSYSTEM] = {"KITTEN", "MILKY WAY", "HARMONICES", "PURRSEC", "ZOOMIES",
     "CATWALK", "SPIRAL", "LUNA NOVA", "SGR A*", "BOOP BOP", "SNOWGLOBE", "STARDUST", "ALPHA CEN", "MOON NAP", "AFTERGLOW",
@@ -206,22 +208,22 @@ static void orb_ring_fol(orb_ring_t *r, uint32_t p, uint32_t q, const char *pat,
  * it is yours to change (STEPS: the keys; IDEA; SOUND) */
 static void orb_system_kitten(orb_sys_t *s)
 {
-    static const int8_t md[] = {0, 0, 7, 0, 10, 12};
-    orb_rdef_t A = {1, 1, 16, 4, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x1};
+    static const int8_t ma[] = {0, 7, 4, 7}, md[] = {0, 0, 7, 0, 10, 12};
+    orb_rdef_t A = {1, 1, 16, 4, 0, 0, DIR_FWD, 0, 0, 0, ma, 4, 0x1};
     orb_rdef_t B = {1, 1, 16, 2, 4, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x3};
     orb_rdef_t C = {1, 1, 16, 8, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0xAA};
     orb_rdef_t D = {1, 1, 16, 6, 0, 0, DIR_FWD, 0, 0, 0, md, 6, 0x1};
     s->tuning = 0; s->sun = 5; s->bpm = 104; s->swing = 16;
     s->bg_prog = 0;                         /* (its bass sings 7/4: under it, the sun's own chord fits) */
     s->snd[0] = SND_PAW; s->snd[0].oct = 0; s->snd[0].level = 74;
-    s->snd[1] = SND_KICK;
+    orb_put(s, ORB_A, LIB_BOOP, 60);        /* (the beat a boop: root, fifth, third, fifth) */
     s->snd[2] = SND_CLAP;
     s->snd[3] = SND_HAT;
-    s->snd[4] = SND_BASS; s->snd[4].oct = 0; s->snd[4].gate = 60; s->snd[4].level = 68;   /* (under the kick) */
+    s->snd[4] = SND_BASS; s->snd[4].oct = 0; s->snd[4].gate = 60; s->snd[4].level = 68;
     orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
     orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
     s->var = 20;
-    s->dtime = 6; s->dfb = 30; s->dmix = 22; s->rmix = 30; s->rsize = 55;
+    s->dtime = 6; s->dfb = 30; s->dmix = 22; s->rmix = 30; s->rsize = 55; s->rdecay = 66;
 }
 
 /* MILKY WAY: a lullaby. A music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at
@@ -229,21 +231,21 @@ static void orb_system_kitten(orb_sys_t *s)
  * mew */
 static void orb_system_milky(orb_sys_t *s)
 {
-    static const int8_t mb[] = {4, 2, 3, 4, 1}, mc[] = {5, 7, 6, 9, 7, 5, 4}, md[] = {0, -2, 3};
-    orb_rdef_t A = {1, 1, 16, 2, 0, 0, DIR_FWD, 0, 0, 0, 0, 0, 0x1};
+    static const int8_t ma[] = {0, 3}, mb[] = {4, 2, 3, 4, 1}, mc[] = {5, 7, 6, 9, 7, 5, 4}, md[] = {0, -2, 3};
+    orb_rdef_t A = {1, 1, 16, 2, 0, 0, DIR_FWD, 0, 0, 0, ma, 2, 0x1};
     orb_rdef_t B = {1, 1, 16, 5, 2, 0, DIR_FWD, 0, 0, 85, mb, 5, 0x1};
     orb_rdef_t C = {3, 2, 24, 7, 0, 0, DIR_FWD, 0, 0, 90, mc, 7, 0x1};
     orb_rdef_t D = {1, 2, 8, 3, 0, 0, DIR_FWD, 0, 0, 0, md, 3, 0x1};
     s->tuning = 3; s->sun = 7; s->bpm = 86; s->swing = 22;
     s->snd[0] = SND_MEW; s->snd[0].level = 58;   /* (a chord of meows adds up) */
-    s->snd[1] = SND_KICK; s->snd[1].level = 88;
+    orb_put(s, ORB_A, LIB_GLASS, 44); s->snd[ORB_A].oct = 1;   /* (one and three: glass) */
     s->snd[2] = SND_BOOP; s->snd[2].level = 72;
     s->snd[3] = SND_STAR; s->snd[3].oct = 2; s->snd[3].level = 70;
     s->snd[4] = SND_BASS; s->snd[4].oct = 0; s->snd[4].level = 66; s->snd[4].gate = 80;
     orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
     orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
     s->mutate = 10; s->var = 15;
-    s->dtime = 7; s->dfb = 45; s->ping = 1; s->dmix = 32; s->rmix = 55; s->rsize = 85; s->rdecay = 74;
+    s->dtime = 7; s->dfb = 45; s->ping = 1; s->dmix = 32; s->rmix = 55; s->rsize = 85; s->rdecay = 82;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 30);
     s->bg_level = 45; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 20; s->bg_silk = 45; s->bg_cut = 30;   /* under it all, */
@@ -271,7 +273,7 @@ static void orb_system_harmonices(orb_sys_t *s)
         orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
         orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
         s->mutate = 12; s->var = 20;
-        s->dtime = 6; s->dfb = 40; s->ping = 1; s->dmix = 36; s->rmix = 50; s->rsize = 70; s->rdecay = 66;
+        s->dtime = 6; s->dfb = 40; s->ping = 1; s->dmix = 36; s->rmix = 50; s->rsize = 70; s->rdecay = 76;
         s->macro[MAC_GRAVITY] = 40; s->macro[MAC_ORBIT] = 15;
         orb_mod_set(s, 0, SRC_ORBX, DST_ECC, 30);
         orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 40);
@@ -283,19 +285,19 @@ static void orb_system_harmonices(orb_sys_t *s)
  * the chords' bass (the royal road: Gmaj7 A6 F#m7 Bm9 on D), a little warmth, the chords dark and short; a toy piano */
 static void orb_system_purrsec(orb_sys_t *s)
 {
-    static const int8_t bass[] = {0, 0, -1, 0, 1};
+    static const int8_t keys[] = {3, 4, 2}, bass[] = {0, 0, -1, 0, 1};
     s->tuning = 0; s->sun = 2; s->bpm = 84; s->swing = 30; s->hum = 6; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_TOY, 66);
-    orb_put(s, ORB_A, LIB_THUMP, 74);
+    orb_put(s, ORB_A, LIB_PAW, 52);
     orb_put(s, ORB_B, LIB_PAT, 80); s->snd[ORB_B].dust = 70; s->snd[ORB_B].color = 62;
     orb_put(s, ORB_C, LIB_TICK, 64); s->snd[ORB_C].pan = 62;
     orb_put(s, ORB_D, LIB_PURR, 52); s->snd[ORB_D].gate = 70;
-    orb_ring_pat(&s->ring[0], 1, 1, "X......x ..x.....", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "X......x ..x.....", keys, 3, 0);
     orb_ring_pat(&s->ring[1], 1, 1, "....X... ....X..x", 0, 0, 0);
     orb_ring_pat(&s->ring[2], 1, 1, "x.xX x.x. x.xX x.xx", 0, 0, 82);
     orb_ring_fol(&s->ring[3], 1, 2, "X..x..x. x...x...", bass, 5, 0);
     s->drive = 18;
-    s->dtime = 6; s->dfb = 30; s->ping = 1; s->dmix = 18; s->rmix = 22; s->rsize = 50;
+    s->dtime = 6; s->dfb = 30; s->ping = 1; s->dmix = 18; s->rmix = 22; s->rsize = 50; s->rdecay = 66;
     s->bg_level = 30; s->bg_prog = 4; s->bg_change = 1; s->bg_halo = 35; s->bg_silk = 62; s->bg_width = 50;
     s->bg_cut = 35; s->bg_glow = 10;
     orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 20);
@@ -305,18 +307,18 @@ static void orb_system_purrsec(orb_sys_t *s)
  * the chords' bass and fifth, a chord a bar (Gadd9 Em7 Cadd9 D6), low; a pixel lead */
 static void orb_system_zoomies(orb_sys_t *s)
 {
-    static const int8_t sq[] = {2, 3, 4, 3, 2, 1, 2, 4, 5, 4, 3, 2}, bass[] = {0, 2, 0, 2, 0, 1, 0, 2};
+    static const int8_t sq[] = {2, 3, 4, 3, 2, 1, 2, 4, 5, 4, 3, 2}, bass[] = {0, 2, 0, 2, 0, 1, 0, 2}, boop[] = {2, 3, 4, 3};
     s->tuning = 0; s->sun = 7; s->bpm = 124; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_PIXEL, 62);
-    orb_put(s, ORB_A, LIB_BOOM, 92);
+    orb_put(s, ORB_A, LIB_BOOP, 58);
     orb_put(s, ORB_B, LIB_CLAP, 99);
     orb_put(s, ORB_C, LIB_SQUEAK, 84); s->snd[ORB_C].oct = 2; s->snd[ORB_C].send = 34;
     orb_put(s, ORB_D, LIB_GROWL, 72); s->snd[ORB_D].gate = 45; s->snd[ORB_D].a = 5;
-    orb_ring_pat(&s->ring[0], 1, 1, "X...x...X...x...", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "X...x...X...x...", boop, 4, 0);
     orb_ring_pat(&s->ring[1], 1, 1, "....X.......X...", 0, 0, 0);
     orb_ring_fol(&s->ring[2], 3, 2, "x.xX..x.x..X x.x..x.X..x.", sq, 12, 85);
     orb_ring_fol(&s->ring[3], 1, 1, "x.x.x.x.x.x.x.x.", bass, 8, 0);
-    s->dtime = 5; s->dfb = 26; s->ping = 1; s->dmix = 18; s->rmix = 22; s->rsize = 50;
+    s->dtime = 5; s->dfb = 26; s->ping = 1; s->dmix = 18; s->rmix = 22; s->rsize = 50; s->rdecay = 62;
     s->bg_level = 40; s->bg_prog = 2; s->bg_change = 0; s->bg_halo = 40; s->bg_silk = 40; s->bg_width = 55;
     s->bg_cut = 40; s->bg_glow = 8;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
@@ -327,19 +329,19 @@ static void orb_system_zoomies(orb_sys_t *s)
  * chords' bass in sixteenths, a chord a bar (A F#m7 Dadd9 E6), glossy; a lead */
 static void orb_system_catwalk(orb_sys_t *s)
 {
-    static const int8_t stab[] = {4, 5, 4, 6, 5, 4}, bass[] = {0, 0, 2, 0, -1, 0, 1, 2};
+    static const int8_t stab[] = {4, 5, 4, 6, 5, 4}, bass[] = {0, 0, 2, 0, -1, 0, 1, 2}, glass[] = {2, 3, 4, 3};
     s->tuning = 0; s->sun = 9; s->bpm = 116; s->swing = 8; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_LEAD, 60);
-    orb_put(s, ORB_A, LIB_BOOM, 80);
+    orb_put(s, ORB_A, LIB_GLASS, 44); s->snd[ORB_A].oct = 1;
     orb_put(s, ORB_B, LIB_CLAP, 84);
     orb_put(s, ORB_C, LIB_PLUCK, 54); s->snd[ORB_C].send = 30;
     orb_put(s, ORB_D, LIB_PURR, 58); s->snd[ORB_D].gate = 40; s->snd[ORB_D].d = 44;
-    orb_ring_pat(&s->ring[0], 1, 1, "X...x...X...x...", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "X...x...X...x...", glass, 4, 0);
     orb_ring_pat(&s->ring[1], 1, 1, "....X.......X...", 0, 0, 0);
     orb_ring_fol(&s->ring[2], 1, 1, "..x..x.x ..x..x.x", stab, 6, 0);
     orb_ring_fol(&s->ring[3], 1, 1, "X..xx.x. x..xx.x.", bass, 8, 0);
     s->drive = 10;
-    s->dtime = 5; s->dfb = 24; s->ping = 1; s->dmix = 14; s->rmix = 26; s->rsize = 55;
+    s->dtime = 5; s->dfb = 24; s->ping = 1; s->dmix = 14; s->rmix = 26; s->rsize = 55; s->rdecay = 64;
     s->bg_level = 36; s->bg_prog = 2; s->bg_change = 0; s->bg_halo = 30; s->bg_silk = 45; s->bg_width = 60;
     s->bg_cut = 40; s->bg_glow = 10;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 20);
@@ -365,7 +367,7 @@ static void orb_system_spiral(orb_sys_t *s)
     orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
     for (r = 0; r < ORB_NRING; r++) s->ring[r].follow = 1;
     s->mutate = 30; s->hum = 20; s->var = 37;
-    s->dtime = 4; s->dfb = 44; s->ping = 1; s->dmix = 32; s->rmix = 45; s->rsize = 80; s->rdecay = 72;
+    s->dtime = 4; s->dfb = 44; s->ping = 1; s->dmix = 32; s->rmix = 45; s->rsize = 80; s->rdecay = 80;
     s->macro[MAC_ORBIT] = 25;
     s->ox = 74; s->oy = 38; s->orad = 26;
     orb_mod_set(s, 0, SRC_ORBX, DST_ECC, 30);
@@ -391,7 +393,7 @@ static void orb_system_lunanova(orb_sys_t *s)
     orb_ring_pat(&s->ring[1], 1, 1, "XxxxXxxx XxxxXxxx", 0, 0, 92);
     orb_ring_fol(&s->ring[2], 1, 1, "x..x..x. ..x..x.. ..x..x.. x..x..x.", comp, 10, 0);
     orb_ring_fol(&s->ring[3], 1, 1, "X.......x.......", bass, 2, 0);
-    s->dtime = 8; s->dfb = 28; s->ping = 1; s->dmix = 16; s->rmix = 35; s->rsize = 65;
+    s->dtime = 8; s->dfb = 28; s->ping = 1; s->dmix = 16; s->rmix = 35; s->rsize = 65; s->rdecay = 68;
     s->bg_level = 34; s->bg_prog = 3; s->bg_change = 1; s->bg_halo = 40; s->bg_silk = 55; s->bg_width = 60;
     s->bg_cut = 35; s->bg_glow = 12;
     orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 20);
@@ -402,19 +404,19 @@ static void orb_system_lunanova(orb_sys_t *s)
  * under G, subharmonic), a deep nebula; the keys a flute */
 static void orb_system_sgra(orb_sys_t *s)
 {
-    static const int8_t skank[] = {3}, bass[] = {0, 0, 2, 1, 0, -1};
+    static const int8_t skank[] = {3}, bass[] = {0, 0, 2, 1, 0, -1}, bell[] = {2};
     s->tuning = 2; s->sun = 7; s->bpm = 72; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_FLUTE, 60);
-    orb_put(s, ORB_A, LIB_THUMP, 99);
+    orb_put(s, ORB_A, LIB_BELL, 46); s->snd[ORB_A].oct = 1;
     orb_put(s, ORB_B, LIB_PAT, 88); s->snd[ORB_B].dust = 50; s->snd[ORB_B].color = 70;
     orb_put(s, ORB_C, LIB_PLUCK, 62); s->snd[ORB_C].send = 70; s->snd[ORB_C].pan = 40;
     orb_put(s, ORB_D, LIB_SUB, 58);
-    orb_ring_pat(&s->ring[0], 1, 1, "........X.......", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "........X.......", bell, 1, 0);
     orb_ring_pat(&s->ring[1], 1, 1, "........X.....x.", 0, 0, 0);
     orb_ring_fol(&s->ring[2], 1, 1, "..x...x...x...x.", skank, 1, 0);
     orb_ring_fol(&s->ring[3], 1, 1, "X...x..x...x.x..", bass, 6, 0);
     s->dtime = 8; s->dfb = 62; s->ping = 1; s->dmix = 36; s->tired = 3;
-    s->rmix = 40; s->rsize = 85; s->rdecay = 70;
+    s->rmix = 40; s->rsize = 85; s->rdecay = 82;
     orb_mod_set(s, 0, SRC_LFO2, DST_ANG, 25);
     s->bg_level = 40; s->bg_prog = 1; s->bg_change = 1; s->bg_halo = 60; s->bg_silk = 50; s->bg_width = 60;
     s->bg_cut = 35; s->bg_glow = 15;
@@ -424,18 +426,19 @@ static void orb_system_sgra(orb_sys_t *s)
  * a chord a bar (the chords silent: only the arpeggio and the bass play them); a pixel lead */
 static void orb_system_boopbop(orb_sys_t *s)
 {
-    static const int8_t arp[] = {2, 3, 4, 5, 4, 3, 2, 3, 2, 3, 4, 5, 6, 5, 4, 3}, bass[] = {0, 0, 2, 0, 0, 0, 2, 1};
+    static const int8_t arp[] = {2, 3, 4, 5, 4, 3, 2, 3, 2, 3, 4, 5, 6, 5, 4, 3}, bass[] = {0, 0, 2, 0, 0, 0, 2, 1},
+                        bloop[] = {1, 2, 3};
     s->tuning = 4; s->sun = 0; s->bpm = 140; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_PIXEL, 60);
-    orb_put(s, ORB_A, LIB_BOOM, 99);
+    orb_put(s, ORB_A, LIB_BLOOP, 60); s->snd[ORB_A].oct = 2;
     orb_put(s, ORB_B, LIB_ZAP, 92);
     orb_put(s, ORB_C, LIB_PIXEL, 78);
     orb_put(s, ORB_D, LIB_PIXEL, 88); s->snd[ORB_D].oct = 0; s->snd[ORB_D].gate = 60;
-    orb_ring_pat(&s->ring[0], 1, 1, "X.......X..x....", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "X.......X..x....", bloop, 3, 0);
     orb_ring_pat(&s->ring[1], 1, 1, "....X.......X...", 0, 0, 0);
     orb_ring_fol(&s->ring[2], 1, 1, "xxxxxxxxxxxxxxxx", arp, 16, 0);
     orb_ring_fol(&s->ring[3], 1, 1, "x.x.x.x.x.x.x.x.", bass, 8, 0);
-    s->dtime = 3; s->dfb = 18; s->ping = 1; s->dmix = 14; s->rmix = 8; s->rsize = 40;
+    s->dtime = 3; s->dfb = 18; s->ping = 1; s->dmix = 14; s->rmix = 8; s->rsize = 40; s->rdecay = 58;
     s->bg_level = 0; s->bg_prog = 2; s->bg_change = 0; s->bg_halo = 0;
 }
 
@@ -454,7 +457,7 @@ static void orb_system_snowglobe(orb_sys_t *s)
     orb_ring_fol(&s->ring[1], 3, 4, "x.....x.....", toy, 2, 0);
     orb_ring_fol(&s->ring[2], 3, 4, "x.....x..... x.....x..x..", star, 3, 60);
     orb_ring_fol(&s->ring[3], 3, 4, "x.....x.....", bass, 2, 0);
-    s->dtime = 9; s->dfb = 36; s->ping = 1; s->dmix = 24; s->rmix = 45; s->rsize = 80;
+    s->dtime = 9; s->dfb = 36; s->ping = 1; s->dmix = 24; s->rmix = 45; s->rsize = 80; s->rdecay = 80;
     s->bg_level = 44; s->bg_prog = 6; s->bg_change = 1; s->bg_halo = 70; s->bg_silk = 50; s->bg_width = 65;
     s->bg_cut = 30; s->bg_glow = 15;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
@@ -464,18 +467,19 @@ static void orb_system_snowglobe(orb_sys_t *s)
  * glass arpeggiating the chord in sixteenths, stars at 3:2, a sub on the bass, a halo; the keys a tidal bell */
 static void orb_system_stardust(orb_sys_t *s)
 {
-    static const int8_t arp[] = {3, 4, 5, 4, 3, 4, 5, 6, 5, 4, 3, 2}, star[] = {2, 3, 4, 3, 5, 4, 3, 2}, sub[] = {0, 0, 2};
+    static const int8_t arp[] = {3, 4, 5, 4, 3, 4, 5, 6, 5, 4, 3, 2}, star[] = {2, 3, 4, 3, 5, 4, 3, 2}, sub[] = {0, 0, 2},
+                        bell[] = {1, 2};
     s->tuning = 1; s->sun = 4; s->bpm = 108; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_TIDAL, 58);
-    orb_put(s, ORB_A, LIB_THUMP, 88);
+    orb_put(s, ORB_A, LIB_BELL, 44); s->snd[ORB_A].oct = 1;
     orb_put(s, ORB_B, LIB_GLASS, 48);
     orb_put(s, ORB_C, LIB_STAR, 50);
     orb_put(s, ORB_D, LIB_SUB, 54); s->snd[ORB_D].gate = 80;
-    orb_ring_pat(&s->ring[0], 1, 1, "X.......X.......", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "X.......X.......", bell, 2, 0);
     orb_ring_fol(&s->ring[1], 1, 1, "x.xxx.xx x.xxx.xx", arp, 12, 0);
     orb_ring_fol(&s->ring[2], 3, 2, "x..x.x...x..x..x.x...x..", star, 8, 75);
     orb_ring_fol(&s->ring[3], 1, 2, "X.......x..x....", sub, 3, 0);
-    s->dtime = 8; s->dfb = 40; s->ping = 1; s->dmix = 24; s->rmix = 35; s->rsize = 75; s->rdecay = 66;
+    s->dtime = 8; s->dfb = 40; s->ping = 1; s->dmix = 24; s->rmix = 35; s->rsize = 75; s->rdecay = 76;
     s->bg_level = 40; s->bg_prog = 2; s->bg_change = 1; s->bg_halo = 55; s->bg_silk = 35; s->bg_width = 70;
     s->bg_cut = 30; s->bg_glow = 20; s->bloom = 30;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 35);
@@ -502,7 +506,7 @@ static void orb_system_alphacen(orb_sys_t *s)
     s->macro[MAC_TIDE] = 30;
     orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 25);
-    s->dtime = 6; s->dfb = 30; s->ping = 1; s->dmix = 20; s->rmix = 40; s->rsize = 75;
+    s->dtime = 6; s->dfb = 30; s->ping = 1; s->dmix = 20; s->rmix = 40; s->rsize = 75; s->rdecay = 80;
 }
 
 /* MOON NAP: a lullaby at 66 under the sun, the subharmonic series (ORBIT: Dm Bbmaj7 Gm7 Dm/F on A): a paw rocking the
@@ -520,7 +524,7 @@ static void orb_system_moonnap(orb_sys_t *s)
     orb_ring_fol(&s->ring[1], 3, 2, "x..... x..... x..... x.....", star, 4, 55);
     orb_ring_fol(&s->ring[2], 5, 4, "x...x... ....x...x...", toy, 4, 70);
     orb_ring_fol(&s->ring[3], 1, 4, "X...x...", sub, 2, 0);
-    s->dtime = 9; s->dfb = 40; s->ping = 1; s->dmix = 28; s->rmix = 50; s->rsize = 90; s->rdecay = 75;
+    s->dtime = 9; s->dfb = 40; s->ping = 1; s->dmix = 28; s->rmix = 50; s->rsize = 90; s->rdecay = 90;
     s->bg_level = 52; s->bg_prog = 2; s->bg_change = 1; s->bg_halo = 90; s->bg_silk = 50; s->bg_width = 70;
     s->bg_cut = 30; s->bg_glow = 20; s->bloom = 30;
     orb_mod_set(s, 0, SRC_CONJ, DST_MOON, 30);
@@ -548,7 +552,7 @@ static void orb_system_afterglow(orb_sys_t *s)
     orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
     for (r = 0; r < ORB_NRING; r++) s->ring[r].follow = 1;
     s->mutate = 12; s->var = 15;
-    s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 60; s->rsize = 95; s->rdecay = 80; s->rdamp = 50;
+    s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 30; s->rmix = 60; s->rsize = 95; s->rdecay = 94; s->rdamp = 50;
     s->macro[MAC_ORBIT] = 20;
     s->bg_level = 48; s->bg_prog = 2; s->bg_change = 1; s->bg_glow = 30; s->bg_silk = 40; s->bg_width = 65; s->bg_cut = 35;
     s->bg_halo = 80; s->bloom = 55; s->tired = 5;
@@ -561,20 +565,20 @@ static void orb_system_afterglow(orb_sys_t *s)
  * Am9 G6 Fmaj7 Em7); a lead */
 static void orb_system_pulsar(orb_sys_t *s)
 {
-    static const int8_t zap[] = {4, 4, 5, 4, 6}, bass[] = {0};
+    static const int8_t zap[] = {4, 4, 5, 4, 6}, bass[] = {0}, boop[] = {2, 1, 2, 3};
     s->tuning = 0; s->sun = 0; s->bpm = 128; s->keymode = KM_CHORD;
     orb_put(s, ORB_KEYS, LIB_LEAD, 56);
-    orb_put(s, ORB_A, LIB_BOOM, 96);
+    orb_put(s, ORB_A, LIB_BOOP, 54); s->snd[ORB_A].beam = 40;
     orb_put(s, ORB_B, LIB_TSSS, 88);
     orb_put(s, ORB_C, LIB_ZAP, 74); s->snd[ORB_C].beam = 60; s->snd[ORB_C].send = 30;
     orb_put(s, ORB_D, LIB_SUB, 62); s->snd[ORB_D].gate = 40;
-    orb_ring_pat(&s->ring[0], 1, 1, "X...x...X...x...", 0, 0, 0);
+    orb_ring_fol(&s->ring[0], 1, 1, "X...x...X...x...", boop, 4, 0);
     orb_ring_pat(&s->ring[1], 1, 1, "..x...x...x...x.", 0, 0, 0);
     orb_ring_fol(&s->ring[2], 1, 1, "x..x..x..x..x...", zap, 5, 0);
     orb_ring_fol(&s->ring[3], 1, 1, "..xx..xx..xx..x.", bass, 1, 0);
     s->cut = 74; s->res = 30; s->lrate[0] = 8; s->lshape[0] = LS_SINE;
     orb_mod_set(s, 0, SRC_LFO1, DST_CUT, 30);
-    s->dtime = 6; s->dfb = 36; s->ping = 1; s->dmix = 18; s->rmix = 20; s->rsize = 50;
+    s->dtime = 6; s->dfb = 36; s->ping = 1; s->dmix = 18; s->rmix = 20; s->rsize = 50; s->rdecay = 64;
     s->bg_level = 28; s->bg_prog = 5; s->bg_change = 1; s->bg_halo = 30; s->bg_silk = 45; s->bg_width = 55;
     s->bg_cut = 45; s->bg_glow = 8;
 }
@@ -600,7 +604,7 @@ static void orb_system_astralica(orb_sys_t *s)
     orb_put(s, ORB_D, LIB_BELL, 56);
     orb_ring_pat(&s->ring[0], 1, 4, "X.......", 0, 0, 0);
     orb_ring_set(&s->ring[1], &B); orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
-    s->dtime = 9; s->dfb = 62; s->ping = 1; s->dmix = 46; s->rmix = 62; s->rsize = 92; s->rdecay = 84; s->rdamp = 50;
+    s->dtime = 9; s->dfb = 62; s->ping = 1; s->dmix = 46; s->rmix = 62; s->rsize = 92; s->rdecay = 88; s->rdamp = 50;
     s->hshift = -12; s->hretro = 25; s->hgrain = 60;
     s->macro[MAC_GRAVITY] = 72; s->macro[MAC_ORBIT] = 20;
     orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
@@ -610,18 +614,18 @@ static void orb_system_astralica(orb_sys_t *s)
  * the eighths, plops at 3:2 on the rings' own notes (4:5:6:7), the drone held under; the keys her meow */
 static void orb_system_nomnom(orb_sys_t *s)
 {
-    static const int8_t chirp[] = {8, 12, 16, 14}, plop[] = {8, 10, 12, 14, 12, 10};
+    static const int8_t gulp[] = {0, 4}, chirp[] = {8, 12, 16, 14}, plop[] = {8, 10, 12, 14, 12, 10};
     s->tuning = 1; s->sun = 7; s->bpm = 88;
     orb_put(s, ORB_KEYS, LIB_MEOW, 62);
-    orb_put(s, ORB_A, LIB_THUMP, 92);
+    orb_put(s, ORB_A, LIB_BLOOP, 66); s->snd[ORB_A].oct = 2;   /* (a gulp on one and three) */
     orb_put(s, ORB_B, LIB_COMET, 96); s->snd[ORB_B].oct = 0; s->snd[ORB_B].send = 50;
     orb_put(s, ORB_C, LIB_BOOP, 86); s->snd[ORB_C].oct = 1;
     orb_put(s, ORB_D, LIB_DRONE, 30); s->snd[ORB_D].oct = 0; s->snd[ORB_D].flags |= SF_HOLD;
-    orb_ring_pat(&s->ring[0], 1, 1, "X.......X.......", 0, 0, 0);
+    orb_ring_pat(&s->ring[0], 1, 1, "X.......X.......", gulp, 2, 0);
     orb_ring_pat(&s->ring[1], 1, 2, "X...x.x. x.......", chirp, 4, 0);
     orb_ring_pat(&s->ring[2], 3, 2, "x.....x..x..x.....x..x..", plop, 6, 80);
     orb_ring_pat(&s->ring[3], 1, 4, "X...............", 0, 0, 0);
-    s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 40; s->rmix = 55; s->rsize = 90; s->rdecay = 80; s->rdamp = 50;
+    s->dtime = 7; s->dfb = 55; s->ping = 1; s->dmix = 40; s->rmix = 55; s->rsize = 90; s->rdecay = 86; s->rdamp = 50;
     s->macro[MAC_GRAVITY] = 72;
     orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 25);
@@ -645,7 +649,7 @@ static void orb_system_tummy(orb_sys_t *s)
     s->macro[MAC_TIDE] = 20; s->macro[MAC_GRAVITY] = 60;
     orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 40);
     orb_mod_set(s, 1, SRC_LFO2, DST_ECC, 25);
-    s->dtime = 6; s->dfb = 48; s->ping = 1; s->dmix = 34; s->rmix = 50; s->rsize = 80; s->rdecay = 72;
+    s->dtime = 6; s->dfb = 48; s->ping = 1; s->dmix = 34; s->rmix = 50; s->rsize = 80; s->rdecay = 82;
 }
 
 /* MULTIVERSE: her meow, echoing from universe to universe, 60, no beat: the drone held for four bars at a time, a
@@ -665,7 +669,7 @@ static void orb_system_multiverse(orb_sys_t *s)
     orb_ring_pat(&s->ring[2], 7, 4, "x......x...........x........", bell, 3, 80);
     orb_ring_pat(&s->ring[3], 3, 2, "x.......................", star, 2, 70);
     s->dtime = 10; s->dfb = 70; s->ping = 1; s->dmix = 50; s->tired = 5;
-    s->rmix = 70; s->rsize = 96; s->rdecay = 88; s->rdamp = 45; s->bloom = 40;
+    s->rmix = 70; s->rsize = 96; s->rdecay = 99; s->rdamp = 45; s->bloom = 40;
     s->macro[MAC_GRAVITY] = 72;
     s->bg_level = 26; s->bg_prog = 0; s->bg_halo = 90; s->bg_silk = 55; s->bg_width = 70; s->bg_cut = 30; s->bg_glow = 25;
 }
@@ -678,9 +682,11 @@ static void orb_system(uint32_t i, orb_sys_t *s)
         orb_system_moonnap, orb_system_afterglow, orb_system_pulsar, orb_system_astralica, orb_system_nomnom,
         orb_system_tummy, orb_system_multiverse};
     static const uint8_t MOOD_OF[ORB_NSYSTEM] = {1, 0, 2, 1, 3, 1, 2, 1, 1, 3, 0, 2, 2, 0, 2, 3, 2, 1, 1, 0};   /* (CUTE's) */
+    uint32_t r;
     orb_sys_clear(s, ORB_SYSTEM_NAME[i % ORB_NSYSTEM]);
     F[i % ORB_NSYSTEM](s);
     s->mood = MOOD_OF[i % ORB_NSYSTEM];
+    for (r = ORB_A; r <= ORB_D; r++) orb_hush(&s->snd[r]);
 }
 
 /* ---- the intro: the legend of Astralica (orbitrix.c's intro() plays it). Its own system: a drone on the keys, the
@@ -731,6 +737,16 @@ static void orb_lib_load(orb_snd_t *s, uint32_t li, uint32_t part)
     s->lib = (uint8_t)li;
 }
 static uint32_t orb_lib_kind(const orb_snd_t *s) { return ORB_LIB[s->lib < ORB_NLIB ? s->lib : 0].kind; }
+/* the drums whisper (D28): under a space a minute long a snare's or a hat's noise would fill it, so they play at a
+ * quarter of their level (-12 dB) and send nothing into it: the space is the notes'. (No system has a kick) */
+static void orb_hush(orb_snd_t *d)
+{
+    uint32_t k = orb_lib_kind(d);
+    if (k != LK_SNARE && k != LK_HAT) return;
+    d->level = (uint8_t)(d->level / 4u < 8u ? 8u : d->level / 4u);
+    d->send = 0;
+}
+
 static const char *orb_lib_name(const orb_snd_t *s) { return s->lib && s->lib < ORB_NLIB ? ORB_LIB[s->lib].name : "OWN"; }
 
 static void orb_intro_system(orb_sys_t *s)
@@ -750,18 +766,21 @@ static void orb_intro_system(orb_sys_t *s)
     orb_ring_set(&s->ring[0], &A); orb_ring_set(&s->ring[1], &B);
     orb_ring_set(&s->ring[2], &C); orb_ring_set(&s->ring[3], &D);
     s->ring[0].mute = 1;                    /* A only sounds when a planet is eaten (orb_part_on) */
-    s->dtime = 9; s->dfb = 62; s->ping = 1; s->dmix = 46; s->rmix = 62; s->rsize = 92; s->rdecay = 84; s->rdamp = 50;
+    s->dtime = 9; s->dfb = 62; s->ping = 1; s->dmix = 46; s->rmix = 62; s->rsize = 92; s->rdamp = 50;
+    s->rdecay = 45;                         /* (6.6 s, as the film was made: D28's law) */
     s->hshift = -12; s->hretro = 25; s->hgrain = 60;
     s->macro[MAC_GRAVITY] = 72; s->macro[MAC_ORBIT] = 20;
     orb_mod_set(s, 0, SRC_CONJ, DST_TIDE, 30);
 }
 /* ---- CUTE: a whole patch at once, in a mood. Each mood has its sounds by role, its tunings and chords, its speeds,
  * its space, and rhythms written by hand (a bank for each role: a few to pick from); every pitched ring FOLLOWs the
- * chords and the keys are CHORD keys, so whatever is made, and whatever is played on it, is in the chord sounding.
+ * chords and the keys are CHORD keys, so whatever is made, and whatever is played on it, is in the chord sounding;
+ * no kick (the beat a pitched pulse), the snares and hats whispering, the space long.
  * orb_mood turns a patch to a mood: its tempo, sounds, space and chords, the patterns kept */
 enum { ORB_MOOD_SLEEPY, ORB_MOOD_PLAYFUL, ORB_MOOD_SPARKLY, ORB_MOOD_ZOOMIES, ORB_NMOOD };
 static const char *const ORB_MOOD_NAME[ORB_NMOOD] = {"SLEEPY", "PLAYFUL", "SPARKLY", "ZOOMIES"};
-enum { RO_KICK, RO_SNARE, RO_MEL, RO_SPARK, RO_COUNT, RO_BASS };   /* a ring's role */
+enum { RO_PULSE, RO_SNARE, RO_MEL, RO_SPARK, RO_COUNT, RO_BASS };   /* a ring's role (the pulse: on the beat, pitched,
+                                                                     * where a kick would be: no kick, D28) */
 typedef struct {
     uint8_t bpm_lo, bpm_hi, swing_hi, halo_lo, halo_hi, level, change, mutate;
     uint8_t role[ORB_NRING];                /* A..D's roles */
@@ -773,21 +792,21 @@ typedef struct {
 } orb_mood_t;
 static const orb_mood_t ORB_MOOD[ORB_NMOOD] = {
     {62, 76, 0, 85, 95, 52, 1, 6, {RO_MEL, RO_SPARK, RO_COUNT, RO_BASS}, {3, 2, 0}, {6, 1, 3, 0xFF},
-     {{LIB_THUMP}, {LIB_PAT}, {LIB_PAW, LIB_TOY, LIB_BELL}, {LIB_STAR}, {LIB_TOY, LIB_GLASS}, {LIB_SUB, LIB_PURR}},
-     {LIB_MEW, LIB_TIDAL, LIB_BELL}, {1, 3, 5, 1}, {1, 2, 4, 4}, 9, 40, 28, 50, 90, 75},
-    {96, 112, 26, 50, 65, 38, 1, 10, {RO_KICK, RO_SNARE, RO_MEL, RO_BASS}, {0, 3, 0xFF}, {2, 4, 1, 0xFF},
-     {{LIB_BOOM, LIB_THUMP}, {LIB_CLAP, LIB_PAT}, {LIB_BOOP, LIB_SQUEAK, LIB_BLOOP, LIB_TOY}, {LIB_STAR}, {LIB_TOY},
+     {{LIB_GLASS}, {LIB_PAT}, {LIB_PAW, LIB_TOY, LIB_BELL}, {LIB_STAR}, {LIB_TOY, LIB_GLASS}, {LIB_SUB, LIB_PURR}},
+     {LIB_MEW, LIB_TIDAL, LIB_BELL}, {1, 3, 5, 1}, {1, 2, 4, 4}, 9, 40, 28, 50, 90, 90},
+    {96, 112, 26, 50, 65, 38, 1, 10, {RO_PULSE, RO_SNARE, RO_MEL, RO_BASS}, {0, 3, 0xFF}, {2, 4, 1, 0xFF},
+     {{LIB_BOOP, LIB_BLOOP}, {LIB_CLAP, LIB_PAT}, {LIB_BOOP, LIB_SQUEAK, LIB_BLOOP, LIB_TOY}, {LIB_STAR}, {LIB_TOY},
       {LIB_PURR, LIB_GROWL}},
-     {LIB_TOY, LIB_PAW, LIB_PIXEL, LIB_MEW}, {1, 1, 1, 1}, {1, 1, 1, 1}, 6, 32, 22, 30, 60, 60},
-    {88, 104, 10, 70, 85, 46, 1, 12, {RO_KICK, RO_SPARK, RO_COUNT, RO_BASS}, {1, 3, 0}, {2, 3, 7, 4},
-     {{LIB_THUMP}, {LIB_PAT}, {LIB_GLASS}, {LIB_STAR}, {LIB_GLASS, LIB_BELL}, {LIB_SUB}},
-     {LIB_TIDAL, LIB_BELL, LIB_STAR}, {1, 3, 5, 1}, {1, 2, 4, 2}, 8, 46, 30, 40, 80, 70},
-    {120, 136, 0, 35, 50, 36, 0, 8, {RO_KICK, RO_SNARE, RO_SPARK, RO_BASS}, {0, 4, 0xFF}, {2, 4, 5, 0xFF},
-     {{LIB_BOOM}, {LIB_CLAP}, {LIB_SQUEAK}, {LIB_SQUEAK, LIB_ZAP, LIB_PIXEL, LIB_BLOOP}, {LIB_ZAP}, {LIB_GROWL, LIB_PURR}},
+     {LIB_TOY, LIB_PAW, LIB_PIXEL, LIB_MEW}, {1, 1, 1, 1}, {1, 1, 1, 1}, 6, 32, 22, 30, 60, 66},
+    {88, 104, 10, 70, 85, 46, 1, 12, {RO_PULSE, RO_SPARK, RO_COUNT, RO_BASS}, {1, 3, 0}, {2, 3, 7, 4},
+     {{LIB_BELL, LIB_GLASS}, {LIB_PAT}, {LIB_GLASS}, {LIB_STAR}, {LIB_GLASS, LIB_BELL}, {LIB_SUB}},
+     {LIB_TIDAL, LIB_BELL, LIB_STAR}, {1, 3, 5, 1}, {1, 2, 4, 2}, 8, 46, 30, 40, 80, 82},
+    {120, 136, 0, 35, 50, 36, 0, 8, {RO_PULSE, RO_SNARE, RO_SPARK, RO_BASS}, {0, 4, 0xFF}, {2, 4, 5, 0xFF},
+     {{LIB_BOOP, LIB_BLOOP}, {LIB_CLAP}, {LIB_SQUEAK}, {LIB_SQUEAK, LIB_ZAP, LIB_PIXEL, LIB_BLOOP}, {LIB_ZAP}, {LIB_GROWL, LIB_PURR}},
      {LIB_PIXEL, LIB_LEAD}, {1, 1, 3, 1}, {1, 1, 2, 1}, 5, 26, 18, 22, 50, 60},
 };
 /* the rhythms, by role and mood (16 steps unless the role runs at 3:2 (24) or 5:4 (20); x a hit, X an accent) */
-static const char *const ORB_CUTE_KICK[ORB_NMOOD][3] = {
+static const char *const ORB_CUTE_PULSE[ORB_NMOOD][3] = {
     {"X.......x.......", "X...............", "X.......X......."},
     {"X......x..x.....", "X..x..x...x.....", "X.....x.X......."},
     {"X.........x.....", "X.......X.....x.", "X...........x..."},
@@ -833,6 +852,7 @@ static void orb_follow_set(orb_sys_t *s, uint32_t r, uint32_t on)
     if (!g->follow == !on) return;
     for (i = 0; i < ORB_NSTEP; i++) {
         int32_t d = g->deg + g->dg[i], p = g->follow ? orb_chord_tone(id, d) : orb_degree(s, d), best = 0, bd = 1 << 30, k;
+        if (g->on[i] & ORB_ON_FIX) { g->dg[i] = (int8_t)orb_clamp(d, -14, 21); continue; }   /* (REC's: the tuning's) */
         for (k = -10; k <= 20; k++) {
             int32_t q = on ? orb_chord_tone(id, k) : orb_degree(s, k), e = q > p ? q - p : p - q;
             if (e < bd) { bd = e; best = k; }
@@ -846,6 +866,7 @@ static void orb_cute_snd(orb_sys_t *s, uint32_t part, uint32_t li, uint32_t role
 {
     s->snd[part].pan = 50;
     orb_lib_load(&s->snd[part], li, part);
+    if (part != ORB_KEYS) orb_hush(&s->snd[part]);   /* (the drums whisper) */
     if (role == RO_BASS) { s->snd[part].flags &= (uint8_t)~SF_LEGATO; s->snd[part].level = (uint8_t)(s->snd[part].level * 8u / 10u); }
     if (role == RO_SPARK) s->snd[part].pan = 38;   /* (a little apart) */
     if (role == RO_COUNT) s->snd[part].pan = 62;
@@ -902,7 +923,12 @@ static void orb_cute(orb_sys_t *s, uint32_t mood, uint32_t seed)
         orb_ring_t *g = &s->ring[r];
         orb_cute_snd(s, ORB_A + r, orb_pick(&rng, m->snd[role], 4), role);
         switch (role) {
-        case RO_KICK: orb_ring_pat(g, p, q, ORB_CUTE_KICK[mood][k], 0, 0, 0); break;
+        case RO_PULSE: {                    /* (on the beat: the chord's notes over its bass) */
+            static const int8_t P[3][4] = {{1, 2, 1, 3}, {2, 1, 2, 2}, {1, 3, 2, 1}};
+            orb_ring_pat(g, p, q, ORB_CUTE_PULSE[mood][k], P[orb_xs(&rng) % 3u], 4, 0);
+            g->follow = 1;
+            break;
+        }
         case RO_SNARE: orb_ring_pat(g, p, q, ORB_CUTE_SNARE[mood][k], 0, 0, 0); break;
         case RO_MEL: orb_cute_mel(g, p, q, ORB_CUTE_MEL[mood][k], &rng, 1, 6, mood == ORB_MOOD_SLEEPY ? 90 : 0); break;
         case RO_SPARK:
@@ -923,7 +949,7 @@ static void orb_cute(orb_sys_t *s, uint32_t mood, uint32_t seed)
     orb_mod_set(s, 1, SRC_LFO2, DST_ANG, 25);
     (void)v;
 }
-/* a patch turned to a mood: its tempo, swing, space and chords; its sounds by kind (a kick the mood's kick, a bass its
+/* a patch turned to a mood: its tempo, swing, space and chords; its sounds by kind (a kick the mood's pulse, a bass its
  * bass, the pitched ones its melodies, the keys its keys); its patterns, sun and tuning kept */
 static void orb_mood(orb_sys_t *s, uint32_t mood)
 {
@@ -934,12 +960,12 @@ static void orb_mood(orb_sys_t *s, uint32_t mood)
     orb_cute_snd(s, ORB_KEYS, orb_pick(&rng, m->keys, 4), RO_MEL);
     for (r = 0; r < ORB_NRING; r++) {
         uint32_t k = orb_lib_kind(&s->snd[ORB_A + r]), role, li;
-        role = k == LK_KICK ? RO_KICK : k == LK_SNARE ? RO_SNARE : k == LK_HAT ? RO_SNARE : k == LK_BASS ? RO_BASS :
+        role = k == LK_KICK ? RO_PULSE : k == LK_SNARE ? RO_SNARE : k == LK_HAT ? RO_SNARE : k == LK_BASS ? RO_BASS :
                (r & 1u) ? RO_SPARK : RO_MEL;
         li = k == LK_HAT ? (mood == ORB_MOOD_SLEEPY ? LIB_TICK : LIB_TSSS) : orb_pick(&rng, m->snd[role], 4);
         orb_cute_snd(s, ORB_A + r, li, role);
-        if (mood == ORB_MOOD_SLEEPY && (role == RO_KICK || role == RO_SNARE)) s->snd[ORB_A + r].level /= 2;   /* (hushed) */
-        if (role != RO_KICK && role != RO_SNARE && k != LK_HAT) orb_follow_set(s, r, 1);
+        if (mood == ORB_MOOD_SLEEPY && role == RO_SNARE) s->snd[ORB_A + r].level /= 2;   /* (hushed) */
+        if (role != RO_SNARE && k != LK_HAT) orb_follow_set(s, r, 1);
     }
 }
 

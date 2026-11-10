@@ -33,7 +33,10 @@ What is here (docs/orbitrix/PLAN.md):
   ORB_PADW     its voice's wave: a soft saw, 8 harmonics and 4 (for the high notes: nothing folds over at 22 kHz)
   ORB_SILK     SILK's low-pass, a pole's coefficient (Q15) for 0..99: 9 kHz .. 400 Hz
   ORB_HALO_*   HALO, the background radiation's own space: its lines and allpasses (at 11 kHz), each line's feedback for
-               HALO 0..99 (3 s .. 40 s to -60 dB), the output's gain for each, the seconds, the lines' damping (3 kHz)
+               HALO 0..99 (3 s .. 120 s to -60 dB), the output's gain for each, the seconds, the lines' damping (3 kHz)
+  ORB_NEB_*    NEBULA's lines (at 22 kHz, full SIZE), the lines' feedback for DECAY 0..99 (0.6 s .. 2 minutes to
+               -60 dB), what goes in for each (a long tail is not let build up as loud as it would), the tenths of a second,
+               how much of DAMP's darkening a pass keeps (a long tail goes round more: its highs as long, in share)
 """
 import itertools
 import math
@@ -567,11 +570,11 @@ def main():
     bg_info = (len(BG_PROGS), len(cat), bgv)
     # ---- HALO: the background radiation's own space, all wet, at a quarter of the rate (11 kHz: its chords are soft
     # already). Four lines (primes, 161 .. 273 ms), four allpasses before them (10 .. 31 ms); each line's feedback for
-    # HALO 0..99 (0: dry, its tail gone in 1.5 s; 1..99: 3 s .. 40 s to -60 dB), and the output's gain that keeps it
-    # as loud whatever its length (a long one builds up: its energy goes as 1 / (1 - g^2))
+    # HALO 0..99 (0: dry, its tail gone in 1.5 s; 1..99: 3 s .. 2 minutes to -60 dB), and the output's gain that keeps
+    # it as loud whatever its length (a long one builds up: its energy goes as 1 / (1 - g^2))
     FS4 = FS / 4
     hlen, hap = [1777, 2203, 2609, 3011], [113, 162, 241, 337]
-    rt = [1.5] + [3.0 * (40.0 / 3.0) ** ((v - 1) / 98.0) for v in range(1, 100)]
+    rt = [1.5] + [3.0 * (120.0 / 3.0) ** ((v - 1) / 98.0) for v in range(1, 100)]
     hg, hout = [], []
     for t in rt:
         g = [10 ** (-3.0 * L / (FS4 * t)) for L in hlen]
@@ -588,6 +591,26 @@ def main():
     parts.append(c_array("ORB_HALO_OUT", "int16_t", hout))
     parts.append(c_array("ORB_HALO_SEC", "uint8_t", [int(round(t)) for t in rt]))
     parts.append(f"#define ORB_HALO_DAMP {int(round(32767 * (1 - math.exp(-2 * math.pi * 3000.0 / FS4))))}\n")
+    # ---- NEBULA's DECAY: its tail to -60 dB from 0.6 s to two minutes, a power of 200 (as it is heard: each step the
+    # same much longer), at full SIZE (the engine keeps it whatever the SIZE: shorter lines, a feedback nearer 1); and
+    # what goes in, so that a long tail, which builds up (its energy goes as 1 / (1 - g^2)), builds half as much (in
+    # dB) as it would past a 5 s one: a minute is a space, not a roar. Mean line: the four at 22 kHz
+    FS2 = FS / 2
+    nlen = [1499, 1889, 2381, 2999]
+    lm = sum(nlen) / 4.0
+    nrt = [0.6 * 200.0 ** (v / 99.0) for v in range(100)]
+    ng = [10 ** (-3.0 * lm / (FS2 * t)) for t in nrt]
+    g5 = 10 ** (-3.0 * lm / (FS2 * 5.0))
+    nin = [int(round(32767 * min(1.0, ((1 - x * x) / (1 - g5 * g5)) ** 0.25))) for x in ng]
+    parts.append(c_array("ORB_NEB_LEN", "int16_t", nlen))
+    parts.append(c_array("ORB_NEB_G", "int16_t", [int(round(32767 * x)) for x in ng]))
+    parts.append(c_array("ORB_NEB_IN", "int16_t", nin))
+    parts.append(c_array("ORB_NEB_TS", "uint16_t", [int(round(10 * t)) for t in nrt]))
+    # DAMP darkens each pass as much more as the tail is longer than 5 s goes round less (its one-pole's (1 - a) / a
+    # times sqrt((1 - g) / (1 - g5)), never more than as set): so DAMP is the tail's colour, the highs' length a share
+    # of the lows' whatever DECAY, and a two-minute tail is two minutes in the middle too, not cut short by the highs
+    nds = [int(round(32767 * min(1.0, math.sqrt((1 - x) / (1 - g5))))) for x in ng]
+    parts.append(c_array("ORB_NEB_DS", "int16_t", nds))
 
     # ---- the moon's ratios
     moons = [("1", 1.0), ("2", 2.0), ("3", 3.0), ("4", 4.0), ("5", 5.0), ("6", 6.0), ("7", 7.0), ("8", 8.0),

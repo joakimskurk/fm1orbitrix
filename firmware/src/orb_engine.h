@@ -39,6 +39,7 @@ enum { ORB_KEYS = 0, ORB_A, ORB_B, ORB_C, ORB_D };
 enum { DIR_FWD, DIR_REV, DIR_PING, DIR_SPIRAL, DIR_RND, ORB_NDIR };
 enum { LOG_FREE, LOG_AND, LOG_NOT, LOG_XOR, LOG_CONJ, ORB_NLOGIC };
 enum { MAC_CHAOS, MAC_SPECTRAL, MAC_GRAVITY, MAC_FRACT, MAC_ORBIT, MAC_TIDE, MAC_HORIZON, ORB_NMACRO };
+#define ORB_ON_FIX 4u                       /* (a step's on: REC's note, see orb_ring_t) */
 enum { KM_SOLAR, KM_HARMONIC, KM_CHORD, ORB_NKM };   /* KM_CHORD: every key a note of the chord now */
 enum { LS_SINE, LS_TRI, LS_SAW, LS_SQR, LS_SH, LS_DRIFT, ORB_NLSHAPE };
 enum { SRC_OFF, SRC_LFO1, SRC_LFO2, SRC_ORBX, SRC_ORBY, SRC_RND, SRC_STEP, SRC_CONJ, SRC_VEL, SRC_MODW, SRC_AFT, ORB_NSRC };
@@ -98,7 +99,8 @@ typedef struct {                            /* a ring */
     int8_t deg;                             /* the degree it sings (of the tuning), -14..21 */
     uint8_t mute, follow, rsv;              /* follow: its degrees are the notes of the chord now (FOLLOW), not the
                                              * tuning's: 0 the chord's bass, 1 the next note up, ... an octave a round */
-    uint8_t on[ORB_NSTEP];                  /* 0 rest, 1 hit, 2 accent */
+    uint8_t on[ORB_NSTEP];                  /* 0 rest, 1 hit, 2 accent; + ORB_ON_FIX: a note REC wrote, which plays
+                                             * the tuning's degree whether the ring FOLLOWs or not (the note played) */
     int8_t dg[ORB_NSTEP];                   /* each step's degree, added to deg */
 } orb_ring_t;                               /* 140 B */
 
@@ -127,7 +129,7 @@ typedef struct {
      * its glow into NEBULA, SILK (its highs softer), its chords (a progression, ORB_BGPROG_NAME), WIDTH (each voice
      * two, a few cents apart, one each side), the low cut (of it, and of what goes into NEBULA); its temperature: the
      * octave, -2..1; CHANGE: a chord every 1, 2, 4 or 8 bars (0..3); OUT: faded out, its settings kept (SEL+GLO);
-     * HALO: its own space, all wet (0: dry; 1..99: 3 s .. 40 s long) */
+     * HALO: its own space, all wet (0: dry; 1..99: 3 s .. 2 minutes long) */
     uint8_t bg_level, bg_glow, bg_silk, bg_prog, bg_width, bg_cut;
     int8_t bg_temp;
     uint8_t bloom;                          /* NEBULA's own light back into it: longer, denser, 0..99 */
@@ -169,7 +171,9 @@ typedef struct {
 typedef struct {
     uint32_t base, next;                    /* the step's unswung tick, the tick it fires on */
     uint32_t k, pos, spin, laps;            /* steps so far, position, SPIRAL's turn, laps */
-    uint8_t cur, lit, fired, rsv;           /* the step now, whether it is a hit, whether it fired */
+    uint8_t cur, lit, fired;                /* the step now, whether it is a hit, whether it fired */
+    volatile uint8_t skip;                  /* REC: a step not to play once (the key played it just now): k % 255 + 1
+                                             * of it, 0 none (the main loop writes it, the next step clears it) */
     uint32_t vm[2];                         /* MUTATE: the steps this lap plays otherwise than written (a bit a step) */
     uint8_t von[ORB_NSTEP];                 /* ... and what they play instead (the pattern itself is never written) */
     int8_t vdg[ORB_NSTEP];
@@ -207,6 +211,7 @@ typedef struct {
     uint32_t T, Tf;                         /* the clock: ticks, and the fraction (Q16). It always runs (LFOs, the pad);
                                                PLAY restarts it, and only then do the rings step */
     uint32_t rnd_k;                         /* the base step RND last took a value on */
+    volatile uint32_t novary;               /* rings MUTATE leaves as written (a bit a ring: the one REC writes) */
     uint32_t rng, ages, vrng;               /* (vrng: MUTATE's own, so its draws leave the rest's alone) */
     uint32_t lph[2], orbph;                 /* LFO and orbit pad phases */
     int32_t lval[2], lsh[2], lsh0[2];       /* LFO values Q15; S&H and DRIFT's targets */
@@ -226,6 +231,8 @@ typedef struct {
                                              * times r_q, how clear it is: a moved sun clears it), BLOOM's share, the
                                              * low cut's state, its own light (for BLOOM), the low cut's coefficient */
     uint32_t r_sun, r_dip;                  /* (r_dip: the clearing going down, ~50 ms, before it comes back) */
+    int32_t r_in;                           /* NEBULA: what of its sends goes in (Q15: a long DECAY, less) */
+    int32_t r_ef[4];                        /* ... and what each line's last write rounded away (Q16), carried */
     /* BACKGROUND RADIATION, at NEBULA's half rate: each voice's two oscillators (phases, steps), its amplitude (and its
      * step a half-rate frame), its note now (1/256 semitone, 0 none), its fade (Q15: down to change its note, up when
      * it has it: a note never glides), its wave; the chord now and the ticks since it came; the swell; WIDTH, SILK,
@@ -797,7 +804,7 @@ static uint32_t orb_step_on(const orb_t *o, uint32_t r, uint32_t i, int32_t *dg)
 
 /* MUTATE, at a ring's lap: the next lap's variation of the pattern, drawn afresh from the pattern as written (so it never
  * drifts away from it, and the pattern itself is never written). Some hits move to a free neighbour, some degrees go up
- * or down by 1 + VAR/25. MUTATE (+ CHAOS / 2) 0..99: how many (1 .. a quarter of the ring) and how likely each */
+ * or down by 1 + VAR/25; a note REC wrote stays as it was played. MUTATE (+ CHAOS / 2) 0..99: how many (1 .. a quarter of the ring) and how likely each */
 static void orb_vary(orb_t *o, uint32_t r)
 {
     orb_rstate_t *R = &o->rs[r];
@@ -806,13 +813,15 @@ static void orb_vary(orb_t *o, uint32_t r)
     uint32_t len = g->len < 1u ? 1u : g->len > ORB_NSTEP ? ORB_NSTEP : g->len, amt, n, k;
     int32_t span = 1 + (int32_t)sy->var / 25;
     R->vm[0] = R->vm[1] = 0;
+    if (o->novary >> r & 1u) return;        /* (REC: the lap plays what is played into it) */
     amt = (uint32_t)sy->mutate + sy->macro[MAC_CHAOS] / 2u;
     if (amt > 99u) amt = 99u;
     if (!amt) return;
     n = 1u + amt * len / 400u;
     for (k = 0; k < 16u; k++) {             /* (16 draws at most, whatever the ring) */
         uint32_t x = orb_xs(&o->vrng), i = x % len, j;
-        if (k >= n || (x >> 8) % 100u >= amt || !g->on[i] || (R->vm[i >> 5] >> (i & 31u) & 1u)) continue;
+        if (k >= n || (x >> 8) % 100u >= amt || !g->on[i] || (g->on[i] & ORB_ON_FIX) ||   /* (REC's notes stay) */
+            (R->vm[i >> 5] >> (i & 31u) & 1u)) continue;
         if ((x >> 16) & 1u) {               /* the hit moves to a free neighbour */
             j = ((x >> 17) & 1u) ? (i + 1u) % len : (i + len - 1u) % len;
             if (g->on[j] || (R->vm[j >> 5] >> (j & 31u) & 1u)) continue;
@@ -899,9 +908,14 @@ static void orb_clock(orb_t *o)
     for (r = 0; r < ORB_NRING; r++) {      /* pass 2: the logic, the conjunctions, the hits */
         orb_rstate_t *R = &o->rs[r];
         orb_ring_t *g = &sy->ring[r];
-        uint32_t t = g->ltgt % ORB_NRING, q, conj = 0, fire, prob;
+        uint32_t t = g->ltgt % ORB_NRING, q, conj = 0, fire, prob, on;
         int32_t vel, pitch, deg, dg;
         if (!(stepping >> r & 1u)) continue;
+        if (R->skip) {                      /* REC put the note just played here: it is not played twice */
+            uint32_t sk = R->skip == (uint8_t)(R->k % 255u + 1u);
+            R->skip = 0;
+            if (sk) continue;
+        }
         for (q = 0; q < ORB_NRING; q++)
             if (q != r && (stepping >> q & 1u) && o->rs[q].lit && tick[q] == tick[r] && !sy->ring[q].mute) conj++;
         switch (g->logic % ORB_NLOGIC) {
@@ -917,13 +931,14 @@ static void orb_clock(orb_t *o)
         if (!fire || g->mute) continue;
         R->fired = 1;
         /* velocity: a hit 0.7, an accent 1.0, each other ring in the conjunction +0.15; HUM */
-        vel = orb_step_on(o, r, R->cur, &dg) == 2u ? 32767 : 22937;
+        on = orb_step_on(o, r, R->cur, &dg);
+        vel = (on & 3u) == 2u ? 32767 : 22937;
         vel += (int32_t)conj * 4915;
         if (sy->hum) vel -= (int32_t)(orb_xs(&o->rng) % 6000u) * sy->hum / 99;
         vel = orb_clamp(vel, 3000, 32767);
         deg = g->deg + dg;
         pitch = (36 + (int32_t)(sy->sun % 12u)) * 256 +
-                (g->follow ? orb_chord_tone(orb_chord_at(sy, o->T), deg) : orb_degree(sy, deg));
+                (g->follow && !(on & ORB_ON_FIX) ? orb_chord_tone(orb_chord_at(sy, o->T), deg) : orb_degree(sy, deg));
         orb_ring_fire(o, r, pitch, vel);
         if (conj) nconj++;
         /* FRACT: a hit may split into 2..4 */
@@ -1084,20 +1099,28 @@ static void orb_fx_tick(orb_t *o)
     }
     /* NEBULA: line lengths by size, the decay, the damping */
     {
-        static const int16_t BASE[4] = {1499, 1889, 2381, 2999};   /* (at 22 kHz: 68 .. 136 ms) */
         int32_t sz = 11000 + (int32_t)sy->rsize * 220, i;   /* Q15: 0.34 .. 1.0 */
         for (i = 0; i < 4; i++) {           /* a new size: the lines glide there, a frame a tick (a jump would click) */
-            int32_t tl = orb_clamp((BASE[i] * sz) >> 15, 200, (int32_t)ORB_RLEN - 16);
+            int32_t tl = orb_clamp((ORB_NEB_LEN[i] * sz) >> 15, 200, (int32_t)ORB_RLEN - 16);   /* (68 .. 136 ms) */
             if (!o->r_len[i]) o->r_len[i] = tl;
             else o->r_len[i] += tl > o->r_len[i] ? 1 : tl < o->r_len[i] ? -1 : 0;
         }
-        o->r_g = 16384 + (int32_t)sy->rdecay * 158;          /* 0.5 .. 0.977 */
-        o->r_damp = 4000 + (99 - (int32_t)sy->rdamp) * 290;  /* the lines' low-pass */
-        /* BLOOM: its own light back into it: the lines' feedback up towards 0.985 (much longer), and 0.01 of its wet
-         * again through the diffusers (denser); the two never sum past 0.995, so it is stable whatever the rest. A sun
-         * that moves clears it a moment (r_q 0.55 -> 1 in ~0.6 s), so the old chord's tail does not clash */
-        if (sy->bloom) o->r_g += (32276 - o->r_g) * (int32_t)sy->bloom / 99;
+        /* DECAY: 0.6 s .. two minutes to -60 dB (ORB_NEB_G, at full SIZE: a smaller one's shorter lines go round more
+         * often, so their feedback is nearer 1 by as much, and the tail is as long); a long one is fed less (ORB_NEB_IN) */
+        o->r_g = 32768 - (((32768 - (int32_t)ORB_NEB_G[sy->rdecay % 100u]) * sz) >> 15);
+        o->r_in = ORB_NEB_IN[sy->rdecay % 100u];
+        {   /* the lines' low-pass (a, Q15): DAMP, its (1 - a) / a shrunk as the tail is longer (ORB_NEB_DS): the colour */
+            int32_t k0 = 28768 - (99 - (int32_t)(sy->rdamp % 100u)) * 290, b = (k0 << 15) / (32768 - k0);
+            b = ((b >> 4) * ORB_NEB_DS[sy->rdecay % 100u]) >> 11;
+            o->r_damp = (int32_t)((1u << 30) / (uint32_t)(32768 + b));
+        }
+        /* BLOOM: its own light back into it: the lines' feedback up towards 0.985 (longer, if it is not yet), and 0.01
+         * of its wet again through the diffusers (denser); the two never sum past 0.999, so it is stable whatever the
+         * rest. A sun that moves clears it a moment (r_q 0.55 -> 1 in ~0.6 s), so the old chord's tail does not clash */
+        if (sy->bloom && o->r_g < 32276) o->r_g += (32276 - o->r_g) * (int32_t)sy->bloom / 99;
+        if (o->r_g > 32735) o->r_g = 32735;
         o->r_b = 327 * (int32_t)sy->bloom / 99;
+        if (o->r_g + o->r_b > 32735) o->r_b = 32735 - o->r_g;
         if (!o->r_q) { o->r_q = 32767; o->r_sun = sy->sun; }   /* (at the start: whole) */
         if (sy->sun != o->r_sun) { o->r_sun = sy->sun; if (sy->bg_level || sy->bloom) o->r_dip = 1; }
         if (o->r_dip) { o->r_q -= 220; if (o->r_q <= 18000) { o->r_q = 18000; o->r_dip = 0; } }   /* down in ~50 ms */
@@ -1177,7 +1200,7 @@ static void orb_fx_tick(orb_t *o)
         }
     }
     /* HALO: the background radiation's own space, all wet (a quarter rate: four allpasses, four lines in a Hadamard,
-     * damped at 3 kHz, two of them swimming). Its length 3 s .. 40 s; a moved sun clears it a moment, as NEBULA. It
+     * damped at 3 kHz, two of them swimming). Its length 3 s .. 2 minutes; a moved sun clears it a moment, as NEBULA. It
      * runs while the chords sound and until its tail is silent (rounded toward zero, it gets there) */
     {
         uint32_t k, v = sy->bg_halo % 100u;
@@ -1274,7 +1297,7 @@ static void orb_fx_render(orb_t *o, int32_t *out)
             static const int16_t APL[2] = {120, 278};
             uint32_t k;
             int32_t h0, h1, h2, h3, pl, pr;
-            rin = o->r_acc;
+            rin = o->r_in >= 32767 ? o->r_acc : (int32_t)(((int64_t)o->r_acc * o->r_in) >> 15);   /* (a long tail: less in) */
             o->r_acc = 0;
             pl = pr = 0;
             if (o->bg_on) {                 /* BACKGROUND RADIATION: each voice two oscillators, A left and B right
@@ -1414,14 +1437,21 @@ static void orb_fx_render(orb_t *o, int32_t *out)
                     yv = mm->rl[k][r0] + (((mm->rl[k][r1] - mm->rl[k][r0]) * mf) >> 8);
                 } else
                     yv = mm->rl[k][ri];
-                o->r_lp[k] += orb_rz((yv - o->r_lp[k]) * o->r_damp, 15);
+                o->r_lp[k] = orb_pole(o->r_lp[k], yv, 32768 - o->r_damp, 15);   /* (lands on it: a quiet tail is not
+                                             * worn a bit a frame, so a long one is as long as DECAY says) */
                 y[k] = o->r_lp[k];
             }
             h0 = y[0] + y[1]; h1 = y[0] - y[1]; h2 = y[2] + y[3]; h3 = y[2] - y[3];
             y[0] = h0 + h2; y[1] = h1 + h3; y[2] = h0 - h2; y[3] = h1 - h3;   /* x 2 */
             for (k = 0; k < 4u; k++) {
-                int64_t v = (int64_t)y[k] * o->r_ge;   /* (Hadamard / 2) * g, rounded once, toward zero */
-                int32_t wv = (int32_t)((v + (v < 0 ? 65535 : 0)) >> 16) + rin;
+                /* (Hadamard / 2) * g, rounded toward zero, what it rounded away carried into the line's next frame
+                 * while it is loud (so a tail two minutes long is not worn away a bit a pass: the lines are 16 bits);
+                 * quiet (16 or less), nothing carried: it ends */
+                int64_t v = (int64_t)y[k] * o->r_ge + o->r_ef[k];
+                int32_t q = (int32_t)((v + (v < 0 ? 65535 : 0)) >> 16), wv;
+                o->r_ef[k] = (uint32_t)(q + 16) > 32u ? (int32_t)((uint32_t)v - ((uint32_t)q << 16)) : 0;   /* (the rest
+                                             * is under 2^16 either way: 32 bits do) */
+                wv = q + rin;
                 if (wv > 24576 || wv < -24576) {   /* a full nebula saturates, warmly: a soft knee, never a hard clip */
                     int32_t dk = (wv < 0 ? -wv : wv) - 24576;
                     dk = 24576 + dk * 8192 / (8192 + dk);

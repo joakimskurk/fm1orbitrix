@@ -410,6 +410,47 @@ static void test_follow(void)
     CHECK(keys > 1000 && !kbad, "chord keys: %u of %u outside the chord", kbad, keys);
 }
 
+/* REC's notes: on a FOLLOWing ring, a step REC wrote (ORB_ON_FIX) plays the tuning's note it was given whatever chord
+ * comes, MUTATE leaves it, and a step REC marks to skip (the key played it just now) is not played once, then is */
+static void test_recfix(void)
+{
+    static int32_t out[64];
+    static const int8_t mel[] = {0, 1, 2, 3, 4, 2, 1, 3};
+    uint32_t tick, fl = 0, fixed = 0, fbad = 0, moved = 0, k, skipped = 0, after = 0, armed = 0, laps0 = 0;
+    orb_system(2, &S);
+    S.bg_prog = 7; S.bg_change = 0; S.bpm = 150; S.mutate = 99; S.var = 99; S.swing = 0; S.hum = 0;
+    for (k = 0; k < ORB_NRING; k++) S.ring[k].mute = 1;
+    orb_ring_pat(&S.ring[0], 1, 1, "xxxxxxxx", mel, 8, 0);
+    S.ring[0].follow = 1; S.ring[0].mute = 0; S.ring[0].prob = 99; S.ring[0].logic = 0; S.ring[0].dir = DIR_FWD;
+    for (k = 0; k < 8u; k += 2u) { S.ring[0].on[k] |= ORB_ON_FIX; S.ring[0].dg[k] = (int8_t)(k / 2u + 1u); }
+    orb_init(&O, &S, &MEM);
+    orb_play(&O, 1);
+    for (tick = 0; tick < (uint32_t)(24.0 * 44100 / 32); tick++) {
+        memset(out, 0, sizeof out);
+        orb_render(&O, out, 32);
+        if (O.rs[0].flash != fl) {
+            uint32_t st = O.rs[0].cur;
+            int32_t rel = O.v[0].target - (int32_t)S.snd[ORB_A].oct * 3072 - (36 + (int32_t)S.sun) * 256;
+            fl = O.rs[0].flash;
+            if (armed == 1u) { armed = 2; if (st != 3u) skipped++; }   /* (the first fire after: not step 3) */
+            if (armed == 2u && O.rs[0].laps == 5u && st == 3u) after++;
+            if (!(S.ring[0].on[st] & ORB_ON_FIX)) continue;
+            fixed++;
+            if (rel != orb_degree(&S, S.ring[0].deg + S.ring[0].dg[st])) fbad++;
+            if (O.rs[0].vm[0] >> st & 1u) moved++;
+        }
+        if (!armed && O.rs[0].laps == 4u && O.rs[0].cur == 2u) {   /* (as REC does: the next step, once) */
+            O.rs[0].skip = (uint8_t)((O.rs[0].k + 1u) % 255u + 1u);
+            armed = 1; laps0 = O.rs[0].flash;
+        }
+    }
+    (void)laps0;
+    printf("rec: %u fixed notes on a FOLLOWing ring, MUTATE 99: %u not as written, %u varied; the skip %s, then %s\n",
+           fixed, fbad, moved, skipped ? "held" : "FAILED", after ? "played" : "NOT");
+    CHECK(fixed > 40 && !fbad && !moved, "rec: %u of %u fixed notes not as written, %u varied", fbad, fixed, moved);
+    CHECK(skipped && after, "rec: the skip once (%u held, %u played after)", skipped, after);
+}
+
 /* CUTE: patches made at a press, every mood, a few of each: they play (not silent, not over), and every note a ring
  * fires is in its chord; MOOD turns a factory system and keeps its notes in register */
 static void test_cute(void)
@@ -681,6 +722,7 @@ int main(void)
     test_library();
     test_cosmic();
     test_follow();
+    test_recfix();
     test_cute();
     test_systems();
     if (fails) { printf("orb_test: %d FAILED\n", fails); return 1; }

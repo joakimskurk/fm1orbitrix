@@ -33,8 +33,8 @@ The voice is a planet on an ellipse, and what you hear is where it is.
 
 ## A groove in a minute
 
-1. Switch on. After the splash (**PLAY** skips it) **KITTEN** is waiting: a kick, a clap, hats, a purring bass, on
-   the grid. Press **PLAY**.
+1. Switch on. After the splash (**PLAY** skips it) **KITTEN** is waiting: a boop on the beat, a clap and hats
+   whispering, a purring bass, on the grid. Press **PLAY**.
 2. Press **SEQ**: **STEPS**. The white keys are the steps of a track: tap one, rest → hit → accent → rest. The black
    keys do the rest, and the screen draws each one over its key:
 
@@ -50,7 +50,9 @@ The voice is a planet on an ellipse, and what you hear is where it is.
    MEOW, MEW, CLOUD, DRONE, COMET);
    stopped, you hear it at once. K2–K4: TONE, DECAY, LEVEL; with SEL: OCT, PAN, SPACE, WOBBLE.
 4. The keys play the **focus**, the chip at the top: a track's sound (where its ring plays it) or, as K, the keys' own.
-   **REC** writes what you play into the track, the note you hear. **SELECT** turns the focus.
+   **REC** writes what you play into the track (from K, into the track with a tune, which it names): the key plays
+   the note written, so what you hear is what you get, on the step nearest your key; on every page while it is on.
+   **SELECT** turns the focus.
 5. **HOME**: K1–K4 set each track's hits; with SEL, their levels. **SAVE**, **SAVE** keeps it in U1.
 
 Each button's pages show on the hint line as you press it, this one lit: **EDIT** is SOUND → ORBIT → BODY → COSMOS,
@@ -127,8 +129,8 @@ when it does not:
 
 | | |
 | --- | --- |
-| **BACKGROUND RADIATION** | GLO's page: chords under it all. **CHORDS** picks a progression: SUN (the sun's own chord, held), TIDES (two, swaying), ORBIT, DUSK, COMET, ECLIPSE (darker, borrowed), LULLABY (over the sun in the bass), VOYAGE (eight chords). Each is written for each tuning in that tuning's own notes, so it never clashes with the rings: in JUST pure chords (add9, m7, maj7, 6, no D with A: the scale's wolf), in OTONAL pieces of the sun's harmonic series (4:5:6:7:9, 10:12:15:18, 6:7:9 …), in UTONAL of its subharmonics (the minor the sun crowns), in PENTA the five notes only. They are voiced and led once, ahead of time (tools/gen_tables.py): a bass above the rings' bass, up to seven voices over it, open (no thirds low down, no minor ninths), each chord into the next by the least movement, the notes two chords share held. **CHANGE**: a chord every 1, 2, 4 or 8 bars, on the bar. A note never glides: a voice whose note changes fades out, takes its new note in silence and swells in, the lowest first, so the chord blooms upwards. Each voice is two soft oscillators a few cents apart, one each side (**WIDTH**). **HALO** is its own space, a reverb only for it and all wet: no dry chord at all, only its light, 3 s to 40 s long (four lines at a quarter of the rate, damped and slowly swimming, so the tail never stands still and never rings), the chords floating into each other; at 0 it is dry. **SILK** softens it, **TEMP** is its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** thins its low end (and what goes into the nebula), **GLOW** feeds it into NEBULA as well. It swells in on PLAY and fades on STOP; **SEL + GLO** takes it out and brings it back. The page shows the chord, its ratios, the progression and each voice as a star. |
-| **BLOOM** | HORIZON's second row, beside TIRED. NEBULA's own light back into it: its lines' feedback up towards 0.985 and a little of its wet again through the diffusers. The tail gets far longer and denser at no cost (no new lines); the two never sum past 0.995, so it is stable. The lines now run hotter, rounded once, and saturate softly, so the tail's last 20 dB are heard instead of cut. When the sun moves, the nebula clears a moment, so the old chord's tail does not clash with the new. |
+| **BACKGROUND RADIATION** | GLO's page: chords under it all. **CHORDS** picks a progression: SUN (the sun's own chord, held), TIDES (two, swaying), ORBIT, DUSK, COMET, ECLIPSE (darker, borrowed), LULLABY (over the sun in the bass), VOYAGE (eight chords). Each is written for each tuning in that tuning's own notes, so it never clashes with the rings: in JUST pure chords (add9, m7, maj7, 6, no D with A: the scale's wolf), in OTONAL pieces of the sun's harmonic series (4:5:6:7:9, 10:12:15:18, 6:7:9 …), in UTONAL of its subharmonics (the minor the sun crowns), in PENTA the five notes only. They are voiced and led once, ahead of time (tools/gen_tables.py): a bass above the rings' bass, up to seven voices over it, open (no thirds low down, no minor ninths), each chord into the next by the least movement, the notes two chords share held. **CHANGE**: a chord every 1, 2, 4 or 8 bars, on the bar. A note never glides: a voice whose note changes fades out, takes its new note in silence and swells in, the lowest first, so the chord blooms upwards. Each voice is two soft oscillators a few cents apart, one each side (**WIDTH**). **HALO** is its own space, a reverb only for it and all wet: no dry chord at all, only its light, 3 s to two minutes long (four lines at a quarter of the rate, damped and slowly swimming, so the tail never stands still and never rings), the chords floating into each other; at 0 it is dry. **SILK** softens it, **TEMP** is its octave (0.7 K … 5.5 K: Wien's law, twice the temperature, twice the frequency), **LOW CUT** thins its low end (and what goes into the nebula), **GLOW** feeds it into NEBULA as well. It swells in on PLAY and fades on STOP; **SEL + GLO** takes it out and brings it back. The page shows the chord, its ratios, the progression and each voice as a star. |
+| **BLOOM** | HORIZON's second row, beside TIRED. NEBULA's own light back into it: its lines' feedback up towards 0.985 and a little of its wet again through the diffusers. The tail gets far longer and denser at no cost (no new lines); the two never sum past 0.999, so it is stable. The lines now run hotter, rounded once, and saturate softly, so the tail's last 20 dB are heard instead of cut. When the sun moves, the nebula clears a moment, so the old chord's tail does not clash with the new. |
 | **TIRED LIGHT** | HORIZON's second row. Zwicky's 1929 idea, long given up, that light tires on its way and reddens with distance; here it is an echo: what goes round again is read slower than it was written, so each echo comes back a just interval lower than the last (z 0.07 a semitone … z 0.50 a fifth … z 1.00 an octave) and, through the echo's tone, dimmer: redder. |
 
 <p align="center">
@@ -191,7 +193,8 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
 - **FILTER MAP:** a stereo state-variable filter on the master, its mode morphing LP → BP → HP, with drive. While it
   is open it costs nothing.
 - **SPACE:** a stereo delay in beat fractions (ping-pong, tone) into **NEBULA**, a four-line feedback delay network
-  with size, decay and damping. Each sound has its own send.
+  with size, damping and a **DECAY** in seconds, 0.6 s to two minutes (as long whatever the size; damping is the
+  tail's colour, so a long one is long in the middle too). Each sound has its own send.
 
 <p align="center">
   <img src="docs/readme/screen_filter.png" width="240" alt="FILTER MAP: a contour map round the point, LP BP HP at the left">
@@ -203,28 +206,30 @@ drawn afresh each lap from the pattern as you wrote it, which never changes: the
 
 Each is its own kind of music, with its own tempo, sounds and space, and each sounds right the moment it plays. In
 every one with chords the bass and the melodies FOLLOW them: they play the chord's own notes, so they change with it on
-the bar, and whatever CHORDS is turned to, nothing clashes.
+the bar, and whatever CHORDS is turned to, nothing clashes. None has a kick: where the beat is, a pitched pulse plays it
+(a boop, glass, a bell), the snares and hats whisper (-12 dB, dry), and the spaces are long, from 15 s for the grooves
+to two minutes for MULTIVERSE.
 
 | | | |
 | --- | --- | --- |
-| **KITTEN** | a beat to start from, 104 | a kick on the beat, a clap's backbeat, hats in 8ths, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
-| **MILKY WAY** | a lullaby, 86 | a music box twinkling at 3:2 over pitched boops, a soft kick on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the chords under it; the keys mew |
+| **KITTEN** | a beat to start from, 104 | a boop on the beat (root, fifth, third, fifth), a clap's backbeat and hats in 8ths whispering, a purring bass on the root, its fifth and 7/4; the keys a soft paw. Nothing mutates: yours to change |
+| **MILKY WAY** | a lullaby, 86 | a music box twinkling at 3:2 over pitched boops, glass on 1 and 3, a purring bass at half speed, pentatonic, a little swing, the chords under it; the keys mew |
 | **HARMONICES** | the idea, 96 | 4, 5, 6 and 7 hits a bar at 1:1 5:4 3:2 7:4: the chord 4:5:6:7 as a rhythm and as a chord, in the overtone scale |
-| **PURRSEC** | lo-fi, 84, swung | a cat café: a soft thump, a brushed pat, ticking hats that come and go, the purr on the royal road (Gmaj7 A6 F#m7 Bm9), dark short chords; a toy piano |
-| **ZOOMIES** | house, 124 | a kitten's mad minute: four on the floor, a clap, a squeak chasing at 3:2, a growl bouncing on the bass and fifth, a chord a bar; a pixel lead |
-| **CATWALK** | disco, 116 | four on the floor, a clap, plucked chord stabs off the beat, the purr in sixteenths, a chord a bar, glossy; a lead |
+| **PURRSEC** | lo-fi, 84, swung | a cat café: a paw on the chord's upper notes, a brushed pat, ticking hats that come and go, the purr on the royal road (Gmaj7 A6 F#m7 Bm9), dark short chords; a toy piano |
+| **ZOOMIES** | house, 124 | a kitten's mad minute: a boop bouncing four on the floor, a clap, a squeak chasing at 3:2, a growl bouncing on the bass and fifth, a chord a bar; a pixel lead |
+| **CATWALK** | disco, 116 | glass four on the floor, a clap, plucked chord stabs off the beat, the purr in sixteenths, a chord a bar, glossy; a lead |
 | **SPIRAL** | generative, 112 | 16 24 20 28 steps at 1:1 3:2 5:4 7:5, all SPIRAL, PROB 74, MUTATE 30: never twice the same, every note in the chord (VOYAGE: eight of them) |
 | **LUNA NOVA** | bossa nova, 92 | a rim on the clave, a shaker, a paw comping jazz chords (Am9 Fmaj7 Cadd9 Em7), the bass on the root and fifth; a flute |
-| **SGR A\*** | dub, 72 | one drop: the kick and the rim on three, a pluck skanking into long echoes that tire a minor third each time (steps, never a slide), a sub walking the chords |
-| **BOOP BOP** | chiptune, 140 | dry: a pixel arpeggio up and down the chord in sixteenths, a pixel bass, a kick and a zap; the chords silent, only played |
+| **SGR A\*** | dub, 72 | one drop: a deep bell and the rim on three, a pluck skanking into long echoes that tire a minor third each time (steps, never a slide), a sub walking the chords |
+| **BOOP BOP** | chiptune, 140 | dry: a pixel arpeggio up and down the chord in sixteenths, a pixel bass, a bloop and a zap; the chords silent, only played |
 | **SNOWGLOBE** | a music box, 96, in 12/8 | the rings at 3:4, twelve steps a bar: a bell turning, a toy answering, stars falling, a sub on the bass and fifth, no drums |
-| **STARDUST** | synth pop, 108 | on the overtone series (maj9 m7 6 add9): a thump on one and three, glass arpeggiating, stars at 3:2, a sub, a halo |
+| **STARDUST** | synth pop, 108 | on the overtone series (maj9 m7 6 add9): a bell on one and three, glass arpeggiating, stars at 3:2, a sub, a halo |
 | **ALPHA CEN** | a gamelan, 100 | a triple star: two bells interlocking (one on the beat, one between), a slow melody, a gong; TIDE makes them shimmer and beat as a gamelan's pairs do; pentatonic, no chords |
-| **MOON NAP** | a lullaby, 66 | on the subharmonics (Dm Bbmaj7 Gm7): a paw rocking the chord, a music box at 5:4, now and then a star, a slow sub, a 30 s halo, no drums; her mew |
+| **MOON NAP** | a lullaby, 66 | on the subharmonics (Dm Bbmaj7 Gm7): a paw rocking the chord, a music box at 5:4, now and then a star, a slow sub, a long halo, no drums; her mew |
 | **AFTERGLOW** | ambient, 70 | the oldest light: chords on the overtone series in a long halo, a sub, glass at 5:4, stars at 7:4, boops at 3:2, the nebula blooming, echoes that tire |
-| **PULSAR** | minimal techno, 128 | four on the floor, open hats off the beat, zaps pulsing on the chord (BEAM), a rolling sub, a resonant filter breathing slowly |
+| **PULSAR** | minimal techno, 128 | boops four on the floor, open hats off the beat, zaps pulsing on the chord (BEAM), a rolling sub, a resonant filter breathing slowly |
 | **ASTRALICA** | the legend's universe, 100 | the film itself: the dark drone held on the sun, the orrery's glass rings at 5:4 3:2 7:4 on 4:5:6:7, the legend's long echoes and vast nebula; the keys her meow |
-| **NOM NOM** | the legend's universe, 88 | the planets eaten, half time: a soft thump, chirps falling in from octaves under on the eighths, plops at 3:2 on the rings' notes, the drone under; her meow |
+| **NOM NOM** | the legend's universe, 88 | the planets eaten, half time: a gulp on one and three, chirps falling in from octaves under on the eighths, plops at 3:2 on the rings' notes, the drone under; her meow |
 | **TUMMY** | the legend's universe, 76 | her tummy glowing and gurgling: bubbles in a syncopated sixteenth, boops at 5:4, glints of glass at 7:4, the drone low, everything wobbling (TIDE); she mews |
 | **MULTIVERSE** | the legend's universe, 60 | her meow from universe to universe, no beat: the drone held four bars at a time, a meow whose echoes come back a fourth lower each time (TIRED LIGHT), bells at 7:4, a star |
 
