@@ -350,7 +350,11 @@ python3 web/make_site.py build/orbitrix.fwsc dev build/site    # after tests/run
 
 Departures from Dinghy's own files: `platform.c` includes `web/app/web_host.c` instead of `tests/host.c` when
 `DINGHY_WEB` is set; `orbitrix.c` runs its start, the story, the splash and its main loop as passes, so the page can
-run one a millisecond; `gfx.c` names no other firmware in a comment.
+run one a millisecond; `gfx.c` names no other firmware in a comment; `store.h` has the default `STORE_MAGIC` "ORBX";
+`tools/build.py` compiles `orbitrix.c` into `orbitrix.*`, with the identity `FM-1_967XY` (`96700` a dev build), the
+data family `ORBTRX` and the update loader's screen "ORBITRIX" in lime; `tests/host.c`, `tests/run_host.sh`,
+`tests/run_tests.sh` and `tests/install_test.py` use the `orbitrix.*` names and the SMK-37 packages' identities
+`_967XY`. Each of these files says at its top that it was changed for ORBITRIX.
 
 ## Where things are
 
