@@ -15,6 +15,7 @@ firmware built from it, give them its complete source under the same licence too
 | From OberVave: the storage (blobs, slots), `LCD_IDLE`, the SMK-37 wiring of `platform.c`, `store.h`, the pad event queue in `smk_input.h`, `tests/smk_flash_test.c`, `tests/run_tests.sh`, the CI workflow | Copyright (C) 2026 zvenson |
 | Dinghy 0.5: the wiring `platform.c`, the host mode `tests/host.c`, `tests/run_host.sh`, `docs/DINGHY.md`, `docs/API.md`, `docs/RULES.md`, `docs/MAKE-IT-YOURS.md`, `docs/SMK37.md` | zvenson |
 | ORBITRIX: the engine `firmware/src/orb_engine.h`, the systems `orb_systems.h`, the app `orbitrix.c`, the tables `tools/gen_tables.py` (and the `orb_tables.h` it writes), `tools/orb_render.c`, `tools/orb_look.py`, `tests/orb_test.c`, `tests/run_orb.sh`, `tests/scripts/`, `docs/orbitrix/`, the logo `assets/logo.svg` / `logo.png`, the splash's cat-planet (`tools/gen_splash.py`, `assets/cat.png`, `firmware/src/orb_splash.h`, after joakimskurk's drawing), the legend of Astralica (the intro and its story), `tools/make_film.sh`, `README.md` | Copyright (C) 2026 joakimskurk |
+| The changes to Dinghy's own files, listed in README.md: each of those files says so at its top ("Changed for ORBITRIX") | Copyright (C) 2026 joakimskurk |
 
 ## Third-party material
 
@@ -27,6 +28,15 @@ firmware built from it, give them its complete source under the same licence too
 
 `assets/logo.svg` / `logo.png` are ORBITRIX's own (a sun, four orbits in the ring colours), under the GPL with the rest.
 Dinghy's logo (the designburg signet) is not in this tree.
+
+## The name
+
+"ORBITRIX" is the name of this firmware, and it is its author's (joakimskurk). The GPL covers the code, not the name:
+under section 7(e) of the GPL, this licence gives no right to use "ORBITRIX", or a name that can be taken for it, as
+the name of another work. A changed version, a fork that is passed on, or a firmware built on this one takes a name of
+its own, and does not call itself ORBITRIX on its screens, in its package or on its page. Saying where it comes from
+("based on ORBITRIX by joakimskurk") is welcome, and is what the notices above ask for anyway. A copy passed on
+unchanged keeps the name.
 
 ## Trademarks
 
