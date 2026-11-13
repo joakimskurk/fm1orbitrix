@@ -1,5 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 joakimskurk
 # The README's screens (docs/readme/screen_*.png) from the host: tests/scripts/readme.txt, cosmos.txt for COSMOS
 # and HORIZON (ALPHA CEN's), tutorial.txt for the page's tutorial (REC)
 set -e
